@@ -1,0 +1,17 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+/.quarto/
+*_files/
+*_cache/
+.DS_Store
+
+**/*.quarto_ipynb
+
+# Bases de datos (Encuesta CEP): no se suben al repositorio
+input/data/original/*
+!input/data/original/.gitkeep
+input/data/proc/*.rds
+# Guardan las muestras de análisis (microdatos), no solo los modelos
+output/models/*.rds

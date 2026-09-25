@@ -1,0 +1,97 @@
+---
+title: "Análisis"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+Este documento carga los datos procesados en `preparation.qmd` y estima los modelos del efecto de la asignatura de Educación Ciudadana sobre el voto en la 2ª vuelta presidencial de 2021 y sobre el interés político. Las tablas se guardan en `output/tables/`, y las muestras y modelos en `output/models/` para presentarlos en la portada.
+
+# Librerías
+
+```{r}
+pacman::p_load(dplyr, texreg)
+```
+
+# Datos procesados
+
+```{r}
+data_voto <- readRDS("input/data/proc/data_voto.rds")
+data_int <- readRDS("input/data/proc/data_int.rds")
+```
+
+# Asignatura de Educación Ciudadana y voto en 2021
+
+```{r}
+## Muestra -------------------------------------------------------------------
+did_df <- data_voto %>%
+  # se excluye a quienes, según su fecha de nacimiento, no tenían 18 años
+  # el día de la 2ª vuelta (19-dic-2021). Quedan fuera también los casos
+  # sin fecha de nacimiento.
+  dplyr::filter(habilitado_2v == 1) %>%
+  dplyr::filter(!is.na(voto), !is.na(educacion_ciudadana))
+sjmisc::frq(did_df$voto)
+# Tamaño de cada grupo
+dplyr::count(did_df, educacion_ciudadana)
+dplyr::count(did_df, ola, educacion_ciudadana)
+
+## Modelos -------------------------------------------------------------------
+
+# Regresiones logísticas
+m1 <- glm(voto ~ educacion_ciudadana,
+          family = binomial(link = "logit"), data = did_df)
+# educ como control
+m2 <- glm(voto ~ educacion_ciudadana + educ,
+          family = binomial(link = "logit"), data = did_df)
+# edad como control, además de educ. Se usa edad_nac (calculada desde la
+# fecha de nacimiento): la edad declarada está desplazada en las olas 85 y 86
+m3 <- glm(voto ~ educacion_ciudadana + educ + edad_nac,
+          family = binomial(link = "logit"), data = did_df)
+
+texreg::htmlreg(list(m1, m2, m3), file = "output/tables/modelos_voto.html")
+
+# Muestra y modelos para la presentación (index.qmd)
+saveRDS(list(datos = did_df, modelos = list(m1, m2, m3)),
+        "output/models/modelos_voto.rds")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(m1, m2, m3))
+```
+
+# Asignatura de Educación Ciudadana e interés político
+
+```{r}
+# data_int_filter <- data_int %>% dplyr::filter(edad<=25)
+# data_int_filter %>% sjmisc::frq(educacion_ciudadana)
+
+## Muestra -------------------------------------------------------------------
+# Casos completos en las variables de los modelos, para que todos se estimen
+# sobre la misma muestra. Se seleccionan antes del na.omit(): columnas como
+# primera_vuelta o const_1 están vacías en varias olas y eliminarían todo.
+int_df <- data_int %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, educ, edad_nac) %>%
+  na.omit()
+
+nrow(int_df)
+dplyr::count(int_df, educacion_ciudadana)
+
+## Modelos -------------------------------------------------------------------
+reg_int1 <- lm(int_pol ~ educacion_ciudadana, data = int_df)
+reg_int2 <- lm(int_pol ~ educacion_ciudadana + educ, data = int_df)
+# edad como control, además de educ (edad_nac, igual que en voto)
+reg_int3 <- lm(int_pol ~ educacion_ciudadana + educ + edad_nac, data = int_df)
+
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3), file = "output/tables/modelo_interes.html")
+
+# Muestra y modelos para la presentación (index.qmd)
+saveRDS(list(datos = int_df, modelos = list(reg_int1, reg_int2, reg_int3)),
+        "output/models/modelos_interes.rds")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3))
+```

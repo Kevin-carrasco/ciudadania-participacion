@@ -1,0 +1,135 @@
+---
+title: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+```{r}
+#| label: setup
+#| echo: false
+
+pacman::p_load(dplyr, gtsummary, texreg)
+
+res_int <- readRDS("output/models/modelos_interes.rds")
+res_voto <- readRDS("output/models/modelos_voto.rds")
+
+# Nombres legibles para los coeficientes de las tablas de regresión
+renombrar <- function(m) {
+  tr <- texreg::extract(m)
+  nombres <- tr@coef.names
+  nombres <- sub("(Intercept)", "Intercepto", nombres, fixed = TRUE)
+  nombres <- gsub("educacion_ciudadana", "Educación ciudadana", nombres, fixed = TRUE)
+  nombres <- gsub("edad_nac", "Edad", nombres, fixed = TRUE)
+  nombres <- gsub("educ(?=\\p{Lu})", "", nombres, perl = TRUE)
+  nombres <- gsub(":", " × ", nombres, fixed = TRUE)
+  tr@coef.names <- nombres
+  tr
+}
+
+olas <- function(d) paste(levels(droplevels(d$ola)), collapse = ", ")
+```
+
+# Presentación
+
+Este proyecto evalúa si la asignatura de Educación Ciudadana (3° y 4° medio desde 2020) y el Plan de Formación Ciudadana (Ley 20.911, desde 2016) se asocian con el interés político y la participación electoral de las cohortes expuestas, usando las olas 77 a 95 de la Encuesta CEP.
+
+En los resultados que siguen, `educacion_ciudadana` identifica a quienes tuvieron la asignatura según su fecha de nacimiento: nacidos desde el 01-abr-2003, que en edad normativa cursaron 3° medio en 2020 o después. Los casos sin fecha de nacimiento quedan fuera de los modelos. El detalle de la construcción está en el documento de [preparación](processing/preparation.qmd) y los modelos en el de [análisis](processing/analysis.qmd).
+
+# Interés político
+
+La base de interés político reúne las olas CEP `r olas(res_int$datos)`, las únicas que incluyen la pregunta "¿Cuán interesado está Ud. en la política?". Todos los modelos se estiman sobre los mismos `r format(nrow(res_int$datos), big.mark = ".", decimal.mark = ",")` casos con información completa en las variables del análisis. La escala se invirtió para que 1 indique nada interesado y 5 muy interesado.
+
+## Descriptivos
+
+```{r}
+#| label: desc-interes
+#| echo: false
+
+res_int$datos %>%
+  dplyr::select(int_pol, educacion_ciudadana, educ, edad_nac) %>%
+  gtsummary::tbl_summary(
+    label = list(int_pol ~ "Interés político (1-5)",
+                 educacion_ciudadana ~ "Tuvo la asignatura de Educación Ciudadana",
+                 educ ~ "Nivel educacional",
+                 edad_nac ~ "Edad"),
+    type = list(int_pol ~ "continuous",
+                educacion_ciudadana ~ "dichotomous"),
+    statistic = list(gtsummary::all_continuous() ~ "{mean} ({sd})"),
+    missing_text = "Sin dato"
+  ) %>%
+  gtsummary::modify_header(label ~ "**Variable**") %>%
+  gtsummary::modify_caption("Descriptivos, base de interés político")
+```
+
+## Regresiones
+
+Modelos lineales para el interés político: sin controles (1), con nivel educacional como control (2) y con nivel educacional y edad como controles (3). La edad se calcula desde la fecha de nacimiento a la fecha de terreno de cada ola. El nivel educacional se agrupa en básica, media, técnica y universitaria o más (nivel más alto cursado, completo o no); la categoría de referencia es "Básica".
+
+```{r}
+#| label: reg-interes
+#| echo: false
+#| results: asis
+
+texreg::htmlreg(
+  lapply(res_int$modelos, renombrar),
+  custom.model.names = paste("Modelo", seq_along(res_int$modelos)),
+  caption = "Asignatura de Educación Ciudadana e interés político",
+  caption.above = TRUE,
+  custom.note = "%stars. Errores estándar entre paréntesis."
+)
+```
+
+# Voto en la 2ª vuelta presidencial de 2021
+
+La base de voto reúne las olas CEP `r olas(res_voto$datos)`, que preguntan si la persona votó en la 2ª vuelta presidencial de diciembre de 2021. Se excluye a quienes, según su fecha de nacimiento, no tenían 18 años el 19 de diciembre de 2021; entre los tratados quedan así los nacidos entre el 01-abr-2003 y el 19-dic-2003 (`r format(nrow(res_voto$datos), big.mark = ".", decimal.mark = ",")` casos con respuesta válida).
+
+## Descriptivos
+
+```{r}
+#| label: desc-voto
+#| echo: false
+
+res_voto$datos %>%
+  dplyr::select(voto, educacion_ciudadana, educ, edad_nac) %>%
+  gtsummary::tbl_summary(
+    label = list(voto ~ "Votó en la 2ª vuelta de 2021",
+                 educacion_ciudadana ~ "Tuvo la asignatura de Educación Ciudadana",
+                 educ ~ "Nivel educacional",
+                 edad_nac ~ "Edad"),
+    type = list(voto ~ "dichotomous",
+                educacion_ciudadana ~ "dichotomous"),
+    statistic = list(gtsummary::all_continuous() ~ "{mean} ({sd})"),
+    missing_text = "Sin dato"
+  ) %>%
+  gtsummary::modify_header(label ~ "**Variable**") %>%
+  gtsummary::modify_caption("Descriptivos, base de voto")
+```
+
+## Regresiones
+
+Regresiones logísticas para haber votado (coeficientes en log-odds): sin controles (1), con nivel educacional como control (2) y con nivel educacional y edad como controles (3). La edad se calcula desde la fecha de nacimiento a la fecha de terreno de cada ola. El nivel educacional se agrupa en básica, media, técnica y universitaria o más (nivel más alto cursado, completo o no); la categoría de referencia es "Básica".
+
+```{r}
+#| label: reg-voto
+#| echo: false
+#| results: asis
+
+nombres_voto <- paste("Modelo", seq_along(res_voto$modelos))
+es_logit <- sapply(res_voto$modelos, inherits, "glm")
+nombres_voto[es_logit] <- paste(nombres_voto[es_logit], "(logit)")
+
+texreg::htmlreg(
+  lapply(res_voto$modelos, renombrar),
+  custom.model.names = nombres_voto,
+  caption = "Asignatura de Educación Ciudadana y voto en la 2ª vuelta de 2021",
+  caption.above = TRUE,
+  custom.note = "%stars. Errores estándar entre paréntesis."
+)
+```
+
+# Organización del proyecto
+
+La estructura del proyecto sigue el protocolo [IPO](https://lisacoes.netlify.app/protocolos/a-ipo-rep/) (Input-Processing-Output) de reproducibilidad, desarrollado en el Laboratorio de Ciencia Social Abierta (LISA-COES). La carpeta `input` contiene las bases originales y los datos procesados, la carpeta `processing` contiene los documentos de preparación y análisis, y la carpeta `output` almacena tablas, figuras y modelos. Los detalles están en el archivo `README.md`.
+
+El flujo de trabajo tiene dos pasos. El documento de [preparación](processing/preparation.qmd) carga las bases CEP originales, revisa por ola las preguntas de participación, construye la variable `educacion_ciudadana` y guarda las bases agrupadas. El documento de [análisis](processing/analysis.qmd) carga esas bases, estima los modelos y los guarda para esta presentación.

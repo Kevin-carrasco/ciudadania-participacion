@@ -1,0 +1,37 @@
+project:
+  type: website
+  output-dir: docs
+  execute-dir: project
+  # index.qmd va al final: lee los modelos que guarda analysis.qmd
+  render:
+    - processing/preparation.qmd
+    - processing/analysis.qmd
+    - index.qmd
+
+website:
+  title: "Educación ciudadana y participación política"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Presentación
+      - href: processing/preparation.qmd
+        text: Preparación
+      - href: processing/analysis.qmd
+        text: Análisis
+  page-footer:
+    center: "Kevin Carrasco"
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-title: Contenidos
+    lang: es
+    code-fold: true
+    code-tools: true
+    fig-align: center
+
+execute:
+  warning: false
+  message: false
+  echo: true

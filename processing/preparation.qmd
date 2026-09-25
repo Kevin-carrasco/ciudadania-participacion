@@ -1,0 +1,908 @@
+---
+title: "Preparación de datos"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+Este documento carga las bases originales de la Encuesta CEP, revisa por ola las preguntas de participación electoral, selecciona las variables de interés y construye las bases agrupadas que se utilizan en el documento de análisis.
+
+Siguiendo el [protocolo IPO](https://lisacoes.netlify.app/protocolos/a-ipo-rep/), este documento comienza cargando los datos originales desde `input/data/original/` y termina guardando los datos procesados en `input/data/proc/`.
+
+# Librerías
+
+```{r}
+pacman::p_load(haven, dplyr)
+```
+
+# Datos originales
+
+```{r}
+base_77 <- read_sav("input/data/original/base_77.sav")
+base_78 <- read_sav("input/data/original/base_78.sav")
+base_79 <- read_sav("input/data/original/base_79.sav")
+base_80 <- read_sav("input/data/original/base_80.sav")
+base_81 <- read_sav("input/data/original/base_81.sav")
+base_82 <- read_sav("input/data/original/base_82.sav")
+base_83 <- read_sav("input/data/original/base_83.sav")
+base_84 <- read_sav("input/data/original/base_84.sav")
+base_85 <- read_sav("input/data/original/base_85.sav")
+#base_86 <- read_sav("input/data/original/base_86_v4.sav")
+#base_86 <- readRDS("input/data/original/base_86.RDS")
+base_86 <- read_dta("input/data/original/base_86.dta")
+base_88 <- read_sav("input/data/original/base_88.sav")
+base_89 <- read_sav("input/data/original/base_89.sav")
+base_90 <- read_sav("input/data/original/base_90.sav")
+base_91 <- read_sav("input/data/original/base_91.sav")
+base_92 <- read_sav("input/data/original/base_92.sav")
+base_93 <- read_sav("input/data/original/base_93.sav")
+base_94 <- read_sav("input/data/original/base_94.sav")
+base_95 <- read_sav("input/data/original/base_95.sav")
+#base_96 <- read_sav("input/data/original/base_96.sav")
+
+base_edades <- read_dta("input/data/original/base_85_95_fecha_nacimiento.dta")
+```
+
+# Fecha de nacimiento
+
+La base `base_85_95_fecha_nacimiento.dta` trae día, mes y año de nacimiento para las olas 85 a 95, identificados con `id_bu` (`"<id>-<ola>"`). Las olas 77 a 84 traen la fecha en sus propias bases (`DS_P2A_DIA`, `DS_P2A_MES`, `DS_P2A_ANO`), pero no forman parte de las bases agrupadas.
+
+```{r}
+fechas_nac <- base_edades %>%
+  haven::zap_labels() %>%
+  dplyr::mutate(
+    ola = sub(".*-", "", id_bu),
+    # as.Date con formato explícito deja NA las fechas imposibles (ej. 31-feb)
+    fecha_nac = as.Date(sprintf("%04d-%02d-%02d", as.integer(nac_ano),
+                                as.integer(nac_mes), as.integer(nac_dia)),
+                        format = "%Y-%m-%d")
+  )
+
+fechas_nac %>%
+  dplyr::group_by(ola) %>%
+  dplyr::summarise(n = dplyr::n(), con_fecha = sum(!is.na(fecha_nac)),
+                   pct_con_fecha = round(100 * con_fecha / n, 1))
+```
+
+## Unión con cada ola
+
+La base CEP 85 no trae `id_bu`, pero sus filas están en el mismo orden que `id_bu_encuesta` (1 a 1.443), así que el identificador se construye con el número de fila.
+
+En la ola 86 los `id_bu` del archivo de fechas no corresponden a los de la base CEP: unidos directamente, la edad declarada y el año de nacimiento no se correlacionan. El archivo de fechas asignó los identificadores de la 86 después de ordenar `id_bu` como texto ("1-86", "10-86", "100-86", ...). Por eso el k-ésimo registro en ese orden corresponde al caso `id_bu_encuesta = k` de la base. Se reconstruye el identificador con ese criterio; el chequeo de abajo confirma la unión.
+
+```{r}
+base_85 <- base_85 %>% dplyr::mutate(id_bu = paste0(dplyr::row_number(), "-85"))
+
+fechas_nac <- dplyr::bind_rows(
+  dplyr::filter(fechas_nac, ola != "86"),
+  fechas_nac %>%
+    dplyr::filter(ola == "86") %>%
+    dplyr::arrange(id_bu) %>%
+    dplyr::mutate(id_bu = paste0(dplyr::row_number(), "-86"))
+)
+
+# Chequeo de la unión: correlación entre edad declarada y año de nacimiento.
+# Si la unión es correcta debe ser cercana a -1.
+chequeo_union <- function(base, o) {
+  j <- base %>%
+    haven::zap_labels() %>%
+    dplyr::select(id_bu, edad) %>%
+    dplyr::inner_join(dplyr::filter(fechas_nac, ola == o), by = "id_bu")
+  cor(j$edad, j$nac_ano, use = "complete.obs")
+}
+c("85" = chequeo_union(base_85, "85"), "86" = chequeo_union(base_86, "86"),
+  "88" = chequeo_union(base_88, "88"), "89" = chequeo_union(base_89, "89"),
+  "90" = chequeo_union(base_90, "90"), "91" = chequeo_union(base_91, "91"),
+  "92" = chequeo_union(base_92, "92"), "93" = chequeo_union(base_93, "93"),
+  "94" = chequeo_union(base_94, "94"), "95" = chequeo_union(base_95, "95"))
+
+fechas_nac <- fechas_nac %>% dplyr::select(id_bu, fecha_nac)
+```
+
+## Edad y educación ciudadana
+
+No hay fecha de entrevista en las bases, así que la edad se calcula al punto medio del período de terreno de cada ola. La fecha de terreno solo afecta a `edad_nac`: `educacion_ciudadana` y la habilitación para votar dependen únicamente de la fecha de nacimiento, no de ninguna de las dos variables de edad.
+
+En las olas 88 a 95, `edad_nac` coincide con la edad declarada en 75-86% de los casos, lo esperable con terrenos de dos meses. En las olas 85 y 86 la coincidencia es baja (26-31%): la variable `edad` de esas bases CEP calza con una fecha unos 8 meses posterior al terreno (abril 2022 para la 85, enero 2023 para la 86), aunque la base 86 registra terreno en mayo de 2022 (`encuesta_a`, `encuesta_m`). En esas olas `edad_nac` es más confiable que `edad`.
+
+- `edad`: edad declarada en la encuesta CEP.
+- `edad_nac`: años cumplidos a la fecha de terreno, calculados desde la fecha de nacimiento.
+- `educacion_ciudadana`: 1 si nació desde el 01-abr-2003, es decir, en edad normativa cursó 3° medio en 2020 o después y tuvo la asignatura de Educación Ciudadana. Es un proxy: no considera repitencia ni ingreso escolar adelantado o tardío. Queda en NA para quienes no informan fecha de nacimiento.
+
+```{r}
+fechas_terreno <- tibble::tribble(
+  ~ola, ~fecha_terreno,
+  "85", "2021-08-15",  # agosto 2021
+  "86", "2022-05-01",  # abril-mayo 2022
+  "88", "2022-12-01",  # noviembre-diciembre 2022
+  "89", "2023-07-01",  # junio-julio 2023
+  "90", "2023-10-01",  # septiembre-octubre 2023
+  "91", "2024-07-01",  # junio-julio 2024
+  "92", "2024-09-01",  # agosto-septiembre 2024
+  "93", "2025-04-01",  # marzo-abril 2025
+  "94", "2025-06-01",  # mayo-junio 2025
+  "95", "2025-10-01"   # septiembre-octubre 2025
+) %>% dplyr::mutate(fecha_terreno = as.Date(fecha_terreno))
+
+# Años cumplidos entre dos fechas
+edad_a <- function(nac, ref) {
+  n <- as.POSIXlt(nac)
+  r <- as.POSIXlt(ref)
+  (r$year - n$year) - ((r$mon < n$mon) | (r$mon == n$mon & r$mday < n$mday))
+}
+
+# Recodificación común a las bases de voto e interés político
+agregar_nacimiento <- function(d) {
+  d %>%
+    dplyr::left_join(fechas_nac, by = "id_bu") %>%
+    dplyr::left_join(fechas_terreno, by = "ola") %>%
+    dplyr::mutate(
+      edad     = as.numeric(edad),
+      edad_nac = edad_a(fecha_nac, fecha_terreno),
+      educacion_ciudadana = dplyr::if_else(fecha_nac >= as.Date("2003-04-01"),
+                                           1L, 0L)
+    )
+}
+```
+
+# Asignatura de Educación Ciudadana: variables por ola
+
+<!-- Grupo de interés: tuvo el curso de Educación Ciudadana (3° medio 2020 y/o 4° medio
+2021) Y pudo votar en 2021. Nacidos entre el 01-abr-2003 y el 21-nov-2003 (1ª vuelta). La cohorte completa con curso nació entre el 01-abr-2003 y el 31-mar-2004, pero los nacidos después del 19-dic-2003 no alcanzaron a votar. -->
+
+## ¿Irá Ud. a votar en las próximas elecciones presidenciales de 2017?
+
+
+CEP N°78 (Noviembre-Diciembre 2016) se pregunta por primera vez elecciones presidenciales de 2017 (escala 1 a 4; Si, probablemente, probablemente no, No). Antes de esto, solo se pregunta voto retrospectivo a 2013.
+
+> **Curso + voto 2021: no aplica.** La cohorte con curso (nacida 2003-2004) tiene 12-13 años y está en 6°-7° básico. Recién entra al marco muestral del CEP (18 años y más) en 2021.
+
+```{r}
+#names(base_78)
+#sjmisc::find_var(base_78, "vot")
+sjmisc::frq(base_78$DS_P2_RESPONDE)
+
+sjmisc::frq(base_78$Edad_rec)
+```
+
+CEP N 79 (abril-mayo 2017)
+
+> **Curso + voto 2021: no aplica.** Cohorte con curso: 13-14 años.
+
+```{r}
+#names(base_79)
+sjmisc::find_var(base_79, "vot")
+sjmisc::frq(base_79$ELE_4)
+```
+
+CEP N 80 (julio-agosto 2017)
+
+> **Curso + voto 2021: no aplica.** Cohorte con curso: 13-14 años.
+
+```{r}
+#names(base_80)
+sjmisc::find_var(base_80, "vot")
+sjmisc::frq(base_80$ELE_5)
+```
+
+CEP N 81 (Septiembre-Octubre 2017)
+
+> **Curso + voto 2021: no aplica.** Cohorte con curso: 13-14 años.
+
+```{r}
+#names(base_81)
+
+sjmisc::find_var(base_81, "vot")
+sjmisc::frq(base_81$ELE_5)
+```
+
+## ¿Votó Ud. en la pasada elección presidencial y parlamentaria de noviembre de 2017?
+
+CEP N 82 (Octubre-Noviembre 2018) se pregunta por primera vez si votó en la elección pasada de presidencial y parlamentaria de 2017 (escala 1 a 2; si y no)
+
+> **Curso + voto 2021: no aplica.** Cohorte con curso: 14-15 años, en 1° medio.
+
+```{r}
+#names(base_82)
+sjmisc::find_var(base_82, "elecc")
+sjmisc::frq(base_82$DS_P25)
+```
+
+CEP N 83 (abril-junio 2019) ¿Votó Ud. en la pasada elección presidencial y parlamentaria de noviembre de 2017?
+
+> **Curso + voto 2021: no aplica.** Cohorte con curso: 15-16 años, en 2° medio.
+
+```{r}
+#names(base_83)
+sjmisc::find_var(base_83, "elecc")
+sjmisc::frq(base_83$DS_P31)
+```
+
+CEP N 84 (Noviembre 2019-enero 2020) ¿Votó Ud. en la pasada elección presidencial y parlamentaria de noviembre de 2017?
+
+> **Curso + voto 2021: no aplica.** Cohorte con curso: 16 años, entrando a 3° medio en 2020, es decir al primer año de la asignatura. Última ola completamente pre-tratamiento.
+
+```{r}
+#names(base_84)
+sjmisc::find_var(base_84, "elecc")
+sjmisc::frq(base_84$DS_P21)
+```
+
+## Elecciones 2020 a 2023 y 2ª vuelta presidencial de 2021
+
+CEP N 85 (Agosto 2021) Elección pasada Plebiscito (Si; no) Votó Ud. en el plebiscito sobre una nueva constitución realizado en octubre del año pasado?
+
+CEP N 85 (Agosto 2021) Elección pasada convencionales, municipales, GR (Si; no)
+
+-->  el curso de formación ciudadana parte en 2020 para tercero y en 2021 para cuarto. Esto implica que ellos no habían votado en CEP 85
+
+> **Curso + voto 2021: 18 años, y solo el 13% de la cohorte.** La cohorte con curso tiene 17-18 años: solo los nacidos entre abril y agosto de 2003 ya cumplieron 18. Para el plebiscito de octubre de 2020 el grupo es vacío, nadie con curso podía votar. Para la megaelección del 15-16 de mayo de 2021 solo califican los nacidos entre el 01-abr y el 16-may de 2003, todos de 18 años en terreno.
+
+```{r}
+#names(base_85)
+sjmisc::find_var(base_85, "pleb")
+sjmisc::frq(base_85$constitucion_4_a)
+sjmisc::find_var(base_85, "elec")
+sjmisc::frq(base_85$constitucion_5_a)
+
+sjmisc::frq(base_85$esc_nivel_1)
+
+sjmisc::frq(base_85$interes_pol_1_b)
+
+base_2021 <- base_85 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+int_pol=interes_pol_1_b)
+```
+
+CEP N 86 (Abril - Mayo 2022) ¿Votó Ud. En la 1ra vuelta de la elección presidencial de noviembre del año pasado?
+
+--> En CEP 86, con 18 años deberían haber tenido el curso de formación ciudadana en tercero (2020) y durante cuarto medio (2021). Entonces las personas con 19 años en abril-mayo 2022 deberían haber votado en la elección presidencial de noviembre 2021 y tenido el curso de formación ciudadana en cuarto medio (2021); En ese mismo año, en cuarto medio (2021) hay gente con 17 y 18 años que tuvo el curso pero no alcanzó a votar en 2021 <-- esa es la principal dificultad.
+
+CEP N 86 (Abril - Mayo 2022) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre del año pasado?
+
+> **Curso + voto 2021: 18 o 19 años.** La cohorte con curso tiene 18-19 en terreno. Los de 18 años nacieron entre abr-2003 y abr/may-2004: son casi todos cohorte con curso, pero solo un 48-61% alcanzó a votar en la 1ª vuelta. Los de 19 años nacieron entre abr-2002 y may-2003: son mayoritariamente la última cohorte SIN curso (4° medio 2020), salvo los nacidos en abril y mayo de 2003, que sí tuvieron el curso y sí votaron.
+
+```{r}
+#names(base_86)
+sjmisc::find_var(base_86, "elec")
+sjmisc::frq(base_86$elec_part_56)
+sjmisc::frq(base_86$elec_part_37)
+sjmisc::frq(base_86$esc_nivel_1)
+sjmisc::frq(base_86$edad)
+
+base_2022 <- base_86 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37)
+```
+
+CEP N 88 (Noviembre - Diciembre 2022) ¿Votó Ud. en el plebiscito sobre una nueva constitución realizado en octubre del 2020?
+
+CEP N 88 (Noviembre - Diciembre 2022) El 4 de septiembre del 2022 se realizó el plebiscito de salida sobre la propuesta de Nueva Constitución. ¿Votó Ud. en esa elección?
+
+CEP N 88 (Noviembre - Diciembre 2022) ¿Votó Ud. en la 1ra vuelta de la elección presidencial de noviembre del 2021?
+
+CEP N 88 (Noviembre - Diciembre 2022) ¿Votó Ud. en la pasada elección presidencial de diciembre de 2021?
+
+> **Curso + voto 2021: 18 o 19 años**, concentrado en los 19. Los de 19 años nacieron entre nov-2002 y dic-2003 y son todos elegibles para la 2ª vuelta; alrededor de la mitad de ellos tuvo el curso. Los de 18 años nacieron entre nov-2003 y dic-2004: casi todos tuvieron el curso, pero casi no alcanzan a votar en diciembre de 2021.
+>
+> Para el plebiscito de salida del 04-sep-2022 el grupo cambia: ahí toda la cohorte con curso es elegible, así que **curso + voto plebiscito 2022 = 18 o 19 años** .
+
+```{r}
+#names(base_88)
+sjmisc::find_var(base_88, "const")
+sjmisc::frq(base_88$constitucion_4_a)
+sjmisc::frq(base_88$constitucion_19)
+
+sjmisc::find_var(base_88, "elec")
+sjmisc::frq(base_88$elec_part_56)
+sjmisc::frq(base_88$elec_part_37)
+
+sjmisc::frq(base_88$interes_pol_1_b)
+
+base_2022_2 <- base_88 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+const_1=constitucion_4_a, const_2=constitucion_19,
+primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37,
+int_pol=interes_pol_1_b)
+```
+
+CEP N 89 (Junio - Julio 2023) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+CEP N 89 (Junio - Julio 2023) El 4 de septiembre del 2022 se realizó el plebiscito de salida sobre la propuesta de Nueva Constitución. ¿Votó Ud. en esa elección?
+
+CEP N 89 (Junio - Julio 2023) El 7 de mayo de este año se realizaron las elecciones para consejeros constitucionales. ¿Votó Ud. en esa elección?
+
+> **Curso + voto 2021: 19 o 20 años.** La cohorte con curso tiene 19-20 en terreno. Los de 20 años son todos elegibles para la 2ª vuelta pero mezclan cohorte con curso y sin curso; los de 19 años son casi todos cohorte con curso, pero pudieron votar en diciembre de 2021.
+>
+> Para el plebiscito de salida 2022 y para consejeros de mayo 2023, toda la cohorte con curso es elegible: **19 o 20 años**.
+
+```{r}
+#names(base_89)
+sjmisc::find_var(base_89, "elec")
+sjmisc::frq(base_89$elec_part_37)
+
+
+sjmisc::find_var(base_89, "const")
+sjmisc::frq(base_89$constitucion_19)
+sjmisc::frq(base_89$constitucion_34)
+
+sjmisc::frq(base_89$edad)
+
+base_2023 <- base_89 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+const_1=constitucion_19, const_2=constitucion_34,
+segunda_vuelta=elec_part_37)
+```
+
+
+CEP N 90 (Septiembre - Octubre 2023) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+CEP N 90 (Septiembre - Octubre 2023) El 4 de septiembre del 2022 se realizó el plebiscito de salida sobre la propuesta de Nueva Constitución. ¿Votó Ud. en esa elección?
+
+CEP N 90 (Septiembre - Octubre 2023) El 7 de mayo de este año se realizaron las elecciones para consejeros constitucionales. ¿Votó Ud. en esa elección?
+
+> **Curso + voto 2021: 19 o 20 años.** Nacidos entre el 01-abr-2003 y el 19-dic-2003: tienen 20 si ya cumplieron durante 2023 y 19 si no. A los 20 años están todos los elegibles de la 2ª vuelta, mezclados con la cohorte sin curso; a los 19 años pocos alcanzó a votar en diciembre de 2021.
+>
+> Para el plebiscito de salida 2022 y consejeros 2023, toda la cohorte con curso es elegible: **19 o 20 años**.
+
+```{r}
+#names(base_90)
+sjmisc::find_var(base_90, "elec")
+sjmisc::frq(base_90$elec_part_37)
+
+
+sjmisc::find_var(base_90, "const")
+sjmisc::frq(base_90$constitucion_19)
+sjmisc::frq(base_90$constitucion_34)
+
+sjmisc::frq(base_90$edad)
+
+base_2023_2 <- base_90 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+const_1=constitucion_19, const_2=constitucion_34,
+segunda_vuelta=elec_part_37)
+```
+
+
+CEP N 91 (Junio - Julio 2024) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Curso + voto 2021: 20 o 21 años.** Los de 21 son todos elegibles pero mezclan cohorte con curso y sin curso; los de 20 son casi todos cohorte con curso, y pudo votar en diciembre de 2021.
+
+```{r}
+#names(base_91)
+sjmisc::find_var(base_91, "elec")
+sjmisc::frq(base_91$elec_part_37)
+
+sjmisc::frq(base_91$edad)
+
+base_2024 <- base_91 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+segunda_vuelta=elec_part_37)
+```
+
+CEP N 92 (Agosto - Septiembre 2024) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Curso + voto 2021: 20 o 21 años.** A los 20 años alcanzó a votar en diciembre de 2021.
+
+```{r}
+#names(base_92)
+sjmisc::find_var(base_92, "elec")
+sjmisc::frq(base_92$elec_part_37)
+
+sjmisc::frq(base_92$interes_pol_1_b)
+
+base_2024_2 <- base_92 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+segunda_vuelta=elec_part_37,
+int_pol=interes_pol_1_b)
+```
+
+CEP N 93 (Marzo - Abril 2025) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Curso + voto 2021: 21 o 22 años.**  la cohorte con curso completa se reparte entre 20, 21 y 22 años. A los 21 años un 68-79% pudo votar en diciembre de 2021.
+
+```{r}
+sjmisc::find_var(base_93, "elec")
+sjmisc::frq(base_93$elec_part_37)
+sjmisc::frq(base_93$esc_nivel_1_c)
+sjmisc::frq(base_93$interes_pol_1_b)
+
+base_2025 <- base_93 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+segunda_vuelta=elec_part_37,
+int_pol=interes_pol_1_b)
+```
+
+CEP N 94 (Mayo-Junio 2025) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Curso + voto 2021: 21 o 22 años.** A los 21 años pudo votar en diciembre de 2021.
+
+```{r}
+sjmisc::find_var(base_94, "elec")
+sjmisc::frq(base_94$elec_part_37)
+sjmisc::frq(base_94$edad)
+
+base_2025_2 <- base_94 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+segunda_vuelta=elec_part_37)
+```
+
+CEP N 95 (Septiembre-Octubre 2025) ¿Votó usted en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+CEP N 95 (Septiembre-Octubre 2025) ¿irá usted a votar en las próximas elecciones presidenciales de 2025?
+
+> **Curso + voto 2021: 21 o 22 años.** Quien tenía justo 18 el día de la 2ª vuelta (nacido el 19-dic-2003) cumple 22 recién en diciembre de 2025, es decir después del terreno: por eso a los 21 años todavía queda elegibles y la garantía empieza a los 22.
+>
+> Para la intención de voto de 2025 no hay truncamiento: toda la cohorte con curso es elegible, y también las cohortes con curso posteriores (4° medio 2022, 2023 y 2024).
+
+```{r}
+sjmisc::find_var(base_95, "elec")
+sjmisc::frq(base_95$elec_part_37)
+sjmisc::find_var(base_95, "vot")
+sjmisc::frq(base_95$elec_part_4)
+
+sjmisc::frq(base_95$interes_pol_1_b)
+
+base_2025_3 <- base_95 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+segunda_vuelta=elec_part_37,
+int_pol=interes_pol_1_b)
+```
+
+# Base agrupada: voto en la 2ª vuelta de 2021
+
+Olas CEP 86 a 95. `educacion_ciudadana` se construye desde la fecha de nacimiento, igual que en la base de interés político. Además se marca quién tenía 18 años cumplidos el día de cada vuelta presidencial de 2021:
+
+- `habilitado_1v`: nacido hasta el 21-nov-2003 (1ª vuelta, 21-nov-2021).
+- `habilitado_2v`: nacido hasta el 19-dic-2003 (2ª vuelta, 19-dic-2021).
+
+El grupo de interés para el voto es quien tuvo el curso y podía votar en la 2ª vuelta: nacidos entre el 01-abr-2003 y el 19-dic-2003.
+
+```{r}
+names(base_2022)
+names(base_2022_2)
+names(base_2023)
+names(base_2023_2)
+names(base_2024)
+names(base_2024_2)
+names(base_2025)
+names(base_2025_2)
+names(base_2025_3)
+
+## 1) Juntar las bases -------------------------------------------------------
+
+# Se sacan los labels de haven para que bind_rows no choque con escalas
+# distintas entre olas. La armonización de escalas queda pendiente.
+sin_labels <- function(d) d %>% haven::zap_labels() %>% haven::zap_label()
+
+# El .id es el número de ola. Ojo que hay dos olas con terreno 2022:
+# CEP 86 (abril-mayo) y CEP 88 (noviembre-diciembre).
+bases <- list(
+  "86" = base_2022,    # CEP 86, abril-mayo 2022
+  "88" = base_2022_2,  # CEP 88, noviembre-diciembre 2022
+  "89" = base_2023,    # CEP 89, junio-julio 2023
+  "90" = base_2023_2,  # CEP 90, septiembre-octubre 2023
+  "91" = base_2024,    # CEP 91, junio-julio 2024
+  "92" = base_2024_2,  # CEP 92, agosto-septiembre 2024
+  "93" = base_2025,    # CEP 93, marzo-abril 2025
+  "94" = base_2025_2,  # CEP 94, mayo-junio 2025
+  "95" = base_2025_3   # CEP 95, septiembre-octubre 2025
+) %>% lapply(sin_labels)
+
+# bind_rows completa con NA las columnas ausentes en una ola
+# (primera_vuelta solo está en 86 y 88; const_1/const_2 solo en 88, 89 y 90)
+base_pooled <- dplyr::bind_rows(bases, .id = "ola")
+
+## 2) Fecha de nacimiento, educacion_ciudadana y habilitación ---------------
+
+data_voto <- base_pooled %>%
+  agregar_nacimiento() %>%
+  dplyr::mutate(
+    habilitado_1v = dplyr::if_else(fecha_nac <= as.Date("2003-11-21"), 1L, 0L),
+    habilitado_2v = dplyr::if_else(fecha_nac <= as.Date("2003-12-19"), 1L, 0L)
+  ) %>%
+  dplyr::relocate(ola, fecha_terreno, fecha_nac, edad, edad_nac,
+                  educacion_ciudadana, habilitado_1v, habilitado_2v)
+
+## Chequeo
+# Casos con fecha de nacimiento y acuerdo con la edad declarada, por ola
+data_voto %>%
+  dplyr::group_by(ola) %>%
+  dplyr::summarise(n = dplyr::n(), con_fecha = sum(!is.na(fecha_nac)),
+                   acuerdo_edad = round(mean(edad_nac == edad, na.rm = TRUE), 3))
+
+sjmisc::frq(data_voto$educacion_ciudadana)
+
+# Tuvo el curso y podía votar en la 2ª vuelta, total y por ola
+dplyr::count(data_voto, educacion_ciudadana, habilitado_2v)
+dplyr::count(data_voto, ola, educacion_ciudadana, habilitado_2v)
+```
+
+## Valores perdidos y recodificación
+
+Los códigos -9, -8, 88 y 99 se declaran como perdidos solo en las variables sustantivas. Aplicarlos a toda la base convertía en NA la ola `"88"` y las edades de 88 y 99 años, que son edades válidas.
+
+El nivel educacional (`esc_nivel_1` / `esc_nivel_1_c`) tiene las mismas 11 categorías en todas las olas, codificadas de 0 (sin estudios formales) a 10 (postgrado completo), salvo en la CEP 85, donde van de 1 a 11 (ver base de interés político).
+
+Se conservan las 11 categorías en `educ_det`. `educ` las agrupa en cuatro según el nivel más alto cursado, completo o no, en línea con la pregunta CEP ("último año aprobado o cursando actualmente"):
+
+| `educ` | Códigos originales |
+|---|---|
+| Básica | 0 sin estudios formales, 1 básica incompleta, 2 básica completa |
+| Media | 3 media incompleta, 4 media completa |
+| Técnica | 5 técnica incompleta, 6 técnica completa |
+| Universitaria o más | 7 a 10: universitaria y postgrado, incompletos o completos |
+
+```{r}
+# Etiquetas de nivel educacional, códigos 0 a 10
+etiquetar_educ <- function(x) {
+  factor(x, levels = 0:10,
+         labels = c("Sin estudios formales", "Básica incompleta",
+                    "Básica completa", "Media incompleta", "Media completa",
+                    "Técnica incompleta", "Técnica completa",
+                    "Universitaria incompleta", "Universitaria completa",
+                    "Postgrado incompleto", "Postgrado completo"))
+}
+
+# Agrupación en cuatro categorías, códigos 0 a 10
+agrupar_educ <- function(x) {
+  cut(x, breaks = c(-Inf, 2, 4, 6, Inf),
+      labels = c("Básica", "Media", "Técnica", "Universitaria o más"))
+}
+
+sjmisc::frq(data_voto$segunda_vuelta)
+
+data_voto <- data_voto %>%
+  sjmisc::set_na(educ, primera_vuelta, segunda_vuelta, const_1, const_2,
+                 int_pol, na = c(-9, -8, 88, 99)) %>%
+  dplyr::mutate(
+    voto = car::recode(segunda_vuelta, "1=1; 2=0; else=NA"),
+    educ_det = etiquetar_educ(educ),
+    educ     = agrupar_educ(educ),
+    ola      = factor(ola)
+  )
+
+# Chequeo de la agrupación
+table(data_voto$educ_det, data_voto$educ, useNA = "ifany")
+sjmisc::frq(data_voto$educ)
+
+sjmisc::frq(data_voto$voto)
+```
+
+# Base agrupada: interés político
+
+Olas CEP 85, 88, 92, 93 y 95 (las que traen `interes_pol_1_b`), con `educacion_ciudadana` definida desde la fecha de nacimiento (nacido desde el 01-abr-2003), sin exigir haber estado habilitado para votar en 2021.
+
+```{r}
+names(base_2021)
+names(base_2022_2)
+names(base_2024_2)
+names(base_2025)
+names(base_2025_3)
+
+## 1) Juntar las bases -------------------------------------------------------
+
+bases_int <- list(
+  "85" = base_2021,    # CEP 85, agosto 2021
+  "88" = base_2022_2,  # CEP 88, noviembre-diciembre 2022
+  "92" = base_2024_2,  # CEP 92, agosto-septiembre 2024
+  "93" = base_2025,    # CEP 93, marzo-abril 2025
+  "95" = base_2025_3   # CEP 95, septiembre-octubre 2025
+) %>% lapply(sin_labels)
+
+# CEP 85 no trae ninguna variable de voto: sus filas quedan con NA en
+# primera_vuelta, segunda_vuelta, const_1 y const_2.
+base_pooled_int <- dplyr::bind_rows(bases_int, .id = "ola")
+
+## 2) Fecha de nacimiento y educacion_ciudadana ------------------------------
+# A diferencia de la base de voto no se exige haber estado habilitado para
+# votar en 2021, así que las cohortes posteriores (4° medio 2022, 2023 y
+# 2024) también quedan con educacion_ciudadana = 1.
+
+data_int <- base_pooled_int %>%
+  agregar_nacimiento() %>%
+  dplyr::relocate(ola, fecha_terreno, fecha_nac, edad, edad_nac,
+                  educacion_ciudadana)
+
+## Chequeo
+data_int %>%
+  dplyr::group_by(ola) %>%
+  dplyr::summarise(n = dplyr::n(), con_fecha = sum(!is.na(fecha_nac)),
+                   acuerdo_edad = round(mean(edad_nac == edad, na.rm = TRUE), 3))
+
+sjmisc::frq(data_int$educacion_ciudadana)
+dplyr::count(data_int, ola, educacion_ciudadana)
+
+data_int %>% group_by(ola) %>%
+    sjmisc::frq(int_pol)
+```
+
+## Valores perdidos y recodificación
+
+Mismo criterio de perdidos que en la base de voto. `int_pol` se invierte para que valores altos indiquen mayor interés.
+
+En la CEP 85 el nivel educacional va de 1 (sin estudios formales) a 11 (postgrado completo), mientras que en el resto de las olas va de 0 a 10. Sin corregirlo, cada caso de la 85 queda un nivel más arriba. Se resta 1 a la ola 85 después de declarar el 99 como perdido.
+
+```{r}
+data_int <- data_int %>%
+  sjmisc::set_na(educ, primera_vuelta, segunda_vuelta, const_1, const_2,
+                 int_pol, na = c(-9, -8, 88, 99)) %>%
+  dplyr::mutate(
+    educ     = dplyr::if_else(ola == "85", educ - 1, educ),
+    educ_det = etiquetar_educ(educ),
+    educ     = agrupar_educ(educ),
+    ola      = factor(ola)
+  )
+
+# Chequeo: distribución educacional por ola tras la corrección
+table(data_int$ola, as.integer(data_int$educ_det) - 1, useNA = "ifany")
+
+# Chequeo de la agrupación
+table(data_int$educ_det, data_int$educ, useNA = "ifany")
+sjmisc::frq(data_int$educ)
+
+data_int$int_pol <- car::recode(data_int$int_pol,
+                                "1=5; 2=4; 3=3; 4=2; 5=1; else=NA")
+
+sjmisc::frq(data_int$int_pol)
+```
+
+# Plan de Formación Ciudadana: variables por ola
+
+<!-- Grupo de interés: estuvo en el sistema escolar en 2016 o después, es decir cursó 4°
+medio en 2016 o más tarde. En edad normativa eso son los nacidos desde el 01-abr-1998;
+quien nació antes salió de 4° medio en 2015 o antes y nunca estuvo bajo la ley.
+A diferencia de la asignatura, el Plan (Ley 20.911) aplica a todos los niveles desde 2016,
+así que la exposición es graduada, de 1 a 9 años dentro de la ventana del CEP. -->
+
+| Cohorte (4° medio) | Nacidos | Años bajo el Plan |
+|---|---|---|
+| 2016 | 01-abr-1998 a 31-mar-1999 | 1 |
+| 2017 | 01-abr-1999 a 31-mar-2000 | 2 |
+| 2018 | 01-abr-2000 a 31-mar-2001 | 3 |
+| 2019 | 01-abr-2001 a 31-mar-2002 | 4 |
+| 2020 | 01-abr-2002 a 31-mar-2003 | 5 |
+| 2021 | 01-abr-2003 a 31-mar-2004 | 6 |
+| 2022 | 01-abr-2004 a 31-mar-2005 | 7 |
+| 2023 | 01-abr-2005 a 31-mar-2006 | 8 |
+| 2024 | 01-abr-2006 a 31-mar-2007 | 9 |
+
+El grupo de edad: el piso lo pone la elegibilidad electoral (los más
+jóvenes todavía no podían votar) y el techo lo pone la ley (los nacidos antes del
+01-abr-1998 nunca estuvieron bajo el Plan). Los más viejos   tienen 1 año de
+exposición y los más jóvenes tienen la dosis máxima.
+
+## ¿Irá Ud. a votar en las próximas elecciones presidenciales de 2017?
+
+CEP N°78 (Noviembre-Diciembre 2016) se pregunta por primera vez elecciones presidenciales de 2017 (escala 1 a 4; Si, probablemente, probablemente no, No). Antes de esto, solo se pregunta voto retrospectivo a 2013.
+
+> **Plan + elegible en 2017: 18 años, solo C2016 (1 año de Plan).** El grupo recién nace como categoría entrevistable: los nacidos desde abril de 1998 tienen 17-18 años y solo los que ya cumplieron 18 entran a la muestra. Todos ellos son elegibles para noviembre de 2017. La pregunta es prospectiva, así que acá el outcome es intención, no voto.
+
+```{r}
+#names(base_78)
+sjmisc::find_var(base_78, "vot")
+sjmisc::frq(base_78$ELE_3)
+
+sjmisc::frq(base_78$Edad_rec)
+```
+
+CEP N 79 (abril-mayo 2017)
+
+> **Plan + elegible en 2017: 18 a 19 años.** C2016 (1 año de Plan) tiene 18-19; C2017 (2 años) tiene 17-18 y solo entra parcialmente. Elegibles para noviembre de 2017: todo C2016 y el 64% de C2017 (los nacidos hasta el 19-nov-1999).
+
+```{r}
+sjmisc::find_var(base_79, "vot")
+sjmisc::frq(base_79$ELE_4)
+```
+
+CEP N 80 (julio-agosto 2017)
+
+> **Plan + elegible en 2017: 18 a 19 años.** Mismo grupo que en CEP 79.
+
+```{r}
+sjmisc::find_var(base_80, "vot")
+sjmisc::frq(base_80$ELE_5)
+```
+
+CEP N 81 (Septiembre-Octubre 2017)
+
+> **Plan + elegible en 2017: 18 a 19 años.** Mismo grupo que en CEP 79 y 80.
+
+```{r}
+sjmisc::find_var(base_81, "vot")
+sjmisc::frq(base_81$ELE_5)
+```
+
+## ¿Votó Ud. en la pasada elección presidencial y parlamentaria de noviembre de 2017?
+
+CEP N 82 (Octubre-Noviembre 2018) se pregunta por primera vez si votó en la elección pasada de presidencial y parlamentaria de 2017 (escala 1 a 2; si y no)
+
+> **Plan + voto 2017: 18 a 20 años.** Primera ola con voto retrospectivo del grupo. C2016 (1 año de Plan) tiene 19-20 y es 100% elegible; C2017 (2 años) tiene 18-19 y es 64% elegible; C2018 (3 años) tiene 17-18 y es 0% elegible, así que sus "No" son menores de edad, no abstenciones.
+
+```{r}
+sjmisc::find_var(base_82, "elecc")
+sjmisc::frq(base_82$DS_P25)
+```
+
+CEP N 83 (abril-junio 2019) ¿Votó Ud. en la pasada elección presidencial y parlamentaria de noviembre de 2017?
+
+> **Plan + voto 2017: 19 a 21 años.** C2016 tiene 20-21 y C2017 tiene 19-20. Los de 18-19 años son C2018 y C2019, que no podían votar en 2017.
+
+```{r}
+sjmisc::find_var(base_83, "elecc")
+sjmisc::frq(base_83$DS_P31)
+```
+
+CEP N 84 (Noviembre 2019-enero 2020) ¿Votó Ud. en la pasada elección presidencial y parlamentaria de noviembre de 2017?
+
+> **Plan + voto 2017: 20 a 21 años.** Última ola pre-estallido con esta pregunta. Solo C2016 (1 año de Plan) y C2017 (2 años) califican; la dosis útil sigue siendo muy baja.
+
+```{r}
+sjmisc::find_var(base_84, "elecc")
+sjmisc::frq(base_84$DS_P21)
+```
+
+## Elecciones 2020 a 2023, 2ª vuelta presidencial de 2021 e intención de voto 2025
+
+CEP N 85 (Agosto 2021) Elección pasada Plebiscito (Si; no) Votó Ud. en el plebiscito sobre una nueva constitución realizado en octubre del año pasado?
+
+CEP N 85 (Agosto 2021) Elección pasada convencionales, municipales, GR (Si; no)
+
+> **Plan + voto plebiscito 2020: 18 a 23 años.** Salto grande respecto de las olas anteriores: entran cinco cohortes con dosis de 1 a 5 años. C2016 (1 año) tiene 22-23; C2020 (5 años) tiene 18-19 y es 57% elegible; C2021 no podía votar.
+>
+> **Plan + voto megaelección mayo 2021: 18 a 23 años.** C2016 a C2020 son 100% elegibles y C2021 solo 13%.
+
+```{r}
+sjmisc::find_var(base_85, "pleb")
+sjmisc::frq(base_85$constitucion_4_a)
+sjmisc::find_var(base_85, "elec")
+sjmisc::frq(base_85$constitucion_5_a)
+
+sjmisc::frq(base_85$edad)
+```
+
+CEP N 86 (Abril - Mayo 2022) ¿Votó Ud. En la 1ra vuelta de la elección presidencial de noviembre del año pasado?
+
+CEP N 86 (Abril - Mayo 2022) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre del año pasado?
+
+> **Plan + voto 2021: 18 a 24 años.** Seis cohortes con dosis de 1 a 6 años. C2016 (1 año) tiene 23-24; C2020 (5 años) tiene 19-20 y es 100% elegible; C2021 (6 años) tiene 18-19 y es la única truncada (64% en 1ª vuelta, 72% en 2ª). El truncamiento afecta solo al extremo inferior de la banda, no a toda la comparación.
+
+```{r}
+sjmisc::find_var(base_86, "elec")
+sjmisc::frq(base_86$elec_part_56)
+sjmisc::frq(base_86$elec_part_37)
+
+sjmisc::frq(base_86$edad)
+```
+
+CEP N 88 (Noviembre - Diciembre 2022) ¿Votó Ud. en el plebiscito sobre una nueva constitución realizado en octubre del 2020?
+
+CEP N 88 (Noviembre - Diciembre 2022) El 4 de septiembre del 2022 se realizó el plebiscito de salida sobre la propuesta de Nueva Constitución. ¿Votó Ud. en esa elección?
+
+CEP N 88 (Noviembre - Diciembre 2022) ¿Votó Ud. en la 1ra vuelta de la elección presidencial de noviembre del 2021?
+
+CEP N 88 (Noviembre - Diciembre 2022) ¿Votó Ud. en la pasada elección presidencial de diciembre de 2021?
+
+> **Plan + voto plebiscito 2020: 20 a 24 años** (dosis 1 a 5).
+>
+> **Plan + voto 2021: 18 a 24 años** (dosis 1 a 6), con C2021 truncada en el extremo inferior.
+>
+> **Plan + voto plebiscito salida 2022: 18 a 24 años** (dosis 1 a 6), sin truncamiento: C2016 a C2021 son todas 100% elegibles. Es la primera vez que la banda completa del Plan queda limpia en una misma elección.
+
+```{r}
+sjmisc::find_var(base_88, "const")
+sjmisc::frq(base_88$constitucion_4_a)
+sjmisc::frq(base_88$constitucion_19)
+
+sjmisc::find_var(base_88, "elec")
+sjmisc::frq(base_88$elec_part_56)
+sjmisc::frq(base_88$elec_part_37)
+
+sjmisc::frq(base_88$edad)
+```
+
+CEP N 89 (Junio - Julio 2023) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+CEP N 89 (Junio - Julio 2023) El 4 de septiembre del 2022 se realizó el plebiscito de salida sobre la propuesta de Nueva Constitución. ¿Votó Ud. en esa elección?
+
+CEP N 89 (Junio - Julio 2023) El 7 de mayo de este año se realizaron las elecciones para consejeros constitucionales. ¿Votó Ud. en esa elección?
+
+> **Plan + voto 2021: 19 a 25 años** (dosis 1 a 6), con C2021 truncada.
+>
+> **Plan + voto plebiscito salida 2022: 18 a 25 años** (dosis 1 a 7); C2022 entra al 43%.
+>
+> **Plan + voto consejeros mayo 2023: 18 a 25 años** (dosis 1 a 7), sin truncamiento hasta C2022. Siete niveles de dosis observados en una sola elección: es la mejor ola de la serie para un diseño de dosis-respuesta.
+
+```{r}
+sjmisc::find_var(base_89, "elec")
+sjmisc::frq(base_89$elec_part_37)
+
+
+sjmisc::find_var(base_89, "const")
+sjmisc::frq(base_89$constitucion_19)
+sjmisc::frq(base_89$constitucion_34)
+
+sjmisc::frq(base_89$edad)
+```
+
+CEP N 90 (Septiembre - Octubre 2023) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+CEP N 90 (Septiembre - Octubre 2023) El 4 de septiembre del 2022 se realizó el plebiscito de salida sobre la propuesta de Nueva Constitución. ¿Votó Ud. en esa elección?
+
+CEP N 90 (Septiembre - Octubre 2023) El 7 de mayo de este año se realizaron las elecciones para consejeros constitucionales. ¿Votó Ud. en esa elección?
+
+> **Plan + voto 2021: 19 a 25 años** (dosis 1 a 6).
+>
+> **Plan + voto plebiscito salida 2022: 19 a 25 años** (dosis 1 a 7).
+>
+> **Plan + voto consejeros mayo 2023: 18 a 25 años** (dosis 1 a 7). Réplica de CEP 89 con la banda corrida un año: sirve para agrupar y ganar casos con la misma definición de cohortes.
+
+```{r}
+sjmisc::find_var(base_90, "elec")
+sjmisc::frq(base_90$elec_part_37)
+
+
+sjmisc::find_var(base_90, "const")
+sjmisc::frq(base_90$constitucion_19)
+sjmisc::frq(base_90$constitucion_34)
+
+sjmisc::frq(base_90$edad)
+```
+
+CEP N 91 (Junio - Julio 2024) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Plan + voto 2021: 20 a 26 años** (dosis 1 a 6). C2016 (1 año) tiene 25-26 y C2021 (6 años) tiene 20-21. Solo esta última está truncada.
+
+```{r}
+sjmisc::find_var(base_91, "elec")
+sjmisc::frq(base_91$elec_part_37)
+
+sjmisc::frq(base_91$edad)
+```
+
+CEP N 92 (Agosto - Septiembre 2024) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Plan + voto 2021: 20 a 26 años** (dosis 1 a 6). Mismo grupo que en CEP 91.
+
+```{r}
+sjmisc::find_var(base_92, "elec")
+sjmisc::frq(base_92$elec_part_37)
+
+sjmisc::frq(base_92$edad)
+```
+
+CEP N 93 (Marzo - Abril 2025) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Plan + voto 2021: 21 a 27 años** (dosis 1 a 6). El terreno cruza el 31 de marzo, que es el corte de ingreso escolar, así que cada cohorte se reparte en tres edades y la edad declarada identifica peor la cohorte que en el resto de las olas.
+
+```{r}
+sjmisc::find_var(base_93, "elec")
+sjmisc::frq(base_93$elec_part_37)
+
+sjmisc::frq(base_93$edad)
+```
+
+CEP N 94 (Mayo-Junio 2025) ¿Votó Ud. en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+> **Plan + voto 2021: 21 a 27 años** (dosis 1 a 6).
+
+```{r}
+sjmisc::find_var(base_94, "elec")
+sjmisc::frq(base_94$elec_part_37)
+sjmisc::frq(base_94$edad)
+```
+
+CEP N 95 (Septiembre-Octubre 2025) ¿Votó usted en la 2da vuelta de la elección presidencial de diciembre de 2021?
+
+CEP N 95 (Septiembre-Octubre 2025) ¿irá usted a votar en las próximas elecciones presidenciales de 2025?
+
+> **Plan + voto 2021: 21 a 27 años** (dosis 1 a 6).
+>
+> **Plan + intención de voto 2025: 18 a 27 años** (dosis 1 a 10), sin truncamiento hasta C2024. Es la banda más ancha y con más niveles de dosis de toda la serie, aunque el outcome es intención y no voto declarado.
+
+```{r}
+sjmisc::find_var(base_95, "elec")
+sjmisc::frq(base_95$elec_part_37)
+sjmisc::find_var(base_95, "vot")
+sjmisc::frq(base_95$elec_part_4)
+
+sjmisc::frq(base_95$edad)
+```
+
+# Guardar datos procesados
+
+```{r}
+saveRDS(data_voto, "input/data/proc/data_voto.rds")
+saveRDS(data_int, "input/data/proc/data_int.rds")
+```
