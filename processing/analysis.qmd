@@ -95,3 +95,181 @@ saveRDS(list(datos = int_df, modelos = list(reg_int1, reg_int2, reg_int3)),
 #| results: asis
 texreg::htmlreg(list(reg_int1, reg_int2, reg_int3))
 ```
+
+## Distintas especificaciones
+
+Las regresiones de interés político se reestiman con todas las combinaciones de tres decisiones: el control socioeconómico (nivel educacional o grupo socioeconómico), el tratamiento de los casos sin fecha de nacimiento (imputarlos desde la edad declarada o excluirlos) y el uso del ponderador de la encuesta (`pond`). En cada combinación se estiman los mismos tres modelos: sin controles (1), con el control (2) y con el control y la edad (3), sobre la misma muestra de casos completos.
+
+- **Control.** El nivel educacional se agrupa en cuatro categorías (referencia: básica) y el grupo socioeconómico en ABC1-C2, C3 y D-E (referencia: D-E).
+- **Imputación.** La versión sin imputación excluye los casos de las olas 85, 92 y 93 cuya fecha de nacimiento se imputó desde la edad declarada. La CEP 96 se mantiene en ambas versiones, porque no tiene fecha de nacimiento para ningún caso.
+- **Ponderación.** El ponderador de cada ola suma el número de casos de la ola.
+
+Todas las combinaciones usan errores estándar robustos HC1, porque los errores clásicos no son válidos con ponderadores. Por eso los errores de la combinación con nivel educacional, imputación y sin ponderar pueden diferir levemente de los de la tabla anterior.
+
+```{r}
+## Combinaciones -------------------------------------------------------------
+# Agrupación de gse (referencia: D-E)
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+
+combinaciones <- expand.grid(
+  control     = c("Nivel educacional", "Grupo socioeconómico"),
+  imputacion  = c("Con imputación", "Sin imputación"),
+  ponderacion = c("Sin ponderar", "Ponderado"),
+  stringsAsFactors = FALSE
+)
+
+# Tres modelos de una combinación, sobre la misma muestra de casos completos
+estimar_combinacion <- function(control, imputacion, ponderacion) {
+  var_control <- if (control == "Nivel educacional") "educ" else "gse3"
+  d <- data_int %>% dplyr::mutate(gse3 = agrupar_gse(gse))
+  if (imputacion == "Sin imputación") {
+    d <- d %>% dplyr::filter(!fecha_nac_imputada | ola == "96")
+  }
+  d <- d %>%
+    dplyr::select(ola, int_pol, educacion_ciudadana, dplyr::all_of(var_control),
+                  edad_nac, pond) %>%
+    na.omit() %>%
+    dplyr::mutate(peso = if (ponderacion == "Ponderado") pond else 1)
+  formulas <- list(
+    int_pol ~ educacion_ciudadana,
+    as.formula(paste("int_pol ~ educacion_ciudadana +", var_control)),
+    as.formula(paste("int_pol ~ educacion_ciudadana +", var_control, "+ edad_nac"))
+  )
+  lapply(formulas, function(f) lm(f, data = d, weights = peso))
+}
+
+modelos_combinaciones <- lapply(seq_len(nrow(combinaciones)), function(i) {
+  estimar_combinacion(combinaciones$control[i], combinaciones$imputacion[i],
+                      combinaciones$ponderacion[i])
+})
+
+## Resumen: coeficiente de educacion_ciudadana -------------------------------
+coef_hc1 <- function(m) {
+  s <- lmtest::coeftest(m, vcov. = sandwich::vcovHC(m, type = "HC1"))["educacion_ciudadana", ]
+  c(estimacion = unname(s[1]), ee = unname(s[2]), p = unname(s[4]))
+}
+
+tabla_combinaciones <- dplyr::bind_rows(lapply(seq_len(nrow(combinaciones)), function(i) {
+  dplyr::bind_rows(lapply(1:3, function(k) {
+    x <- coef_hc1(modelos_combinaciones[[i]][[k]])
+    data.frame(combinaciones[i, ], modelo = k, n = nobs(modelos_combinaciones[[i]][[k]]),
+               estimacion = x["estimacion"], ee = x["ee"], p = x["p"])
+  }))
+}))
+rownames(tabla_combinaciones) <- NULL
+tabla_combinaciones
+
+# Formato ancho: una fila por combinación, una columna por modelo
+estrellas <- function(p) dplyr::case_when(p < 0.001 ~ "***", p < 0.01 ~ "**", p < 0.05 ~ "*", TRUE ~ "")
+tabla_combinaciones_ancha <- tabla_combinaciones %>%
+  dplyr::mutate(celda = sprintf("%.3f%s (%.3f)", estimacion, estrellas(p), ee)) %>%
+  dplyr::select(control, imputacion, ponderacion, modelo, n, celda) %>%
+  dplyr::group_by(control, imputacion, ponderacion) %>%
+  dplyr::mutate(n = dplyr::first(n)) %>%
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(names_from = modelo, values_from = celda, names_prefix = "Modelo ")
+
+knitr::kable(tabla_combinaciones_ancha,
+             caption = "Coeficiente de educacion_ciudadana en interés político según la especificación (errores estándar HC1)")
+
+writeLines(knitr::kable(tabla_combinaciones_ancha, format = "html",
+                        caption = "Coeficiente de educacion_ciudadana en interés político según la especificación (errores estándar HC1)"),
+           "output/tables/modelo_interes_combinaciones.html")
+
+# Modelos y resúmenes para la presentación (index.qmd)
+saveRDS(list(combinaciones = combinaciones, modelos = modelos_combinaciones,
+             tabla = tabla_combinaciones, tabla_ancha = tabla_combinaciones_ancha),
+        "output/models/modelos_interes_combinaciones.rds")
+```
+
+# Diferencia en diferencias: interés político
+
+La cohorte con la asignatura envejece entre olas: las edades de 18 a 21 años aparecen sin tratamiento en la ola 85 y con tratamiento en las olas 92, 93, 95 y 96. En la ola 96 y en los casos sin fecha de nacimiento de las demás olas, el tratamiento se asigna desde la edad declarada (ver `preparation.qmd`). Se compara el cambio en `int_pol` de quienes tienen 18 a 21 años con el de quienes tienen 23 a 30. Los de 22 años quedan fuera del 2x2 porque mezclan tratados y no tratados. La ola 88 también queda fuera del 2x2: en diciembre de 2022, quienes tienen 18 años y parte de quienes tienen 19 ya habían cursado la asignatura, por lo que no sirve como período previo. El modelo con tratamiento individual (`m_did_twfe`) usa todas las olas.
+
+Ni el grupo de comparación ni los jóvenes del período previo están libres de tratamiento. El Plan de Formación Ciudadana (Ley 20.911) rige desde 2016, por lo que parte de quienes tienen 23 a 30 años tuvo uno o más años de Plan durante su escolaridad, y esa exposición crece entre olas a medida que cohortes más jóvenes entran a ese tramo de edad. Siguiendo a Callaway, Goodman-Bacon y Sant'Anna ("Difference-in-Differences with a Continuous Treatment"), cuando el grupo de comparación tiene una dosis positiva de tratamiento, el estimador compara dos niveles de exposición. En este caso, el estimador corresponde al efecto de la asignatura junto con una mayor exposición al Plan, en comparación con un grupo que tiene exposición positiva al Plan.
+
+La dosis de Plan (`dosis_plan`) se aproxima desde la fecha de nacimiento como los años de Plan hasta 4° medio en edad normativa, sin considerar repitencia. Como robustez, `m_did_2x2_edad_sinplan` reestima el 2x2 con efectos fijos de edad restringiendo los controles a cohortes sin Plan (`dosis_plan == 0`) y manteniendo a todos los jóvenes.
+
+```{r}
+## Muestra -------------------------------------------------------------------
+# Sin condicionar a educ
+did_int <- data_int %>%
+  dplyr::filter(edad_nac >= 18, edad_nac <= 30) %>%
+  dplyr::filter(!is.na(int_pol), !is.na(edad_nac), !is.na(educacion_ciudadana))
+
+# Conteos por edad, ola y tratamiento
+conteos_did <- dplyr::count(did_int, edad_nac, ola, educacion_ciudadana)
+conteos_did
+
+## 2x2 -----------------------------------------------------------------------
+# Solo la ola 85 como período previo: en la ola 88 (dic-2022) quienes tienen
+# 18 años y parte de quienes tienen 19 ya habían cursado la asignatura
+did_2x2 <- did_int %>%
+  dplyr::filter(edad_nac != 22, ola != "88") %>%
+  droplevels() %>%
+  dplyr::mutate(
+    joven = as.integer(edad_nac <= 21),
+    post  = as.integer(ola %in% c("92", "93", "95", "96"))
+  )
+
+# Medias de int_pol por ola y grupo de edad
+medias_did <- did_2x2 %>%
+  dplyr::group_by(ola, joven) %>%
+  dplyr::summarise(n = dplyr::n(), media = mean(int_pol), de = sd(int_pol),
+                   .groups = "drop")
+medias_did
+
+## Modelos -------------------------------------------------------------------
+# 2x2 con efectos fijos de ola (post queda absorbido por los EF de ola)
+m_did_2x2 <- lm(int_pol ~ joven + ola + joven:post, data = did_2x2)
+
+# 2x2 con efectos fijos de edad (joven queda absorbido por los EF de edad)
+m_did_2x2_edad <- lm(int_pol ~ factor(edad_nac) + ola + joven:post,
+                     data = did_2x2)
+
+# Efectos fijos de edad y ola, con el tratamiento individual
+m_did_twfe <- lm(int_pol ~ educacion_ciudadana + factor(edad_nac) + ola,
+                 data = did_int)
+
+## Exposición al Plan de Formación Ciudadana ---------------------------------
+# cohorte_4m: año en que, en edad normativa, cursó 4° medio (sin repitencia)
+# dosis_plan: años de Plan (Ley 20.911, desde 2016) durante la escolaridad
+did_2x2_plan <- did_2x2 %>%
+  dplyr::mutate(
+    cohorte_4m = as.integer(format(fecha_nac, "%Y")) +
+      dplyr::if_else(as.integer(format(fecha_nac, "%m")) >= 4, 18L, 17L),
+    dosis_plan = pmax(0L, cohorte_4m - 2015L)
+  )
+
+# Controles restringidos a cohortes sin Plan; los jóvenes se mantienen
+did_2x2_sinplan <- did_2x2_plan %>%
+  dplyr::filter(joven == 1 | dosis_plan == 0)
+
+dplyr::count(did_2x2_sinplan, ola, joven)
+
+# 2x2 con efectos fijos de edad y controles sin Plan
+m_did_2x2_edad_sinplan <- lm(int_pol ~ factor(edad_nac) + ola + joven:post,
+                             data = did_2x2_sinplan)
+
+texreg::htmlreg(list(m_did_2x2, m_did_2x2_edad, m_did_twfe, m_did_2x2_edad_sinplan),
+                file = "output/tables/modelo_did_interes.html")
+
+# Muestras, medias y modelos para la presentación (index.qmd). El modelo con
+# controles sin Plan se guarda aparte para no alterar la lista `modelos`
+saveRDS(list(datos = did_int, datos_2x2 = did_2x2, conteos = conteos_did,
+             medias = medias_did,
+             modelos = list(m_did_2x2, m_did_2x2_edad, m_did_twfe),
+             datos_2x2_sinplan = did_2x2_sinplan,
+             modelo_2x2_edad_sinplan = m_did_2x2_edad_sinplan),
+        "output/models/modelos_did_interes.rds")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(m_did_2x2, m_did_2x2_edad, m_did_twfe, m_did_2x2_edad_sinplan))
+```

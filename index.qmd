@@ -12,7 +12,9 @@ lang: es
 pacman::p_load(dplyr, gtsummary, texreg)
 
 res_int <- readRDS("output/models/modelos_interes.rds")
+res_comb <- readRDS("output/models/modelos_interes_combinaciones.rds")
 res_voto <- readRDS("output/models/modelos_voto.rds")
+res_did <- readRDS("output/models/modelos_did_interes.rds")
 
 # Nombres legibles para los coeficientes de las tablas de regresión
 renombrar <- function(m) {
@@ -22,6 +24,8 @@ renombrar <- function(m) {
   nombres <- gsub("educacion_ciudadana", "Educación ciudadana", nombres, fixed = TRUE)
   nombres <- gsub("edad_nac", "Edad", nombres, fixed = TRUE)
   nombres <- gsub("educ(?=\\p{Lu})", "", nombres, perl = TRUE)
+  nombres <- sub("^joven:post$", "Joven (18 a 21 años) × período posterior", nombres)
+  nombres <- sub("^joven$", "Joven (18 a 21 años)", nombres)
   nombres <- gsub(":", " × ", nombres, fixed = TRUE)
   tr@coef.names <- nombres
   tr
@@ -32,9 +36,9 @@ olas <- function(d) paste(levels(droplevels(d$ola)), collapse = ", ")
 
 # Presentación
 
-Este proyecto evalúa si la asignatura de Educación Ciudadana (3° y 4° medio desde 2020) y el Plan de Formación Ciudadana (Ley 20.911, desde 2016) se asocian con el interés político y la participación electoral de las cohortes expuestas, usando las olas 77 a 95 de la Encuesta CEP.
+Este proyecto evalúa si la asignatura de Educación Ciudadana (3° y 4° medio desde 2020) y el Plan de Formación Ciudadana (Ley 20.911, desde 2016) se asocian con el interés político y la participación electoral de las cohortes expuestas, usando las olas 77 a 96 de la Encuesta CEP.
 
-En los resultados que siguen, `educacion_ciudadana` identifica a quienes tuvieron la asignatura según su fecha de nacimiento: nacidos desde el 01-abr-2003, que en edad normativa cursaron 3° medio en 2020 o después. Los casos sin fecha de nacimiento quedan fuera de los modelos. El detalle de la construcción está en el documento de [preparación](processing/preparation.qmd) y los modelos en el de [análisis](processing/analysis.qmd).
+En los resultados que siguen, `educacion_ciudadana` identifica a quienes tuvieron la asignatura según su fecha de nacimiento: nacidos desde el 01-abr-2003, que en edad normativa cursaron 3° medio en 2020 o después. En los análisis de voto, los casos sin fecha de nacimiento quedan fuera de los modelos. En los análisis de interés político, la fecha de nacimiento se imputa desde la edad declarada cuando no está disponible: en toda la CEP 96 (mayo de 2026), que no tiene esa información, y en los casos sin fecha de las olas 85, 92 y 93. El detalle de la construcción está en el documento de [preparación](processing/preparation.qmd) y los modelos en el de [análisis](processing/analysis.qmd).
 
 # Interés político
 
@@ -79,6 +83,106 @@ texreg::htmlreg(
   custom.note = "%stars. Errores estándar entre paréntesis."
 )
 ```
+
+## Distintas especificaciones
+
+La tabla siguiente muestra el coeficiente de la asignatura en las mismas tres regresiones bajo todas las combinaciones de tres decisiones de análisis: el control socioeconómico (nivel educacional o grupo socioeconómico), el tratamiento de los casos sin fecha de nacimiento en las olas 85, 92 y 93 (imputarlos desde la edad declarada o excluirlos) y el uso del ponderador de la encuesta. El grupo socioeconómico se agrupa en ABC1-C2, C3 y D-E. La CEP 96 se incluye en todas las versiones, con su fecha de nacimiento imputada. Todas las estimaciones usan errores estándar robustos HC1.
+
+```{r}
+#| label: tabla-combinaciones
+#| echo: false
+
+res_comb$tabla_ancha %>%
+  dplyr::rename(Control = control, `Casos sin fecha` = imputacion,
+                Ponderación = ponderacion) %>%
+  knitr::kable(caption = "Coeficiente de la asignatura de Educación Ciudadana sobre el interés político según la especificación")
+```
+
+Modelo 1: sin controles. Modelo 2: con el control socioeconómico. Modelo 3: con el control socioeconómico y la edad. \* p < 0,05; \*\* p < 0,01; \*\*\* p < 0,001. Errores estándar HC1 entre paréntesis.
+
+```{r}
+#| label: interp-combinaciones
+#| echo: false
+
+tc <- res_comb$tabla
+f2 <- function(x) formatC(round(x, 2) + 0, format = "f", digits = 2, decimal.mark = ",")
+rango <- function(x) paste(f2(min(x)), "y", f2(max(x)))
+m1 <- tc %>% dplyr::filter(modelo == 1)
+m2_gse <- tc %>% dplyr::filter(modelo == 2, control == "Grupo socioeconómico", ponderacion == "Sin ponderar")
+m2_educ <- tc %>% dplyr::filter(modelo == 2, control == "Nivel educacional")
+m3 <- tc %>% dplyr::filter(modelo == 3)
+m3_sig <- m3 %>% dplyr::filter(p < 0.05)
+```
+
+Sin controles (modelo 1), la asociación entre la asignatura y el interés político es positiva en todas las especificaciones, con coeficientes entre `r rango(m1$estimacion)`. Es significativa sin ponderar; al ponderar, el coeficiente se reduce a cerca de la mitad y el error estándar aumenta, por lo que deja de ser significativa. Al agregar el control socioeconómico (modelo 2), el coeficiente se acerca a cero con el nivel educacional (entre `r rango(m2_educ$estimacion)`) y se mantiene en torno a `r f2(mean(m2_gse$estimacion))` con el grupo socioeconómico sin ponderar. Esa diferencia se debe a que el nivel educacional absorbe en parte la edad de quienes cursaron la asignatura, mientras que el grupo socioeconómico no lo hace. Al controlar además por la edad (modelo 3), los coeficientes quedan entre `r rango(m3$estimacion)`. `r if (nrow(m3_sig) == 0) "Ninguno es significativo al 5%." else paste0("Solo ", nrow(m3_sig), " de las ", nrow(m3), " especificaciones es significativa al 5%, y su coeficiente es negativo (", f2(m3_sig$estimacion[1]), ").")` Con ninguna combinación de decisiones de análisis aparece un efecto positivo de la asignatura sobre el interés político una vez considerada la edad.
+
+# Diferencia en diferencias: interés político
+
+Este análisis aprovecha que la cohorte con la asignatura envejece entre olas. En la ola 85, que forma el período previo, las edades de 18 a 21 años corresponden a cohortes sin la asignatura; en las olas 92, 93, 95 y 96, que forman el período posterior, esas mismas edades corresponden a cohortes que sí la cursaron. La ola 88 se excluye de los modelos 2x2, porque en diciembre de 2022 quienes tenían 18 años y parte de quienes tenían 19 ya habían cursado la asignatura. Se compara el cambio en el interés político entre ambos períodos de quienes tienen 18 a 21 años con el cambio de quienes tienen 23 a 30 años, grupo que en ninguna ola tuvo la asignatura. Las personas de 22 años se excluyen de esta comparación porque mezclan tratados y no tratados. La muestra incluye `r format(nrow(res_did$datos), big.mark = ".", decimal.mark = ",")` casos de 18 a 30 años con información completa en interés político y edad, sin condicionar al nivel educacional. Cuando no hay fecha de nacimiento, el tratamiento se asigna desde la edad declarada.
+
+La estimación descansa en el supuesto de tendencias paralelas: en ausencia de la asignatura, el interés político de ambos grupos de edad habría evolucionado de la misma forma entre olas. El primer modelo estima la diferencia en diferencias con un indicador de grupo joven y efectos fijos de ola. El segundo reemplaza ese indicador por efectos fijos de cada edad. El tercero usa efectos fijos de edad y ola junto al tratamiento individual construido desde la fecha de nacimiento, por lo que incluye también a las personas de 22 años y la ola 88.
+
+## Medias por celda
+
+```{r}
+#| label: medias-did
+#| echo: false
+
+res_did$medias %>%
+  dplyr::mutate(
+    periodo = dplyr::if_else(ola %in% c("92", "93", "95", "96"), "Posterior", "Previo"),
+    grupo = dplyr::if_else(joven == 1, "18 a 21 años", "23 a 30 años")
+  ) %>%
+  dplyr::select(Ola = ola, Período = periodo, `Grupo de edad` = grupo,
+                n, Media = media, DE = de) %>%
+  knitr::kable(digits = 2, format.args = list(decimal.mark = ","),
+               caption = "Interés político (1-5) por ola y grupo de edad")
+```
+
+## Regresiones
+
+En los modelos "2x2" y "2x2 con EF edad" el estimador de diferencia en diferencias es el coeficiente de la interacción entre grupo joven y período posterior; en el modelo "EF edad y ola" es el coeficiente de Educación ciudadana.
+
+```{r}
+#| label: reg-did
+#| echo: false
+#| results: asis
+
+texreg::htmlreg(
+  lapply(res_did$modelos, renombrar),
+  custom.model.names = c("2x2", "2x2 con EF edad", "EF edad y ola"),
+  omit.coef = "^ola|^factor\\(",
+  custom.gof.rows = list("EF ola" = c("Sí", "Sí", "Sí"),
+                         "EF edad" = c("No", "Sí", "Sí")),
+  caption = "Diferencia en diferencias: asignatura de Educación Ciudadana e interés político",
+  caption.above = TRUE,
+  custom.note = "%stars. Errores estándar entre paréntesis."
+)
+```
+
+```{r}
+#| label: interp-did
+#| echo: false
+
+# Estimador, error estándar, p e intervalo de confianza al 95% de cada modelo
+estimador_did <- function(m, coef) {
+  s <- summary(m)$coefficients[coef, ]
+  ic <- confint(m)[coef, ]
+  list(b = s[1], ee = s[2], p = s[4], li = ic[1], ls = ic[2])
+}
+# round() + 0 evita que se imprima "-0,00"
+num <- function(x, d = 2) formatC(round(x, d) + 0, format = "f", digits = d, decimal.mark = ",")
+# p cercano a 1 se reporta como "p > 0,99"
+num_p <- function(p) if (p > 0.99) "> 0,99" else paste("=", num(p))
+
+e1 <- estimador_did(res_did$modelos[[1]], "joven:post")
+e2 <- estimador_did(res_did$modelos[[2]], "joven:post")
+e3 <- estimador_did(res_did$modelos[[3]], "educacion_ciudadana")
+```
+
+Los tres modelos entregan estimaciones cercanas a cero y sin significancia estadística. En el modelo 2x2 el estimador es `r num(e1$b)` (EE = `r num(e1$ee)`; p `r num_p(e1$p)`), en el modelo 2x2 con efectos fijos de edad es `r num(e2$b)` (EE = `r num(e2$ee)`; p `r num_p(e2$p)`) y en el modelo con efectos fijos de edad y ola es `r num(e3$b)` (EE = `r num(e3$ee)`; p `r num_p(e3$p)`). Con estos datos no hay evidencia de que la asignatura de Educación Ciudadana haya aumentado el interés político de las cohortes que la cursaron.
+
+Este resultado debe leerse con cautela. Los intervalos de confianza al 95% son amplios: en el modelo con efectos fijos de edad y ola va de `r num(e3$li)` a `r num(e3$ls)` puntos en una escala de 1 a 5, por lo que los datos no permiten descartar efectos moderados en ninguna dirección. Además, al contar con una sola ola en el período previo, el supuesto de tendencias paralelas no puede contrastarse con los datos. La coincidencia entre los tres modelos, que difieren en la muestra y en la forma de controlar la edad, indica que la ausencia de efecto no depende de una especificación particular.
 
 # Voto en la 2ª vuelta presidencial de 2021
 

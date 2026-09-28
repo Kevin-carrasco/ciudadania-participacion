@@ -39,7 +39,7 @@ base_92 <- read_sav("input/data/original/base_92.sav")
 base_93 <- read_sav("input/data/original/base_93.sav")
 base_94 <- read_sav("input/data/original/base_94.sav")
 base_95 <- read_sav("input/data/original/base_95.sav")
-#base_96 <- read_sav("input/data/original/base_96.sav")
+base_96 <- read_sav("input/data/original/base_96.sav")
 
 base_edades <- read_dta("input/data/original/base_85_95_fecha_nacimiento.dta")
 ```
@@ -108,7 +108,11 @@ En las olas 88 a 95, `edad_nac` coincide con la edad declarada en 75-86% de los 
 
 - `edad`: edad declarada en la encuesta CEP.
 - `edad_nac`: años cumplidos a la fecha de terreno, calculados desde la fecha de nacimiento.
-- `educacion_ciudadana`: 1 si nació desde el 01-abr-2003, es decir, en edad normativa cursó 3° medio en 2020 o después y tuvo la asignatura de Educación Ciudadana. Es un proxy: no considera repitencia ni ingreso escolar adelantado o tardío. Queda en NA para quienes no informan fecha de nacimiento.
+- `educacion_ciudadana`: 1 si nació desde el 01-abr-2003, es decir, en edad normativa cursó 3° medio en 2020 o después y tuvo la asignatura de Educación Ciudadana. Es un proxy: no considera repitencia ni ingreso escolar adelantado o tardío. En la base de voto queda en NA para quienes no informan fecha de nacimiento; en la base de interés político esos casos se imputan (ver más abajo).
+
+La CEP 96 (mayo de 2026) no está en el archivo de fechas de nacimiento, por lo que en esa ola solo se dispone de la edad declarada. Para aplicar las mismas reglas, se imputa como fecha de nacimiento el punto medio del rango compatible con la edad declarada: la fecha de terreno menos la edad más medio año. Con esta imputación `edad_nac` coincide con la edad declarada, y `educacion_ciudadana` queda en 1 cuando la mayor parte del rango de nacimiento de esa edad es posterior al 01-abr-2003. En mayo de 2026 esto marca como tratadas las edades de 18 a 22 años; la edad de 23 queda sin tratamiento, aunque cerca de un octavo de ella (nacidos entre abril y mayo de 2003) tuvo la asignatura. La variable `fecha_nac_imputada` identifica estos casos.
+
+En la base de interés político se aplica la misma imputación a los casos de las demás olas que no informan fecha de nacimiento (375 en la CEP 85, 360 en la 92 y 280 en la 93). Quienes tienen fecha real la conservan. En la base de voto no se imputa, porque la edad declarada no permite ubicar con precisión la ventana de nacimiento que define quién tuvo la asignatura y podía votar en diciembre de 2021. En la CEP 85 la edad declarada calza con una fecha unos 8 meses posterior al terreno, por lo que las fechas imputadas en esa ola tienden a ser algo anteriores a las reales; como en esa ola casi no hay tratados, el efecto sobre la clasificación es menor.
 
 ```{r}
 fechas_terreno <- tibble::tribble(
@@ -122,8 +126,12 @@ fechas_terreno <- tibble::tribble(
   "92", "2024-09-01",  # agosto-septiembre 2024
   "93", "2025-04-01",  # marzo-abril 2025
   "94", "2025-06-01",  # mayo-junio 2025
-  "95", "2025-10-01"   # septiembre-octubre 2025
+  "95", "2025-10-01",  # septiembre-octubre 2025
+  "96", "2026-05-15"   # mayo 2026 (encuesta_a, encuesta_m)
 ) %>% dplyr::mutate(fecha_terreno = as.Date(fecha_terreno))
+
+# Olas sin fecha de nacimiento: se imputa desde la edad declarada
+olas_sin_fecha <- "96"
 
 # Años cumplidos entre dos fechas
 edad_a <- function(nac, ref) {
@@ -132,13 +140,21 @@ edad_a <- function(nac, ref) {
   (r$year - n$year) - ((r$mon < n$mon) | (r$mon == n$mon & r$mday < n$mday))
 }
 
-# Recodificación común a las bases de voto e interés político
-agregar_nacimiento <- function(d) {
+# Recodificación común a las bases de voto e interés político.
+# imputar_faltantes = TRUE imputa también los casos sin fecha de nacimiento
+# de las demás olas (solo en la base de interés político)
+agregar_nacimiento <- function(d, imputar_faltantes = FALSE) {
   d %>%
     dplyr::left_join(fechas_nac, by = "id_bu") %>%
     dplyr::left_join(fechas_terreno, by = "ola") %>%
     dplyr::mutate(
       edad     = as.numeric(edad),
+      # Punto medio del rango de nacimiento compatible con la edad declarada
+      fecha_nac_imputada = ola %in% olas_sin_fecha |
+        (imputar_faltantes & is.na(fecha_nac) & !is.na(edad)),
+      fecha_nac = dplyr::if_else(fecha_nac_imputada,
+                                 fecha_terreno - round(365.25 * (edad + 0.5)),
+                                 fecha_nac),
       edad_nac = edad_a(fecha_nac, fecha_terreno),
       educacion_ciudadana = dplyr::if_else(fecha_nac >= as.Date("2003-04-01"),
                                            1L, 0L)
@@ -250,7 +266,7 @@ sjmisc::frq(base_85$esc_nivel_1)
 
 sjmisc::frq(base_85$interes_pol_1_b)
 
-base_2021 <- base_85 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+base_2021 <- base_85 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
 int_pol=interes_pol_1_b)
 ```
 
@@ -270,7 +286,7 @@ sjmisc::frq(base_86$elec_part_37)
 sjmisc::frq(base_86$esc_nivel_1)
 sjmisc::frq(base_86$edad)
 
-base_2022 <- base_86 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+base_2022 <- base_86 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
 primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37)
 ```
 
@@ -298,7 +314,7 @@ sjmisc::frq(base_88$elec_part_37)
 
 sjmisc::frq(base_88$interes_pol_1_b)
 
-base_2022_2 <- base_88 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+base_2022_2 <- base_88 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
 const_1=constitucion_4_a, const_2=constitucion_19,
 primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
@@ -326,7 +342,7 @@ sjmisc::frq(base_89$constitucion_34)
 
 sjmisc::frq(base_89$edad)
 
-base_2023 <- base_89 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1,
+base_2023 <- base_89 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
 const_1=constitucion_19, const_2=constitucion_34,
 segunda_vuelta=elec_part_37)
 ```
@@ -354,7 +370,7 @@ sjmisc::frq(base_90$constitucion_34)
 
 sjmisc::frq(base_90$edad)
 
-base_2023_2 <- base_90 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+base_2023_2 <- base_90 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
 const_1=constitucion_19, const_2=constitucion_34,
 segunda_vuelta=elec_part_37)
 ```
@@ -371,7 +387,7 @@ sjmisc::frq(base_91$elec_part_37)
 
 sjmisc::frq(base_91$edad)
 
-base_2024 <- base_91 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+base_2024 <- base_91 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37)
 ```
 
@@ -386,7 +402,7 @@ sjmisc::frq(base_92$elec_part_37)
 
 sjmisc::frq(base_92$interes_pol_1_b)
 
-base_2024_2 <- base_92 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+base_2024_2 <- base_92 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -401,7 +417,7 @@ sjmisc::frq(base_93$elec_part_37)
 sjmisc::frq(base_93$esc_nivel_1_c)
 sjmisc::frq(base_93$interes_pol_1_b)
 
-base_2025 <- base_93 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+base_2025 <- base_93 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -415,7 +431,7 @@ sjmisc::find_var(base_94, "elec")
 sjmisc::frq(base_94$elec_part_37)
 sjmisc::frq(base_94$edad)
 
-base_2025_2 <- base_94 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+base_2025_2 <- base_94 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37)
 ```
 
@@ -435,8 +451,21 @@ sjmisc::frq(base_95$elec_part_4)
 
 sjmisc::frq(base_95$interes_pol_1_b)
 
-base_2025_3 <- base_95 %>% dplyr::select(id_bu, edad, educ=esc_nivel_1_c,
+base_2025_3 <- base_95 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
+int_pol=interes_pol_1_b)
+```
+
+CEP N 96 (Mayo 2026) ¿Cuán interesado está usted en la política?
+
+> Solo se usa para interés político: las preguntas de voto de esta ola refieren a otras elecciones. No hay fecha de nacimiento para esta ola, por lo que se usa la edad declarada (ver sección "Fecha de nacimiento"). En mayo de 2026 la cohorte con curso completa tiene 22 o 23 años.
+
+```{r}
+sjmisc::frq(base_96$interes_pol_1_b)
+sjmisc::frq(base_96$esc_nivel_1_c)
+sjmisc::frq(base_96$edad)
+
+base_2026 <- base_96 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
 int_pol=interes_pol_1_b)
 ```
 
@@ -524,6 +553,10 @@ Se conservan las 11 categorías en `educ_det`. `educ` las agrupa en cuatro segú
 | Técnica | 5 técnica incompleta, 6 técnica completa |
 | Universitaria o más | 7 a 10: universitaria y postgrado, incompletos o completos |
 
+El grupo socioeconómico (`gse`) tiene los mismos códigos en todas las olas (1 = ABC1, 2 = C2, 3 = C3, 4 = D, 5 = E) y casi no tiene casos perdidos. En la CEP 85 corresponde a una asignación visual del encuestador ("GSE VISUAL"); en las demás olas la base no documenta el método de construcción.
+
+El ponderador de cada ola (`pond`) está normalizado para que su suma sea igual al número de casos de la ola (media 1), por lo que las olas agrupadas conservan su peso relativo. Las bases no incluyen identificadores de conglomerado, solo `estrato`.
+
 ```{r}
 # Etiquetas de nivel educacional, códigos 0 a 10
 etiquetar_educ <- function(x) {
@@ -550,6 +583,7 @@ data_voto <- data_voto %>%
     voto = car::recode(segunda_vuelta, "1=1; 2=0; else=NA"),
     educ_det = etiquetar_educ(educ),
     educ     = agrupar_educ(educ),
+    gse      = factor(gse, levels = 1:5, labels = c("ABC1", "C2", "C3", "D", "E")),
     ola      = factor(ola)
   )
 
@@ -562,7 +596,7 @@ sjmisc::frq(data_voto$voto)
 
 # Base agrupada: interés político
 
-Olas CEP 85, 88, 92, 93 y 95 (las que traen `interes_pol_1_b`), con `educacion_ciudadana` definida desde la fecha de nacimiento (nacido desde el 01-abr-2003), sin exigir haber estado habilitado para votar en 2021.
+Olas CEP 85, 88, 92, 93, 95 y 96 (las que traen `interes_pol_1_b`), con `educacion_ciudadana` definida desde la fecha de nacimiento (nacido desde el 01-abr-2003), sin exigir haber estado habilitado para votar en 2021.
 
 ```{r}
 names(base_2021)
@@ -570,6 +604,7 @@ names(base_2022_2)
 names(base_2024_2)
 names(base_2025)
 names(base_2025_3)
+names(base_2026)
 
 ## 1) Juntar las bases -------------------------------------------------------
 
@@ -578,7 +613,8 @@ bases_int <- list(
   "88" = base_2022_2,  # CEP 88, noviembre-diciembre 2022
   "92" = base_2024_2,  # CEP 92, agosto-septiembre 2024
   "93" = base_2025,    # CEP 93, marzo-abril 2025
-  "95" = base_2025_3   # CEP 95, septiembre-octubre 2025
+  "95" = base_2025_3,  # CEP 95, septiembre-octubre 2025
+  "96" = base_2026     # CEP 96, mayo 2026 (sin fecha de nacimiento)
 ) %>% lapply(sin_labels)
 
 # CEP 85 no trae ninguna variable de voto: sus filas quedan con NA en
@@ -590,16 +626,19 @@ base_pooled_int <- dplyr::bind_rows(bases_int, .id = "ola")
 # votar en 2021, así que las cohortes posteriores (4° medio 2022, 2023 y
 # 2024) también quedan con educacion_ciudadana = 1.
 
+# Los casos sin fecha de nacimiento se imputan desde la edad declarada
 data_int <- base_pooled_int %>%
-  agregar_nacimiento() %>%
-  dplyr::relocate(ola, fecha_terreno, fecha_nac, edad, edad_nac,
-                  educacion_ciudadana)
+  agregar_nacimiento(imputar_faltantes = TRUE) %>%
+  dplyr::relocate(ola, fecha_terreno, fecha_nac, fecha_nac_imputada, edad,
+                  edad_nac, educacion_ciudadana)
 
 ## Chequeo
+# acuerdo_edad se calcula solo con fechas reales
 data_int %>%
   dplyr::group_by(ola) %>%
-  dplyr::summarise(n = dplyr::n(), con_fecha = sum(!is.na(fecha_nac)),
-                   acuerdo_edad = round(mean(edad_nac == edad, na.rm = TRUE), 3))
+  dplyr::summarise(n = dplyr::n(), fecha_real = sum(!fecha_nac_imputada & !is.na(fecha_nac)),
+                   imputada = sum(fecha_nac_imputada),
+                   acuerdo_edad = round(mean((edad_nac == edad)[!fecha_nac_imputada], na.rm = TRUE), 3))
 
 sjmisc::frq(data_int$educacion_ciudadana)
 dplyr::count(data_int, ola, educacion_ciudadana)
@@ -622,6 +661,7 @@ data_int <- data_int %>%
     educ     = dplyr::if_else(ola == "85", educ - 1, educ),
     educ_det = etiquetar_educ(educ),
     educ     = agrupar_educ(educ),
+    gse      = factor(gse, levels = 1:5, labels = c("ABC1", "C2", "C3", "D", "E")),
     ola      = factor(ola)
   )
 

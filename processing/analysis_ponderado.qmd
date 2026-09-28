@@ -1,0 +1,277 @@
+---
+title: "Interés político con ponderadores"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+Este documento reestima los análisis de interés político usando el ponderador de la Encuesta CEP (`pond`), como prueba de robustez. Cada especificación se estima sin ponderar y ponderada sobre la misma muestra, con errores estándar robustos HC1 en ambas versiones, por lo que los errores de la columna sin ponderar pueden diferir levemente de los reportados en los documentos principales. Carga los datos procesados en `preparation.qmd`. La tabla de comparación se guarda en `output/tables/ponderado_comparacion.html` y los resultados en `output/models/modelos_ponderados.rds`.
+
+El ponderador de cada ola suma el número de casos de la ola, de modo que las olas agrupadas conservan su peso relativo. Las bases no incluyen identificadores de conglomerado, por lo que no es posible calcular errores estándar que consideren el diseño muestral completo. Los jóvenes están subrepresentados en la muestra y reciben ponderadores mayores que el promedio, lo que aumenta su peso en las estimaciones y también la varianza.
+
+Las muestras, especificaciones y definiciones de tratamiento son las mismas de `analysis.qmd`, `analysis_gse.qmd`, `analysis_jovenes.qmd` y `analysis_did_interes.qmd`.
+
+# Librerías
+
+```{r}
+pacman::p_load(dplyr, tidyr, sandwich, lmtest, marginaleffects)
+```
+
+# Datos procesados
+
+```{r}
+data_int <- readRDS("input/data/proc/data_int.rds")
+
+# Agrupación de gse (referencia: D-E), igual que en analysis_gse.qmd
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+data_int <- data_int %>% dplyr::mutate(gse3 = agrupar_gse(gse))
+
+# Ponderador medio por tratamiento entre quienes tienen 30 años o menos
+data_int %>%
+  dplyr::filter(edad_nac <= 30) %>%
+  dplyr::group_by(educacion_ciudadana) %>%
+  dplyr::summarise(n = dplyr::n(), pond_medio = mean(pond))
+```
+
+# Funciones auxiliares
+
+```{r}
+# Matriz de varianzas robusta HC1
+vc <- function(m) sandwich::vcovHC(m, type = "HC1")
+
+# Coeficiente con error estándar HC1
+coef_hc1 <- function(m, v) {
+  s <- lmtest::coeftest(m, vcov. = vc(m))[v, ]
+  c(estimacion = unname(s[1]), ee = unname(s[2]), p = unname(s[4]))
+}
+
+# Estima un modelo lineal sin ponderar y ponderado y devuelve el coeficiente v
+comparar_lm <- function(analisis, modelo, formula, datos, v) {
+  m0 <- lm(formula, data = datos)
+  m1 <- lm(formula, data = datos, weights = pond)
+  a <- coef_hc1(m0, v); b <- coef_hc1(m1, v)
+  data.frame(analisis, modelo, n = nobs(m0),
+             sin_ponderar = a["estimacion"], ee_sin = a["ee"], p_sin = a["p"],
+             ponderado = b["estimacion"], ee_pond = b["ee"], p_pond = b["p"])
+}
+
+resultados <- list()
+agregar <- function(x) resultados[[length(resultados) + 1]] <<- x
+```
+
+# Regresiones de interés político
+
+```{r}
+## Con nivel educacional (analysis.qmd) --------------------------------------
+int_df <- data_int %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, educ, edad_nac, pond) %>%
+  na.omit()
+
+agregar(comparar_lm("Regresión (educ)", "1: sin controles",
+                    int_pol ~ educacion_ciudadana, int_df, "educacion_ciudadana"))
+agregar(comparar_lm("Regresión (educ)", "2: + educ",
+                    int_pol ~ educacion_ciudadana + educ, int_df, "educacion_ciudadana"))
+agregar(comparar_lm("Regresión (educ)", "3: + educ y edad",
+                    int_pol ~ educacion_ciudadana + educ + edad_nac, int_df, "educacion_ciudadana"))
+
+## Con grupo socioeconómico (analysis_gse.qmd) -------------------------------
+int_gse <- data_int %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, gse3, edad_nac, pond) %>%
+  na.omit()
+
+agregar(comparar_lm("Regresión (gse)", "2: + gse",
+                    int_pol ~ educacion_ciudadana + gse3, int_gse, "educacion_ciudadana"))
+agregar(comparar_lm("Regresión (gse)", "3: + gse y edad",
+                    int_pol ~ educacion_ciudadana + gse3 + edad_nac, int_gse, "educacion_ciudadana"))
+
+## Jóvenes (analysis_jovenes.qmd) --------------------------------------------
+for (lim in c(30, 35)) {
+  dj <- data_int %>%
+    dplyr::filter(edad_nac < lim) %>%
+    dplyr::select(ola, int_pol, educacion_ciudadana, educ, gse3, edad_nac, pond) %>%
+    na.omit()
+  etiqueta <- paste("Menores de", lim)
+  agregar(comparar_lm(etiqueta, "1: sin controles", int_pol ~ educacion_ciudadana, dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "2: + educ", int_pol ~ educacion_ciudadana + educ, dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "3: + educ y edad", int_pol ~ educacion_ciudadana + educ + edad_nac, dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "4: + gse", int_pol ~ educacion_ciudadana + gse3, dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "5: + gse y edad", int_pol ~ educacion_ciudadana + gse3 + edad_nac, dj, "educacion_ciudadana"))
+}
+```
+
+# Diferencia en diferencias (analysis.qmd)
+
+```{r}
+## Muestras ------------------------------------------------------------------
+did_int <- data_int %>%
+  dplyr::filter(edad_nac >= 18, edad_nac <= 30) %>%
+  dplyr::filter(!is.na(int_pol), !is.na(edad_nac), !is.na(educacion_ciudadana))
+
+did_2x2 <- did_int %>%
+  dplyr::filter(edad_nac != 22, ola != "88") %>%
+  droplevels() %>%
+  dplyr::mutate(
+    joven = as.integer(edad_nac <= 21),
+    post  = as.integer(ola %in% c("92", "93", "95", "96")),
+    cohorte_4m = as.integer(format(fecha_nac, "%Y")) +
+      dplyr::if_else(as.integer(format(fecha_nac, "%m")) >= 4, 18L, 17L),
+    dosis_plan = pmax(0L, cohorte_4m - 2015L)
+  )
+
+did_2x2_sinplan <- did_2x2 %>% dplyr::filter(joven == 1 | dosis_plan == 0)
+
+## Modelos -------------------------------------------------------------------
+agregar(comparar_lm("DiD analysis.qmd", "2x2",
+                    int_pol ~ joven + ola + joven:post, did_2x2, "joven:post"))
+agregar(comparar_lm("DiD analysis.qmd", "2x2 con EF edad",
+                    int_pol ~ factor(edad_nac) + ola + joven:post, did_2x2, "joven:post"))
+agregar(comparar_lm("DiD analysis.qmd", "EF edad y ola",
+                    int_pol ~ educacion_ciudadana + factor(edad_nac) + ola, did_int, "educacion_ciudadana"))
+agregar(comparar_lm("DiD analysis.qmd", "2x2 con EF edad, controles sin Plan",
+                    int_pol ~ factor(edad_nac) + ola + joven:post, did_2x2_sinplan, "joven:post"))
+```
+
+# Diferencia en diferencias escalonada (analysis_did_interes.qmd)
+
+La estructura del diseño (cohortes de adopción `g`, tratamiento `W` y celdas mixtas) se define igual que en el documento principal, con proporciones de tratados sin ponderar, para que la comparación refleje solo el efecto de ponderar la estimación. El ATT agregado de M2 pondera los efectos de celda por la suma de ponderadores de cada celda en la versión ponderada y por su número de casos en la versión sin ponderar. Los efectos parciales promedio sobre los tratados de los modelos no lineales se promedian con el ponderador en la versión ponderada. El logit binario se estima por cuasi verosimilitud, que entrega los mismos coeficientes que el logit y admite ponderadores no enteros.
+
+```{r}
+## Estructura ----------------------------------------------------------------
+did <- did_int %>%
+  dplyr::mutate(
+    ola_num = as.numeric(as.character(ola)),
+    cohorte_4m = as.integer(format(fecha_nac, "%Y")) +
+      dplyr::if_else(as.integer(format(fecha_nac, "%m")) >= 4, 18L, 17L),
+    dosis_plan = pmax(0L, cohorte_4m - 2015L)
+  )
+
+celdas <- did %>%
+  dplyr::group_by(edad_nac, ola_num) %>%
+  dplyr::summarise(n = dplyr::n(), suma_pond = sum(pond),
+                   prop_trat = mean(educacion_ciudadana), .groups = "drop")
+
+cohortes <- celdas %>%
+  dplyr::group_by(edad_nac) %>%
+  dplyr::summarise(g = if (any(prop_trat >= 0.5)) min(ola_num[prop_trat >= 0.5]) else 0)
+
+celdas <- celdas %>%
+  dplyr::left_join(cohortes, by = "edad_nac") %>%
+  dplyr::mutate(W = as.integer(g > 0 & ola_num >= g),
+                mixta = prop_trat >= 0.1 & prop_trat <= 0.9)
+
+primera_ola <- min(did$ola_num)
+
+d_est <- did %>%
+  dplyr::left_join(cohortes, by = "edad_nac") %>%
+  dplyr::filter(g != primera_ola) %>%
+  dplyr::mutate(W = as.integer(g > 0 & ola_num >= g),
+                y01 = (int_pol - 1) / 4,
+                int_alto = as.integer(int_pol >= 3))
+
+celdas_tr <- celdas %>%
+  dplyr::filter(W == 1, g != primera_ola) %>%
+  dplyr::mutate(nombre = paste0("c_", edad_nac, "_", ola_num))
+for (i in seq_len(nrow(celdas_tr))) {
+  d_est[[celdas_tr$nombre[i]]] <- as.integer(d_est$edad_nac == celdas_tr$edad_nac[i] &
+                                               d_est$ola_num == celdas_tr$ola_num[i])
+}
+
+efectos_fijos <- "factor(edad_nac) + factor(ola_num)"
+f_m1 <- function(y) as.formula(paste(y, "~ W +", efectos_fijos))
+f_m2 <- function(y) as.formula(paste0(y, " ~ W:(", paste(celdas_tr$nombre, collapse = " + "),
+                                     ") + ", efectos_fijos))
+
+## Funciones -----------------------------------------------------------------
+# ATT agregado de M2: combinación lineal de efectos de celda
+att_m2 <- function(m, pesos) {
+  coefs <- paste0("W:", celdas_tr$nombre)
+  w <- pesos / sum(pesos)
+  est <- sum(w * coef(m)[coefs])
+  ee <- sqrt(as.numeric(t(w) %*% vc(m)[coefs, coefs] %*% w))
+  c(estimacion = est, ee = ee, p = 2 * pnorm(-abs(est / ee)))
+}
+
+# Efecto parcial promedio de W sobre los tratados
+ape_w <- function(m, datos, ponderar) {
+  a <- marginaleffects::avg_comparisons(
+    m, variables = list(W = c(0, 1)), newdata = subset(datos, W == 1),
+    wts = if (ponderar) "pond" else FALSE, vcov = "HC1")
+  c(estimacion = a$estimate, ee = a$std.error, p = a$p.value)
+}
+
+fila <- function(modelo, n, a, b) {
+  data.frame(analisis = "DiD escalonado", modelo, n,
+             sin_ponderar = a["estimacion"], ee_sin = a["ee"], p_sin = a["p"],
+             ponderado = b["estimacion"], ee_pond = b["ee"], p_pond = b["p"])
+}
+
+## M1 y M2 lineales ----------------------------------------------------------
+agregar(comparar_lm("DiD escalonado", "M1 lineal", f_m1("int_pol"), d_est, "W"))
+
+m2_0 <- lm(f_m2("int_pol"), data = d_est)
+m2_1 <- lm(f_m2("int_pol"), data = d_est, weights = pond)
+agregar(fila("M2 lineal (ATT)", nrow(d_est), att_m2(m2_0, celdas_tr$n), att_m2(m2_1, celdas_tr$suma_pond)))
+
+## Modelos no lineales (efecto parcial promedio de W) ------------------------
+for (esp in list(list("M1 logit fraccional (APE)", f_m1("y01")),
+                 list("M2 logit fraccional (APE)", f_m2("y01")),
+                 list("M1 logit binario (APE)", f_m1("int_alto")),
+                 list("M2 logit binario (APE)", f_m2("int_alto")))) {
+  g0 <- glm(esp[[2]], family = quasibinomial(link = "logit"), data = d_est)
+  g1 <- glm(esp[[2]], family = quasibinomial(link = "logit"), data = d_est, weights = pond)
+  agregar(fila(esp[[1]], nrow(d_est), ape_w(g0, d_est, FALSE), ape_w(g1, d_est, TRUE)))
+}
+
+## Robustez ------------------------------------------------------------------
+mixtas <- celdas %>% dplyr::filter(mixta) %>% dplyr::select(edad_nac, ola_num)
+d_sin_mixtas <- d_est %>% dplyr::anti_join(mixtas, by = c("edad_nac", "ola_num"))
+agregar(comparar_lm("DiD escalonado", "M1 lineal sin celdas mixtas", f_m1("int_pol"), d_sin_mixtas, "W"))
+
+d_sinplan <- d_est %>% dplyr::filter(g > 0 | dosis_plan == 0)
+agregar(comparar_lm("DiD escalonado", "M1 lineal, controles sin Plan", f_m1("int_pol"), d_sinplan, "W"))
+
+## Adelantos -----------------------------------------------------------------
+olas <- sort(unique(d_est$ola_num))
+adelantos <- cohortes %>%
+  dplyr::filter(g > 0, g != primera_ola) %>%
+  dplyr::rowwise() %>%
+  dplyr::reframe(edad_nac = edad_nac, g = g, ola_num = head(olas[olas < g], -1)) %>%
+  dplyr::mutate(nombre = paste0("lead_", edad_nac, "_", ola_num))
+for (i in seq_len(nrow(adelantos))) {
+  d_est[[adelantos$nombre[i]]] <- as.integer(d_est$edad_nac == adelantos$edad_nac[i] &
+                                               d_est$ola_num == adelantos$ola_num[i])
+}
+f_ad <- as.formula(paste("int_pol ~ W +", paste(adelantos$nombre, collapse = " + "), "+", efectos_fijos))
+
+prueba_adelantos <- function(w) {
+  base <- if (w) lm(f_m1("int_pol"), data = d_est, weights = pond) else lm(f_m1("int_pol"), data = d_est)
+  ad <- if (w) lm(f_ad, data = d_est, weights = pond) else lm(f_ad, data = d_est)
+  lmtest::waldtest(base, ad, vcov = vc(ad), test = "F")$`Pr(>F)`[2]
+}
+pruebas_adelantos <- c(sin_ponderar = prueba_adelantos(FALSE), ponderado = prueba_adelantos(TRUE))
+pruebas_adelantos
+```
+
+# Comparación
+
+```{r}
+comparacion <- dplyr::bind_rows(resultados)
+rownames(comparacion) <- NULL
+
+knitr::kable(comparacion, digits = 3,
+             caption = "Estimador del tratamiento sin ponderar y ponderado (errores estándar HC1)")
+
+writeLines(knitr::kable(comparacion, format = "html", digits = 3,
+                        caption = "Estimador del tratamiento sin ponderar y ponderado (errores estándar HC1)"),
+           "output/tables/ponderado_comparacion.html")
+
+saveRDS(list(comparacion = comparacion, pruebas_adelantos = pruebas_adelantos,
+             celdas = celdas, cohortes = cohortes),
+        "output/models/modelos_ponderados.rds")
+```

@@ -1,0 +1,203 @@
+---
+title: "Análisis con grupo socioeconómico"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+Este documento replica los análisis de regresión de `analysis.qmd` que usan el nivel educacional como control, reemplazándolo por el grupo socioeconómico (`gse`). Carga los datos procesados en `preparation.qmd`. Las tablas se guardan en `output/tables/gse_*.html`, y las muestras y modelos en `output/models/modelos_gse.rds`.
+
+A diferencia del nivel educacional, que para quienes siguen estudiando es un resultado posterior al tratamiento, el grupo socioeconómico describe al hogar y difícilmente es afectado por la asignatura. La agrupación principal es ABC1-C2, C3 y D-E, con D-E como categoría de referencia, porque el grupo E tiene muy pocos casos en todas las olas. Los análisis de diferencia en diferencias no usan el nivel educacional y no se replican aquí.
+
+Se reportan todas las especificaciones estimadas. Al comparar muchas especificaciones, es esperable que alguna tenga un valor p bajo 0,05 aunque no haya efecto, por lo que ninguna debe elegirse por su significancia.
+
+# Librerías
+
+```{r}
+pacman::p_load(dplyr, texreg)
+```
+
+# Datos procesados
+
+```{r}
+data_voto <- readRDS("input/data/proc/data_voto.rds")
+data_int <- readRDS("input/data/proc/data_int.rds")
+
+# Agrupación principal de gse (referencia: D-E)
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+
+data_voto <- data_voto %>% dplyr::mutate(gse3 = agrupar_gse(gse))
+data_int <- data_int %>% dplyr::mutate(gse3 = agrupar_gse(gse))
+
+table(data_int$gse, data_int$gse3, useNA = "ifany")
+```
+
+# Asignatura de Educación Ciudadana e interés político
+
+```{r}
+## Muestra -------------------------------------------------------------------
+# Casos completos en las variables de los modelos
+int_gse <- data_int %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, gse, gse3, edad_nac) %>%
+  na.omit()
+
+nrow(int_gse)
+dplyr::count(int_gse, educacion_ciudadana)
+dplyr::count(int_gse, gse3, educacion_ciudadana)
+
+## Modelos -------------------------------------------------------------------
+reg_int1 <- lm(int_pol ~ educacion_ciudadana, data = int_gse)
+# gse como control
+reg_int2 <- lm(int_pol ~ educacion_ciudadana + gse3, data = int_gse)
+# gse y edad como controles
+reg_int3 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac, data = int_gse)
+
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3),
+                file = "output/tables/gse_modelos_interes.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3))
+```
+
+# Asignatura de Educación Ciudadana y voto en 2021
+
+```{r}
+## Muestra -------------------------------------------------------------------
+# Habilitados para votar en la 2ª vuelta según su fecha de nacimiento
+voto_gse <- data_voto %>%
+  dplyr::filter(habilitado_2v == 1) %>%
+  dplyr::filter(!is.na(voto), !is.na(educacion_ciudadana), !is.na(gse3))
+
+nrow(voto_gse)
+dplyr::count(voto_gse, educacion_ciudadana)
+
+## Modelos -------------------------------------------------------------------
+# Regresiones logísticas
+m1 <- glm(voto ~ educacion_ciudadana,
+          family = binomial(link = "logit"), data = voto_gse)
+# gse como control
+m2 <- glm(voto ~ educacion_ciudadana + gse3,
+          family = binomial(link = "logit"), data = voto_gse)
+# gse y edad como controles
+m3 <- glm(voto ~ educacion_ciudadana + gse3 + edad_nac,
+          family = binomial(link = "logit"), data = voto_gse)
+
+texreg::htmlreg(list(m1, m2, m3), file = "output/tables/gse_modelos_voto.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(m1, m2, m3))
+```
+
+# Interacción entre la asignatura y el grupo socioeconómico
+
+Replica los modelos que interactuaban la asignatura con el nivel educacional, ahora con el grupo socioeconómico: el efecto de la asignatura puede variar según el nivel socioeconómico del hogar.
+
+```{r}
+## Modelos -------------------------------------------------------------------
+reg_int_x <- lm(int_pol ~ educacion_ciudadana * gse3 + edad_nac, data = int_gse)
+m_x <- glm(voto ~ educacion_ciudadana * gse3 + edad_nac,
+           family = binomial(link = "logit"), data = voto_gse)
+
+# Tratados por grupo socioeconómico en cada muestra
+dplyr::count(int_gse, gse3, educacion_ciudadana)
+dplyr::count(voto_gse, gse3, educacion_ciudadana)
+
+texreg::htmlreg(list(reg_int_x, m_x),
+                custom.model.names = c("Interés político (lineal)", "Voto 2021 (logit)"),
+                file = "output/tables/gse_modelos_interaccion.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_int_x, m_x),
+                custom.model.names = c("Interés político (lineal)", "Voto 2021 (logit)"))
+```
+
+# Sensibilidad a la agrupación del grupo socioeconómico
+
+Replica la comparación de agrupaciones del nivel educacional. Para cada agrupación de `gse` se estima el modelo con el control (2) y con el control y la edad (3), en interés político y en voto.
+
+```{r}
+## Agrupaciones --------------------------------------------------------------
+agrupaciones <- list(
+  "a) 5 categorías (ABC1, C2, C3, D, E)" = function(x) x,
+  "b) 3: ABC1-C2, C3, D-E (principal)"   = agrupar_gse,
+  "c) 2: ABC1-C2 vs resto"               = function(x) factor(x %in% c("ABC1", "C2")),
+  "d) 2: D-E vs resto"                   = function(x) factor(x %in% c("D", "E")),
+  "e) continua (1 = ABC1 a 5 = E)"       = function(x) as.integer(x)
+)
+
+# Coeficiente de educacion_ciudadana en una especificación
+coef_trat <- function(m) {
+  s <- summary(m)$coefficients["educacion_ciudadana", ]
+  data.frame(estimacion = s[1], ee = s[2], p = s[4], n = nobs(m))
+}
+
+sensibilidad_gse <- dplyr::bind_rows(lapply(names(agrupaciones), function(k) {
+  di <- int_gse %>% dplyr::mutate(g_ = agrupaciones[[k]](gse))
+  dv <- voto_gse %>% dplyr::mutate(g_ = agrupaciones[[k]](gse))
+  dplyr::bind_rows(
+    cbind(agrupacion = k, resultado = "Interés", modelo = "2: + gse",
+          coef_trat(lm(int_pol ~ educacion_ciudadana + g_, data = di))),
+    cbind(agrupacion = k, resultado = "Interés", modelo = "3: + gse y edad",
+          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + edad_nac, data = di))),
+    cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "2: + gse",
+          coef_trat(glm(voto ~ educacion_ciudadana + g_, family = binomial, data = dv))),
+    cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "3: + gse y edad",
+          coef_trat(glm(voto ~ educacion_ciudadana + g_ + edad_nac, family = binomial, data = dv)))
+  )
+}))
+rownames(sensibilidad_gse) <- NULL
+
+knitr::kable(sensibilidad_gse, digits = 3,
+             caption = "Coeficiente de educacion_ciudadana según la agrupación de gse")
+
+writeLines(knitr::kable(sensibilidad_gse, format = "html", digits = 3,
+                        caption = "Coeficiente de educacion_ciudadana según la agrupación de gse"),
+           "output/tables/gse_sensibilidad_agrupacion.html")
+```
+
+# Interés político sin la ola 85
+
+Replica la prueba de los modelos de interés político excluyendo la CEP 85.
+
+```{r}
+## Muestra -------------------------------------------------------------------
+int_gse_sin85 <- int_gse %>% dplyr::filter(ola != "85") %>% droplevels()
+nrow(int_gse_sin85)
+
+## Modelos -------------------------------------------------------------------
+reg_int1_sin85 <- lm(int_pol ~ educacion_ciudadana, data = int_gse_sin85)
+reg_int2_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3, data = int_gse_sin85)
+reg_int3_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac, data = int_gse_sin85)
+
+texreg::htmlreg(list(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85),
+                file = "output/tables/gse_modelos_interes_sin85.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85))
+```
+
+# Guardar muestras y modelos
+
+```{r}
+saveRDS(list(datos_interes = int_gse, datos_voto = voto_gse,
+             modelos_interes = list(reg_int1, reg_int2, reg_int3),
+             modelos_voto = list(m1, m2, m3),
+             modelos_interaccion = list(interes = reg_int_x, voto = m_x),
+             modelos_interes_sin85 = list(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85),
+             sensibilidad = sensibilidad_gse),
+        "output/models/modelos_gse.rds")
+```

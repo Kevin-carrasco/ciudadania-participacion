@@ -6,6 +6,10 @@ project:
   render:
     - processing/preparation.qmd
     - processing/analysis.qmd
+    - processing/analysis_did_interes.qmd
+    - processing/analysis_gse.qmd
+    - processing/analysis_jovenes.qmd
+    - processing/analysis_ponderado.qmd
     - index.qmd
 
 website:

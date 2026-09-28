@@ -1,0 +1,526 @@
+---
+title: "Diferencia en diferencias escalonada"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+Este documento estima el efecto de la asignatura de Educación Ciudadana sobre el interés político con un diseño de diferencia en diferencias escalonado para cortes transversales repetidos, siguiendo a Wooldridge ("Nonlinear Difference-in-Differences with Repeated Cross Sections") y a Deb, Norton, Wooldridge y Zabel (2025). Carga los datos procesados en `preparation.qmd`. Las tablas se guardan en `output/tables/did_interes_*.html`, y los modelos y resúmenes en `output/models/did_interes.rds`.
+
+Las edades son los grupos y las olas los períodos. La cohorte que cursó la asignatura envejece entre olas, por lo que cada edad pasa a estar tratada en una ola distinta. Quienes tienen 23 a 30 años no están tratados en ninguna ola. El nivel educacional no se usa como control, porque puede ser afectado por el tratamiento.
+
+Ni los controles ni los períodos previos de las cohortes tratadas están libres de tratamiento. El Plan de Formación Ciudadana (Ley 20.911) rige desde 2016, de modo que parte de las personas de comparación tuvo uno o más años de Plan durante su escolaridad, y esa exposición crece entre olas a medida que cohortes más jóvenes entran al tramo de 23 a 30 años. Siguiendo a Callaway, Goodman-Bacon y Sant'Anna ("Difference-in-Differences with a Continuous Treatment"), cuando el grupo de comparación tiene una dosis positiva de tratamiento, el estimador compara dos niveles de exposición. Por eso el estimador de W corresponde al efecto de la asignatura junto con una mayor exposición al Plan, en comparación con un grupo que tiene exposición positiva al Plan. La sección de robustez reestima M1 con controles sin Plan.
+
+# Librerías
+
+```{r}
+pacman::p_load(dplyr, tidyr, texreg, sandwich, lmtest, marginaleffects, etwfe)
+```
+
+# Datos procesados
+
+```{r}
+data_int <- readRDS("input/data/proc/data_int.rds")
+
+## Muestra -------------------------------------------------------------------
+did <- data_int %>%
+  dplyr::filter(edad_nac >= 18, edad_nac <= 30) %>%
+  dplyr::filter(!is.na(int_pol), !is.na(edad_nac), !is.na(educacion_ciudadana)) %>%
+  dplyr::mutate(ola_num = as.numeric(as.character(ola)))
+
+nrow(did)
+```
+
+## Exposición al Plan de Formación Ciudadana
+
+La dosis de Plan se aproxima desde la fecha de nacimiento. `cohorte_4m` es el año en que la persona cursó 4° medio en edad normativa: el año de nacimiento más 18 para quienes nacieron entre abril y diciembre, y más 17 para quienes nacieron entre enero y marzo. `dosis_plan` corresponde a los años de Plan hasta ese momento, `max(0, cohorte_4m - 2015)`. Es un proxy que no considera repitencia. La dosis no se usa como regresor lineal en ningún modelo.
+
+```{r}
+## Dosis de Plan -------------------------------------------------------------
+did <- did %>%
+  dplyr::mutate(
+    cohorte_4m = as.integer(format(fecha_nac, "%Y")) +
+      dplyr::if_else(as.integer(format(fecha_nac, "%m")) >= 4, 18L, 17L),
+    dosis_plan = pmax(0L, cohorte_4m - 2015L),
+    grupo_edad = dplyr::case_when(edad_nac <= 21 ~ "18 a 21",
+                                  edad_nac == 22 ~ "22",
+                                  TRUE ~ "23 a 30")
+  )
+
+# Dosis de Plan por ola y grupo de edad
+dosis_ola_grupo <- did %>%
+  dplyr::group_by(ola_num, grupo_edad) %>%
+  dplyr::summarise(n = dplyr::n(), media_dosis = mean(dosis_plan),
+                   prop_con_plan = mean(dosis_plan > 0), .groups = "drop")
+
+knitr::kable(dosis_ola_grupo, digits = 2,
+             caption = "Dosis de Plan por ola y grupo de edad")
+```
+
+# Estructura del diseño
+
+Para cada combinación de edad y ola se calcula el número de casos y la proporción con `educacion_ciudadana = 1`. La cohorte de adopción `g` de cada edad es la primera ola en que al menos la mitad de la celda está tratada; las edades que nunca alcanzan ese umbral quedan con `g = 0`. El tratamiento `W` vale 1 cuando la ola es igual o posterior a `g` y `g > 0`. Las celdas con una proporción de tratados entre 0,1 y 0,9 se marcan como mixtas.
+
+En la ola 96, y en los casos sin fecha de nacimiento de las olas 85, 92 y 93, `educacion_ciudadana`, `edad_nac` y `dosis_plan` se asignan desde la edad declarada, a partir de una fecha de nacimiento imputada en el punto medio del rango compatible con esa edad (ver `preparation.qmd`). En consecuencia, las celdas de la ola 96 tienen proporciones de tratados iguales a 0 o 1 y no pueden marcarse como mixtas, y en las demás olas los casos imputados se clasifican según la mayoría de su edad. La celda de 23 años en la ola 96 queda sin tratamiento, aunque cerca de un octavo de sus integrantes (nacidos entre abril y mayo de 2003) tuvo la asignatura.
+
+```{r}
+## Celdas edad x ola ---------------------------------------------------------
+celdas <- did %>%
+  dplyr::group_by(edad_nac, ola_num) %>%
+  dplyr::summarise(n = dplyr::n(), prop_trat = mean(educacion_ciudadana),
+                   media = mean(int_pol), de = sd(int_pol), .groups = "drop")
+
+## Cohorte de adopción -------------------------------------------------------
+cohortes <- celdas %>%
+  dplyr::group_by(edad_nac) %>%
+  dplyr::summarise(g = if (any(prop_trat >= 0.5)) min(ola_num[prop_trat >= 0.5]) else 0)
+
+celdas <- celdas %>%
+  dplyr::left_join(cohortes, by = "edad_nac") %>%
+  dplyr::mutate(W = as.integer(g > 0 & ola_num >= g),
+                mixta = prop_trat >= 0.1 & prop_trat <= 0.9)
+
+# n y proporción de tratados por edad y ola
+tabla_estructura <- celdas %>%
+  dplyr::mutate(celda = sprintf("%d (%.2f)%s", n, prop_trat, ifelse(mixta, " M", ""))) %>%
+  dplyr::select(edad_nac, ola_num, celda) %>%
+  tidyr::pivot_wider(names_from = ola_num, values_from = celda) %>%
+  dplyr::left_join(cohortes, by = "edad_nac")
+
+knitr::kable(tabla_estructura,
+             caption = "n (proporción de tratados) por edad y ola. M: celda mixta. g: cohorte de adopción")
+
+# Cohorte de adopción por edad
+knitr::kable(cohortes, caption = "Cohorte de adopción g por edad (0 = nunca tratada)")
+
+# Celdas mixtas
+celdas %>% dplyr::filter(mixta) %>% dplyr::select(edad_nac, ola_num, n, prop_trat, W)
+
+# Medias de int_pol por celda
+tabla_medias <- celdas %>%
+  dplyr::mutate(celda = sprintf("%.2f (%d)", media, n)) %>%
+  dplyr::select(edad_nac, ola_num, celda) %>%
+  tidyr::pivot_wider(names_from = ola_num, values_from = celda)
+
+knitr::kable(tabla_medias, caption = "Media de interés político (n) por edad y ola")
+
+writeLines(c(knitr::kable(tabla_estructura, format = "html",
+                          caption = "n (proporción de tratados) por edad y ola. M: celda mixta"),
+             knitr::kable(tabla_medias, format = "html",
+                          caption = "Media de interés político (n) por edad y ola")),
+           "output/tables/did_interes_estructura.html")
+```
+
+## Muestra de estimación
+
+Una edad cuya cohorte de adopción coincida con la primera ola (`g = 85`) estaría tratada en todos los períodos observados y no tendría período previo. Sus celdas tratadas quedarían perfectamente colineales con su efecto fijo de edad, por lo que no aportarían información para identificar el efecto. Siguiendo a Wooldridge, una cohorte siempre tratada se excluye de la estimación. Con la imputación de fechas de nacimiento desde la edad declarada, la celda de 18 años en la ola 85 queda con menos de la mitad de tratados, por lo que ninguna edad tiene `g = 85` y ninguna se excluye; el conteo por `g` y `W` de abajo lo verifica.
+
+```{r}
+primera_ola <- min(did$ola_num)
+
+d_est <- did %>%
+  dplyr::left_join(cohortes, by = "edad_nac") %>%
+  dplyr::filter(g != primera_ola) %>%
+  dplyr::mutate(
+    W       = as.integer(g > 0 & ola_num >= g),
+    y01     = (int_pol - 1) / 4,
+    # algo, bastante o muy interesado
+    int_alto = as.integer(int_pol >= 3)
+  )
+
+nrow(d_est)
+dplyr::count(d_est, g, W)
+
+## Indicadores de celdas tratadas (g x ola) ----------------------------------
+celdas_tr <- celdas %>%
+  dplyr::filter(W == 1, g != primera_ola) %>%
+  dplyr::mutate(nombre = paste0("c_", edad_nac, "_", ola_num))
+
+for (i in seq_len(nrow(celdas_tr))) {
+  d_est[[celdas_tr$nombre[i]]] <- as.integer(d_est$edad_nac == celdas_tr$edad_nac[i] &
+                                               d_est$ola_num == celdas_tr$ola_num[i])
+}
+
+celdas_tr %>% dplyr::select(nombre, edad_nac, g, ola_num, n)
+```
+
+# Funciones auxiliares
+
+```{r}
+# Matriz de varianzas robusta HC1
+vc <- function(m) sandwich::vcovHC(m, type = "HC1")
+
+# texreg con errores estándar y valores p HC1
+extraer_hc1 <- function(m) {
+  e <- texreg::extract(m)
+  ct <- lmtest::coeftest(m, vcov. = vc(m))
+  e@se <- unname(ct[e@coef.names, 2])
+  e@pvalues <- unname(ct[e@coef.names, 4])
+  e@coef.names <- etiquetar(e@coef.names)
+  e
+}
+
+# Etiquetas legibles para los coeficientes
+etiquetar <- function(x) {
+  x <- sub("^W:c_(\\d+)_(\\d+)$", "W × edad \\1, ola \\2", x)
+  x <- sub("^lead_(\\d+)_(\\d+)$", "Adelanto edad \\1, ola \\2", x)
+  x <- sub("^W$", "W (tratado)", x)
+  sub("(Intercept)", "Intercepto", x, fixed = TRUE)
+}
+
+# Combinación lineal de coeficientes con error estándar HC1
+combinar <- function(m, coefs, pesos) {
+  w <- pesos / sum(pesos)
+  V <- vc(m)[coefs, coefs]
+  est <- sum(w * coef(m)[coefs])
+  ee <- sqrt(as.numeric(t(w) %*% V %*% w))
+  data.frame(estimacion = est, ee = ee, p = 2 * pnorm(-abs(est / ee)),
+             ic_inf = est - 1.96 * ee, ic_sup = est + 1.96 * ee)
+}
+
+# Efecto parcial promedio de W sobre los tratados (W de 0 a 1)
+ape_w <- function(m) {
+  a <- marginaleffects::avg_comparisons(m, variables = list(W = c(0, 1)),
+                                        newdata = subset(d_est, W == 1),
+                                        vcov = "HC1")
+  data.frame(estimacion = a$estimate, ee = a$std.error, p = a$p.value,
+             ic_inf = a$conf.low, ic_sup = a$conf.high)
+}
+
+## Fórmulas ------------------------------------------------------------------
+efectos_fijos <- "factor(edad_nac) + factor(ola_num)"
+f_m1 <- function(y) as.formula(paste(y, "~ W +", efectos_fijos))
+f_m2 <- function(y) as.formula(paste0(y, " ~ W:(", paste(celdas_tr$nombre, collapse = " + "),
+                                     ") + ", efectos_fijos))
+```
+
+# Modelos lineales
+
+M1 supone un efecto constante del tratamiento. M2 permite un efecto distinto para cada celda tratada, es decir, para cada combinación de cohorte `g` y ola posterior a la adopción; los períodos de cohortes aún no tratadas sirven como controles junto a las edades nunca tratadas. El efecto promedio sobre los tratados (ATT) de M2 se obtiene ponderando los efectos de celda por su número de casos.
+
+```{r}
+## Modelos -------------------------------------------------------------------
+m1_lin <- lm(f_m1("int_pol"), data = d_est)
+m2_lin <- lm(f_m2("int_pol"), data = d_est)
+
+lmtest::coeftest(m1_lin, vcov. = vc(m1_lin))["W", ]
+
+## ATT agregado de M2 --------------------------------------------------------
+coefs_m2 <- paste0("W:", celdas_tr$nombre)
+att_m2 <- combinar(m2_lin, coefs_m2, celdas_tr$n)
+att_m2
+
+## Agregación por años de exposición -----------------------------------------
+# Años transcurridos entre el terreno de la ola de adopción y el de la ola
+anio_ola <- c("85" = 2021, "88" = 2022, "89" = 2023, "90" = 2023, "91" = 2024,
+              "92" = 2024, "93" = 2025, "94" = 2025, "95" = 2025, "96" = 2026)
+celdas_tr <- celdas_tr %>%
+  dplyr::mutate(exposicion = anio_ola[as.character(ola_num)] - anio_ola[as.character(g)])
+
+att_exposicion <- celdas_tr %>%
+  dplyr::group_by(exposicion) %>%
+  dplyr::group_modify(~ cbind(n = sum(.x$n),
+                              combinar(m2_lin, paste0("W:", .x$nombre), .x$n))) %>%
+  dplyr::ungroup()
+att_exposicion
+
+## Comparación M1 y M2 -------------------------------------------------------
+comparacion_lineal <- rbind(
+  cbind(modelo = "M1: efecto constante",
+        as.data.frame(t(lmtest::coeftest(m1_lin, vcov. = vc(m1_lin))["W", ]))[, 1:2] %>%
+          stats::setNames(c("estimacion", "ee"))),
+  cbind(modelo = "M2: ATT ponderado por n", att_m2[, c("estimacion", "ee")])
+)
+comparacion_lineal
+
+texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m2_lin)),
+                custom.model.names = c("M1", "M2"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis.",
+                file = "output/tables/did_interes_lineal.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m2_lin)),
+                custom.model.names = c("M1", "M2"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+```
+
+# Modelos no lineales
+
+Se reestiman M1 y M2 con dos funciones de enlace logit. El logit fraccional usa el interés político reescalado al intervalo de 0 a 1, `y01 = (int_pol - 1) / 4`, estimado por cuasi verosimilitud. El logit binario modela la probabilidad de estar algo, bastante o muy interesado (`int_pol >= 3`). En estos modelos los coeficientes del índice no son directamente comparables con los lineales, por lo que se reporta el efecto parcial promedio de W sobre los tratados: la diferencia promedio entre la predicción con `W = 1` y con `W = 0`, calculada sobre las observaciones tratadas.
+
+```{r}
+## Modelos -------------------------------------------------------------------
+m1_frac <- glm(f_m1("y01"), family = quasibinomial(link = "logit"), data = d_est)
+m2_frac <- glm(f_m2("y01"), family = quasibinomial(link = "logit"), data = d_est)
+m1_logit <- glm(f_m1("int_alto"), family = binomial(link = "logit"), data = d_est)
+m2_logit <- glm(f_m2("int_alto"), family = binomial(link = "logit"), data = d_est)
+
+texreg::htmlreg(lapply(list(m1_frac, m2_frac, m1_logit, m2_logit), extraer_hc1),
+                custom.model.names = c("M1 fraccional", "M2 fraccional",
+                                       "M1 logit", "M2 logit"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = rep("Sí", 4), "EF ola" = rep("Sí", 4)),
+                custom.note = "%stars. Coeficientes del índice. Errores estándar HC1 entre paréntesis.",
+                file = "output/tables/did_interes_no_lineal.html")
+
+## Efectos parciales promedio de W sobre los tratados ------------------------
+efectos_w <- dplyr::bind_rows(
+  cbind(modelo = "M1 lineal (escala 1-5)", ape_w(m1_lin)),
+  cbind(modelo = "M2 lineal (escala 1-5)", ape_w(m2_lin)),
+  cbind(modelo = "M1 logit fraccional (escala 0-1)", ape_w(m1_frac)),
+  cbind(modelo = "M2 logit fraccional (escala 0-1)", ape_w(m2_frac)),
+  cbind(modelo = "M1 logit binario (probabilidad)", ape_w(m1_logit)),
+  cbind(modelo = "M2 logit binario (probabilidad)", ape_w(m2_logit))
+) %>%
+  # El logit fraccional se lleva a la escala 1-5 multiplicando por 4
+  dplyr::mutate(escala_1_5 = dplyr::if_else(grepl("fraccional", modelo),
+                                            estimacion * 4, NA_real_))
+efectos_w
+
+writeLines(knitr::kable(efectos_w, format = "html", digits = 3,
+                        caption = "Efecto de W sobre los tratados (errores estándar HC1)"),
+           "output/tables/did_interes_efectos.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(lapply(list(m1_frac, m2_frac, m1_logit, m2_logit), extraer_hc1),
+                custom.model.names = c("M1 fraccional", "M2 fraccional",
+                                       "M1 logit", "M2 logit"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = rep("Sí", 4), "EF ola" = rep("Sí", 4)),
+                custom.note = "%stars. Coeficientes del índice. Errores estándar HC1 entre paréntesis.")
+```
+
+```{r}
+knitr::kable(efectos_w, digits = 3,
+             caption = "Efecto de W sobre los tratados (errores estándar HC1)")
+```
+
+En los modelos lineales el efecto parcial promedio sobre los tratados coincide con el coeficiente de W en M1 y con el ATT ponderado por n en M2. En el logit fraccional, la columna `escala_1_5` multiplica el efecto por 4 para expresarlo en la escala original del interés político.
+
+# Adelantos
+
+Para evaluar el supuesto de tendencias paralelas se agregan a M1 indicadores de los períodos previos de las cohortes que tienen más de un período previo, usando el período inmediatamente anterior a la adopción (`g - 1`) como referencia. Si las tendencias son paralelas, estos coeficientes deberían ser cercanos a cero en conjunto.
+
+```{r}
+## Indicadores de adelanto ---------------------------------------------------
+olas <- sort(unique(d_est$ola_num))
+adelantos <- cohortes %>%
+  dplyr::filter(g > 0, g != primera_ola) %>%
+  dplyr::rowwise() %>%
+  dplyr::reframe(edad_nac = edad_nac, g = g,
+                 ola_num = head(olas[olas < g], -1)) %>%
+  dplyr::mutate(nombre = paste0("lead_", edad_nac, "_", ola_num))
+adelantos
+
+for (i in seq_len(nrow(adelantos))) {
+  d_est[[adelantos$nombre[i]]] <- as.integer(d_est$edad_nac == adelantos$edad_nac[i] &
+                                               d_est$ola_num == adelantos$ola_num[i])
+}
+
+f_adelantos <- function(y) as.formula(paste(y, "~ W +", paste(adelantos$nombre, collapse = " + "),
+                                            "+", efectos_fijos))
+
+## Modelos -------------------------------------------------------------------
+m1_lin_ad <- lm(f_adelantos("int_pol"), data = d_est)
+m1_frac_ad <- glm(f_adelantos("y01"), family = quasibinomial(link = "logit"), data = d_est)
+
+## Prueba conjunta (Wald, HC1) -----------------------------------------------
+prueba_ad_lin <- lmtest::waldtest(m1_lin, m1_lin_ad, vcov = vc(m1_lin_ad), test = "F")
+prueba_ad_frac <- lmtest::waldtest(m1_frac, m1_frac_ad, vcov = vc(m1_frac_ad), test = "Chisq")
+prueba_ad_lin
+prueba_ad_frac
+
+pruebas_adelantos <- data.frame(
+  modelo = c("M1 lineal", "M1 logit fraccional"),
+  estadistico = c(prueba_ad_lin$F[2], prueba_ad_frac$Chisq[2]),
+  gl = c(prueba_ad_lin$Df[2], prueba_ad_frac$Df[2]),
+  p = c(prueba_ad_lin$`Pr(>F)`[2], prueba_ad_frac$`Pr(>Chisq)`[2])
+)
+pruebas_adelantos
+
+texreg::htmlreg(list(extraer_hc1(m1_lin_ad), extraer_hc1(m1_frac_ad)),
+                custom.model.names = c("M1 lineal con adelantos", "M1 fraccional con adelantos"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí"),
+                                       "Prueba conjunta de adelantos (p)" =
+                                         formatC(pruebas_adelantos$p, format = "f", digits = 3)),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis.",
+                file = "output/tables/did_interes_adelantos.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(extraer_hc1(m1_lin_ad), extraer_hc1(m1_frac_ad)),
+                custom.model.names = c("M1 lineal con adelantos", "M1 fraccional con adelantos"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí"),
+                                       "Prueba conjunta de adelantos (p)" =
+                                         formatC(pruebas_adelantos$p, format = "f", digits = 3)),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+```
+
+# Robustez: sin celdas mixtas
+
+Las celdas mixtas combinan personas con y sin la asignatura, por lo que su clasificación en W es imprecisa. Se reestima M1 lineal excluyéndolas.
+
+```{r}
+mixtas <- celdas %>% dplyr::filter(mixta) %>% dplyr::select(edad_nac, ola_num)
+d_sin_mixtas <- d_est %>% dplyr::anti_join(mixtas, by = c("edad_nac", "ola_num"))
+
+nrow(d_est) - nrow(d_sin_mixtas)
+
+m1_lin_sm <- lm(f_m1("int_pol"), data = d_sin_mixtas)
+lmtest::coeftest(m1_lin_sm, vcov. = vc(m1_lin_sm))["W", ]
+
+texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m1_lin_sm)),
+                custom.model.names = c("M1", "M1 sin celdas mixtas"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis.",
+                file = "output/tables/did_interes_robustez.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m1_lin_sm)),
+                custom.model.names = c("M1", "M1 sin celdas mixtas"),
+                omit.coef = "^factor\\(",
+                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+```
+
+# Robustez: controles sin Plan
+
+Se reestima M1, en su versión lineal y en el efecto parcial promedio del logit fraccional, restringiendo los controles nunca tratados (edades de 23 a 30 años) a cohortes sin Plan (`dosis_plan == 0`). Las cohortes tratadas se mantienen completas, incluidos sus períodos previos. Con esta restricción el grupo de comparación queda sin exposición al Plan, aunque los períodos previos de las cohortes tratadas siguen teniendo años de Plan. Como el Plan alcanza a cohortes cada vez mayores, las edades de control disponibles se desplazan hacia arriba en las olas más recientes.
+
+```{r}
+## Muestra con controles sin Plan --------------------------------------------
+d_sinplan <- d_est %>%
+  dplyr::filter(g > 0 | dosis_plan == 0)
+
+# Edades de control (n) que quedan en cada ola
+controles_sinplan <- d_sinplan %>%
+  dplyr::filter(g == 0) %>%
+  dplyr::count(ola_num, edad_nac) %>%
+  dplyr::group_by(ola_num) %>%
+  dplyr::summarise(edades = paste0(edad_nac, " (", n, ")", collapse = ", "),
+                   n_controles = sum(n), .groups = "drop") %>%
+  dplyr::left_join(d_est %>% dplyr::filter(g == 0) %>% dplyr::count(ola_num, name = "n_controles_total"),
+                   by = "ola_num")
+
+knitr::kable(controles_sinplan,
+             caption = "Edades de control sin Plan por ola: edad (n)")
+
+## Modelos -------------------------------------------------------------------
+m1_lin_sinplan <- lm(f_m1("int_pol"), data = d_sinplan)
+m1_frac_sinplan <- glm(f_m1("y01"), family = quasibinomial(link = "logit"),
+                       data = d_sinplan)
+
+## Comparación con M1 --------------------------------------------------------
+comparacion_plan <- dplyr::bind_rows(
+  cbind(modelo = "M1 lineal, todos los controles", ape_w(m1_lin), n = nobs(m1_lin)),
+  cbind(modelo = "M1 lineal, controles sin Plan", ape_w(m1_lin_sinplan), n = nobs(m1_lin_sinplan)),
+  cbind(modelo = "M1 logit fraccional, todos los controles", ape_w(m1_frac), n = nobs(m1_frac)),
+  cbind(modelo = "M1 logit fraccional, controles sin Plan", ape_w(m1_frac_sinplan), n = nobs(m1_frac_sinplan))
+) %>%
+  dplyr::mutate(escala_1_5 = dplyr::if_else(grepl("fraccional", modelo),
+                                            estimacion * 4, NA_real_))
+
+knitr::kable(comparacion_plan, digits = 3,
+             caption = "Efecto de W sobre los tratados con y sin restricción de controles (errores estándar HC1)")
+
+writeLines(c(knitr::kable(dosis_ola_grupo, format = "html", digits = 2,
+                          caption = "Dosis de Plan por ola y grupo de edad"),
+             knitr::kable(controles_sinplan, format = "html",
+                          caption = "Edades de control sin Plan por ola: edad (n)"),
+             knitr::kable(comparacion_plan, format = "html", digits = 3,
+                          caption = "Efecto de W sobre los tratados con y sin restricción de controles (errores estándar HC1)")),
+           "output/tables/did_interes_plan.html")
+```
+
+# Verificación con etwfe
+
+El paquete `etwfe` implementa el estimador de Wooldridge. Sin `ivar`, los efectos fijos de grupo que incluye corresponden a la cohorte de adopción `g`, no a cada edad, y los efectos de tratamiento se estiman por combinación de cohorte y ola. Cuando una cohorte agrupa más de una edad, M2 de este documento estima un efecto distinto para cada edad dentro de la cohorte. Por eso la verificación se hace con una versión manual equivalente a `etwfe`, con efectos fijos de cohorte y un efecto por combinación de cohorte y ola, que debe coincidir exactamente. La tabla muestra también el efecto de cohorte y ola implícito en M2, calculado como el promedio de sus efectos por edad ponderado por n.
+
+```{r}
+## etwfe ---------------------------------------------------------------------
+m_etwfe <- etwfe::etwfe(fml = int_pol ~ 0, tvar = ola_num, gvar = g,
+                        data = d_est, vcov = "hc1")
+
+coef_etwfe <- coef(m_etwfe)
+coef_etwfe <- data.frame(
+  g       = as.numeric(sub(".*g::(\\d+).*", "\\1", names(coef_etwfe))),
+  ola_num = as.numeric(sub(".*ola_num::(\\d+).*", "\\1", names(coef_etwfe))),
+  etwfe   = unname(coef_etwfe)
+)
+
+## M2 manual equivalente a etwfe ---------------------------------------------
+# Efectos fijos de cohorte y un efecto por combinación de cohorte y ola
+celdas_gt <- celdas_tr %>%
+  dplyr::group_by(g, ola_num) %>%
+  dplyr::summarise(n = sum(n), .groups = "drop") %>%
+  dplyr::mutate(nombre = paste0("gt_", g, "_", ola_num))
+
+for (i in seq_len(nrow(celdas_gt))) {
+  d_est[[celdas_gt$nombre[i]]] <- as.integer(d_est$g == celdas_gt$g[i] &
+                                               d_est$ola_num == celdas_gt$ola_num[i])
+}
+
+m2_lin_cohorte <- lm(as.formula(paste0("int_pol ~ W:(", paste(celdas_gt$nombre, collapse = " + "),
+                                       ") + factor(g) + factor(ola_num)")),
+                     data = d_est)
+
+# Efecto de cohorte y ola implícito en M2 (promedio de edades ponderado por n)
+m2_gt <- celdas_tr %>%
+  dplyr::mutate(b = unname(coef(m2_lin)[paste0("W:", nombre)])) %>%
+  dplyr::group_by(g, ola_num) %>%
+  dplyr::summarise(m2_ef_edad = sum(b * n) / sum(n), .groups = "drop")
+
+verificacion_etwfe <- celdas_gt %>%
+  dplyr::mutate(manual_ef_cohorte = unname(coef(m2_lin_cohorte)[paste0("W:", nombre)])) %>%
+  dplyr::left_join(coef_etwfe, by = c("g", "ola_num")) %>%
+  dplyr::left_join(m2_gt, by = c("g", "ola_num")) %>%
+  dplyr::mutate(dif_etwfe_manual = etwfe - manual_ef_cohorte,
+                dif_etwfe_m2     = etwfe - m2_ef_edad)
+
+knitr::kable(verificacion_etwfe, digits = 4,
+             caption = "Efectos por cohorte y ola: etwfe, versión manual equivalente y M2")
+
+## ATT agregado --------------------------------------------------------------
+att_etwfe <- etwfe::emfx(m_etwfe, type = "simple")
+att_etwfe
+combinar(m2_lin_cohorte, paste0("W:", celdas_gt$nombre), celdas_gt$n)
+att_m2
+```
+
+# Guardar modelos y resúmenes
+
+```{r}
+saveRDS(list(muestra = d_est, celdas = celdas, cohortes = cohortes,
+             celdas_tratadas = celdas_tr, adelantos = adelantos,
+             modelos = list(m1_lin = m1_lin, m2_lin = m2_lin,
+                            m1_frac = m1_frac, m2_frac = m2_frac,
+                            m1_logit = m1_logit, m2_logit = m2_logit,
+                            m1_lin_ad = m1_lin_ad, m1_frac_ad = m1_frac_ad,
+                            m1_lin_sm = m1_lin_sm, m2_lin_cohorte = m2_lin_cohorte,
+                            m1_lin_sinplan = m1_lin_sinplan,
+                            m1_frac_sinplan = m1_frac_sinplan),
+             muestra_sinplan = d_sinplan,
+             resumen = list(comparacion_lineal = comparacion_lineal, att_m2 = att_m2,
+                            att_exposicion = att_exposicion, efectos_w = efectos_w,
+                            pruebas_adelantos = pruebas_adelantos,
+                            verificacion_etwfe = verificacion_etwfe,
+                            dosis_ola_grupo = dosis_ola_grupo,
+                            controles_sinplan = controles_sinplan,
+                            comparacion_plan = comparacion_plan)),
+        "output/models/did_interes.rds")
+```
