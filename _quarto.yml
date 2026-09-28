@@ -7,6 +7,7 @@ project:
     - processing/preparation.qmd
     - processing/analysis.qmd
     - processing/analysis_did_interes.qmd
+    - processing/analysis_did_interes_ext.qmd
     - processing/analysis_gse.qmd
     - processing/analysis_jovenes.qmd
     - processing/analysis_ponderado.qmd
@@ -20,8 +21,22 @@ website:
         text: Presentación
       - href: processing/preparation.qmd
         text: Preparación
-      - href: processing/analysis.qmd
-        text: Análisis
+      - text: Análisis
+        menu:
+          - href: processing/analysis.qmd
+            text: Regresiones y diferencia en diferencias 2x2
+          - href: processing/analysis_did_interes.qmd
+            text: Diferencia en diferencias escalonada
+          - href: processing/analysis_did_interes_ext.qmd
+            text: Diferencia en diferencias con olas 77 a 96
+      - text: Robustez
+        menu:
+          - href: processing/analysis_gse.qmd
+            text: Grupo socioeconómico
+          - href: processing/analysis_jovenes.qmd
+            text: Jóvenes
+          - href: processing/analysis_ponderado.qmd
+            text: Ponderadores y diseño muestral
   page-footer:
     center: "Kevin Carrasco"
 

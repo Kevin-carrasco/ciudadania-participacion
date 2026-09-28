@@ -1,0 +1,253 @@
+---
+title: "Diferencia en diferencias con olas 77 a 96"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+Este documento extiende el diseño de diferencia en diferencias de `analysis_did_interes.qmd` incorporando las olas 77, 81, 82, 83 y 84 de la Encuesta CEP, levantadas entre 2016 y 2019, antes de que existiera la asignatura de Educación Ciudadana. Estas olas agregan períodos previos para todas las cohortes y permiten evaluar tendencias previas con varias olas. Carga la base `input/data/proc/data_int_ext.rds`, construida en `preparation.qmd`. Las tablas se guardan en `output/tables/did_ext_*.html`, el gráfico en `output/graphs/` y los modelos en `output/models/did_ext.rds`.
+
+El resultado principal es `int_alto`, que distingue a quienes están algo, bastante o muy interesados de quienes están no muy o nada interesados. La pregunta tiene las mismas cinco categorías en las olas 77, 82, 83, 84 y 85 a 96. En la ola 81 tiene cuatro categorías, sin "no muy interesado", por lo que esa ola no entra en los modelos de `int_alto`. El resultado secundario, `int_z`, estandariza el interés dentro de cada ola e incluye la ola 81.
+
+# Librerías
+
+```{r}
+pacman::p_load(dplyr, tidyr, texreg, sandwich, lmtest, fixest, ggplot2)
+```
+
+# Datos procesados
+
+```{r}
+data_int_ext <- readRDS("input/data/proc/data_int_ext.rds")
+
+## Muestra -------------------------------------------------------------------
+did_ext <- data_int_ext %>%
+  dplyr::filter(edad_nac >= 18, edad_nac <= 30) %>%
+  dplyr::filter(!is.na(edad_nac), !is.na(educacion_ciudadana)) %>%
+  dplyr::mutate(ola_num = as.numeric(as.character(ola)))
+
+nrow(did_ext)
+dplyr::count(did_ext, ola, escala)
+```
+
+# Tratamiento
+
+El tratamiento `W` se define igual que en `analysis_did_interes.qmd`: la cohorte de adopción `g` de cada edad es la primera ola en que al menos la mitad de la celda de edad y ola está tratada, y `W` vale 1 desde esa ola. Con las olas 77 a 84 la primera ola observada es la 77, en la que nadie está tratado, por lo que ninguna edad queda siempre tratada.
+
+```{r}
+## Celdas y cohortes de adopción ----------------------------------------------
+celdas <- did_ext %>%
+  dplyr::group_by(edad_nac, ola_num) %>%
+  dplyr::summarise(n = dplyr::n(), prop_trat = mean(educacion_ciudadana), .groups = "drop")
+
+cohortes <- celdas %>%
+  dplyr::group_by(edad_nac) %>%
+  dplyr::summarise(g = if (any(prop_trat >= 0.5)) min(ola_num[prop_trat >= 0.5]) else 0)
+
+primera_ola <- min(did_ext$ola_num)
+
+d_ext <- did_ext %>%
+  dplyr::left_join(cohortes, by = "edad_nac") %>%
+  dplyr::filter(g != primera_ola) %>%
+  dplyr::mutate(W = as.integer(g > 0 & ola_num >= g),
+                celda = interaction(edad_nac, ola_num, drop = TRUE))
+
+knitr::kable(t(as.data.frame(cohortes)), caption = "Cohorte de adopción g por edad (0 = nunca tratada)")
+
+## Jóvenes no tratados ------------------------------------------------------------
+# Personas de 18 a 21 años sin la asignatura, con int_alto observado
+jovenes_nt <- d_ext %>%
+  dplyr::filter(edad_nac <= 21, educacion_ciudadana == 0, !is.na(int_alto)) %>%
+  dplyr::mutate(periodo = dplyr::if_else(ola_num <= 84, "Olas 77 a 84", "Olas 85 a 96")) %>%
+  dplyr::count(periodo)
+jovenes_nt
+```
+
+# M1 extendido
+
+M1 estima un efecto constante del tratamiento con efectos fijos de edad y de ola, ahora sobre las olas 77 a 96. Se reportan errores robustos HC1 y errores agrupados por celda de edad y ola (`sandwich::vcovCL`).
+
+```{r}
+## Modelos -------------------------------------------------------------------
+m1_ext_alto <- lm(int_alto ~ W + factor(edad_nac) + factor(ola), data = d_ext)
+m1_ext_z <- lm(int_z ~ W + factor(edad_nac) + factor(ola), data = d_ext)
+
+## Errores HC1 y agrupados por celda -----------------------------------------
+ct_alto_hc1 <- lmtest::coeftest(m1_ext_alto, vcov. = sandwich::vcovHC, type = "HC1")
+ct_alto_cl <- lmtest::coeftest(m1_ext_alto, vcov. = sandwich::vcovCL, cluster = ~celda, type = "HC1")
+ct_z_hc1 <- lmtest::coeftest(m1_ext_z, vcov. = sandwich::vcovHC, type = "HC1")
+ct_z_cl <- lmtest::coeftest(m1_ext_z, vcov. = sandwich::vcovCL, cluster = ~celda, type = "HC1")
+
+cts_m1 <- list(ct_alto_hc1, ct_alto_cl, ct_z_hc1, ct_z_cl)
+modelos_m1 <- list(m1_ext_alto, m1_ext_alto, m1_ext_z, m1_ext_z)
+args_m1 <- list(modelos_m1,
+                custom.model.names = c("int_alto (HC1)", "int_alto (celda)",
+                                       "int_z (HC1)", "int_z (celda)"),
+                override.se = lapply(cts_m1, function(ct) ct[, 2]),
+                override.pvalues = lapply(cts_m1, function(ct) ct[, 4]),
+                omit.coef = "factor[(]",
+                custom.gof.rows = list("EF edad" = rep("Sí", 4), "EF ola" = rep("Sí", 4)),
+                custom.note = "%stars. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.")
+
+do.call(texreg::htmlreg, c(args_m1, file = "output/tables/did_ext_m1.html"))
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_m1)
+```
+
+# Estudio de eventos
+
+El estudio de eventos compara a los jóvenes de 18 a 21 años con quienes tienen 23 a 30 años (se excluyen los de 22) en cada ola, con efectos fijos de edad y de ola. Cada coeficiente mide la diferencia en `int_alto` entre ambos grupos en una ola, relativa a la misma diferencia en la ola 88, que es la categoría de referencia. Antes de 2020 ningún joven había cursado la asignatura, por lo que los coeficientes de las olas 77 a 84 permiten evaluar si las diferencias entre grupos eran estables antes del tratamiento. En la ola 88 cerca de la mitad de los jóvenes ya había cursado la asignatura, por lo que la referencia no está libre de tratamiento: los coeficientes posteriores miden cambios respecto de un grupo parcialmente tratado.
+
+```{r}
+## Muestra -------------------------------------------------------------------
+d_es <- d_ext %>%
+  dplyr::filter(edad_nac != 22) %>%
+  dplyr::mutate(joven = as.integer(edad_nac <= 21))
+
+## Modelos -------------------------------------------------------------------
+es_alto <- fixest::feols(int_alto ~ i(ola, joven, ref = "88") | edad_nac + ola,
+                         data = d_es, vcov = "hetero")
+es_z <- fixest::feols(int_z ~ i(ola, joven, ref = "88") | edad_nac + ola,
+                      data = d_es, vcov = "hetero")
+
+fixest::etable(es_alto, es_z)
+
+## Prueba conjunta de los coeficientes previos a 2020 -------------------------
+prueba_previa_alto <- fixest::wald(es_alto, keep = "ola::(77|82|83|84):joven")
+prueba_previa_z <- fixest::wald(es_z, keep = "ola::(77|81|82|83|84):joven")
+
+pruebas_previas <- data.frame(
+  resultado = c("int_alto", "int_z"),
+  olas = c("77, 82, 83, 84", "77, 81, 82, 83, 84"),
+  estadistico = c(prueba_previa_alto$stat, prueba_previa_z$stat),
+  gl = c(prueba_previa_alto$df1, prueba_previa_z$df1),
+  p = c(prueba_previa_alto$p, prueba_previa_z$p)
+)
+knitr::kable(pruebas_previas, digits = 3,
+             caption = "Prueba conjunta de los coeficientes previos a 2020 (Wald, errores HC1)")
+
+## Coeficientes para el gráfico ------------------------------------------------
+fechas_ola <- d_ext %>% dplyr::distinct(ola, fecha_terreno, escala)
+
+coefs_es <- dplyr::bind_rows(
+  as.data.frame(fixest::coeftable(es_alto)) %>% dplyr::mutate(resultado = "int_alto", termino = rownames(.)),
+  as.data.frame(fixest::coeftable(es_z)) %>% dplyr::mutate(resultado = "int_z", termino = rownames(.))
+) %>%
+  dplyr::transmute(resultado, ola = sub("ola::(\\d+):joven", "\\1", termino),
+                   estimacion = Estimate, ee = `Std. Error`) %>%
+  # La ola de referencia se agrega con coeficiente 0
+  dplyr::bind_rows(tibble::tibble(resultado = c("int_alto", "int_z"), ola = "88",
+                                  estimacion = 0, ee = 0)) %>%
+  dplyr::left_join(fechas_ola %>% dplyr::mutate(ola = as.character(ola)), by = "ola") %>%
+  dplyr::mutate(ic_inf = estimacion - 1.96 * ee, ic_sup = estimacion + 1.96 * ee)
+
+## Gráfico ---------------------------------------------------------------------
+grafico_es <- ggplot(coefs_es, aes(x = fecha_terreno, y = estimacion)) +
+  geom_hline(yintercept = 0, colour = "grey50") +
+  geom_vline(xintercept = as.Date("2020-03-01"), linetype = "dashed") +
+  annotate("text", x = as.Date("2020-03-01"), y = Inf, label = "Inicio de la asignatura (2020)",
+           hjust = -0.05, vjust = 1.5, size = 3) +
+  geom_errorbar(aes(ymin = ic_inf, ymax = ic_sup), width = 60) +
+  geom_point(aes(shape = escala), size = 2.5) +
+  scale_shape_manual(values = c("5 categorías" = 16, "4 categorías (sin 'no muy')" = 17),
+                     name = "Escala de la pregunta") +
+  facet_wrap(~ resultado, ncol = 1, scales = "free_y",
+             labeller = as_labeller(c(int_alto = "Algo o más interesado (int_alto)",
+                                      int_z = "Interés estandarizado por ola (int_z)"))) +
+  labs(x = "Fecha de terreno de la ola", y = "Diferencia jóvenes (18-21) vs. 23-30, relativa a la ola 88",
+       caption = "Intervalos de confianza al 95% con errores HC1. La ola 81 solo tiene la escala de cuatro categorías y no entra en int_alto.") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+grafico_es
+ggsave("output/graphs/did_ext_estudio_eventos.png", grafico_es, width = 8, height = 7, dpi = 300)
+
+texreg::htmlreg(list(es_alto, es_z), custom.model.names = c("int_alto", "int_z"),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis. Referencia: ola 88.",
+                file = "output/tables/did_ext_estudio_eventos.html")
+```
+
+# Robustez
+
+Se reestima M1 extendido (`int_alto`) excluyendo los casos con fecha de nacimiento imputada, lo que deja fuera toda la CEP 96, y restringiendo los controles nunca tratados a cohortes sin Plan (`dosis_plan == 0`).
+
+```{r}
+## Modelos -------------------------------------------------------------------
+m1_ext_sinimp <- lm(int_alto ~ W + factor(edad_nac) + factor(ola),
+                    data = dplyr::filter(d_ext, !fecha_nac_imputada))
+m1_ext_sinplan <- lm(int_alto ~ W + factor(edad_nac) + factor(ola),
+                     data = dplyr::filter(d_ext, g > 0 | dosis_plan == 0))
+
+modelos_rob <- list(m1_ext_alto, m1_ext_sinimp, m1_ext_sinplan)
+cts_rob <- lapply(modelos_rob, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+args_rob <- list(modelos_rob,
+                 custom.model.names = c("M1 extendido", "Sin fechas imputadas", "Controles sin Plan"),
+                 override.se = lapply(cts_rob, function(ct) ct[, 2]),
+                 override.pvalues = lapply(cts_rob, function(ct) ct[, 4]),
+                 omit.coef = "factor[(]",
+                 custom.gof.rows = list("EF edad" = rep("Sí", 3), "EF ola" = rep("Sí", 3)),
+                 custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+
+do.call(texreg::htmlreg, c(args_rob, file = "output/tables/did_ext_robustez.html"))
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_rob)
+```
+
+# Comparación con M1 original
+
+M1 original (`analysis_did_interes.qmd`) usa las olas 85 a 96 y el interés en la escala de 1 a 5. Para comparar el efecto de agregar olas sobre la precisión, M1 se reestima también con `int_alto` solo en las olas 85 a 96, y se compara con M1 extendido.
+
+```{r}
+## Modelos -------------------------------------------------------------------
+m1_original <- readRDS("output/models/did_interes.rds")$modelos$m1_lin
+m1_85_alto <- lm(int_alto ~ W + factor(edad_nac) + factor(ola),
+                 data = dplyr::filter(d_ext, ola_num >= 85))
+
+## Tabla ---------------------------------------------------------------------
+comparacion <- dplyr::bind_rows(lapply(
+  list("M1 original (int_pol, olas 85 a 96)" = m1_original,
+       "M1 con int_alto, olas 85 a 96" = m1_85_alto,
+       "M1 extendido con int_alto, olas 77 a 96" = m1_ext_alto),
+  function(m) {
+    hc1 <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
+    cl <- lmtest::coeftest(m, vcov. = sandwich::vcovCL,
+                           cluster = interaction(m$model$`factor(edad_nac)`, m$model[[ncol(m$model)]], drop = TRUE),
+                           type = "HC1")["W", ]
+    data.frame(n = nobs(m), estimacion = hc1[1], ee_hc1 = hc1[2], p_hc1 = hc1[4],
+               ee_celda = cl[2], p_celda = cl[4])
+  }), .id = "modelo")
+rownames(comparacion) <- NULL
+
+# Cambio en el error estándar de W al agregar las olas 77 a 84 (misma variable de resultado)
+comparacion <- comparacion %>%
+  dplyr::mutate(cambio_ee_hc1 = ee_hc1 / ee_hc1[2] - 1, cambio_ee_celda = ee_celda / ee_celda[2] - 1)
+comparacion$cambio_ee_hc1[1] <- NA
+comparacion$cambio_ee_celda[1] <- NA
+
+knitr::kable(comparacion, digits = 3,
+             caption = "W en M1 original y extendido. El cambio en el error estándar compara con M1 con int_alto en las olas 85 a 96")
+
+writeLines(knitr::kable(comparacion, format = "html", digits = 3,
+                        caption = "W en M1 original y extendido"),
+           "output/tables/did_ext_comparacion.html")
+```
+
+# Guardar modelos
+
+```{r}
+saveRDS(list(muestra = d_ext, cohortes = cohortes, jovenes_no_tratados = jovenes_nt,
+             modelos = list(m1_ext_alto = m1_ext_alto, m1_ext_z = m1_ext_z,
+                            es_alto = es_alto, es_z = es_z,
+                            m1_ext_sinimp = m1_ext_sinimp, m1_ext_sinplan = m1_ext_sinplan,
+                            m1_85_alto = m1_85_alto),
+             coeficientes_eventos = coefs_es, pruebas_previas = pruebas_previas,
+             comparacion = comparacion),
+        "output/models/did_ext.rds")
+```

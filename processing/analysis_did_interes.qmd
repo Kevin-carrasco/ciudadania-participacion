@@ -138,7 +138,7 @@ dplyr::count(d_est, g, W)
 ## Indicadores de celdas tratadas (g x ola) ----------------------------------
 celdas_tr <- celdas %>%
   dplyr::filter(W == 1, g != primera_ola) %>%
-  dplyr::mutate(nombre = paste0("c_", edad_nac, "_", ola_num))
+  dplyr::mutate(nombre = paste0("edad", edad_nac, "_ola", ola_num))
 
 for (i in seq_len(nrow(celdas_tr))) {
   d_est[[celdas_tr$nombre[i]]] <- as.integer(d_est$edad_nac == celdas_tr$edad_nac[i] &
@@ -148,54 +148,20 @@ for (i in seq_len(nrow(celdas_tr))) {
 celdas_tr %>% dplyr::select(nombre, edad_nac, g, ola_num, n)
 ```
 
-# Funciones auxiliares
+# Fórmulas y opciones de estimación
+
+Los errores estándar HC1 se obtienen con `lmtest::coeftest` y `sandwich::vcovHC`, las combinaciones lineales de coeficientes con `marginaleffects::hypotheses` y los efectos parciales promedio con `marginaleffects::avg_comparisons`. Las tablas de `texreg` reciben esos errores con `override.se` y `override.pvalues`.
 
 ```{r}
-# Matriz de varianzas robusta HC1
-vc <- function(m) sandwich::vcovHC(m, type = "HC1")
-
-# texreg con errores estándar y valores p HC1
-extraer_hc1 <- function(m) {
-  e <- texreg::extract(m)
-  ct <- lmtest::coeftest(m, vcov. = vc(m))
-  e@se <- unname(ct[e@coef.names, 2])
-  e@pvalues <- unname(ct[e@coef.names, 4])
-  e@coef.names <- etiquetar(e@coef.names)
-  e
-}
-
-# Etiquetas legibles para los coeficientes
-etiquetar <- function(x) {
-  x <- sub("^W:c_(\\d+)_(\\d+)$", "W × edad \\1, ola \\2", x)
-  x <- sub("^lead_(\\d+)_(\\d+)$", "Adelanto edad \\1, ola \\2", x)
-  x <- sub("^W$", "W (tratado)", x)
-  sub("(Intercept)", "Intercepto", x, fixed = TRUE)
-}
-
-# Combinación lineal de coeficientes con error estándar HC1
-combinar <- function(m, coefs, pesos) {
-  w <- pesos / sum(pesos)
-  V <- vc(m)[coefs, coefs]
-  est <- sum(w * coef(m)[coefs])
-  ee <- sqrt(as.numeric(t(w) %*% V %*% w))
-  data.frame(estimacion = est, ee = ee, p = 2 * pnorm(-abs(est / ee)),
-             ic_inf = est - 1.96 * ee, ic_sup = est + 1.96 * ee)
-}
-
-# Efecto parcial promedio de W sobre los tratados (W de 0 a 1)
-ape_w <- function(m) {
-  a <- marginaleffects::avg_comparisons(m, variables = list(W = c(0, 1)),
-                                        newdata = subset(d_est, W == 1),
-                                        vcov = "HC1")
-  data.frame(estimacion = a$estimate, ee = a$std.error, p = a$p.value,
-             ic_inf = a$conf.low, ic_sup = a$conf.high)
-}
-
 ## Fórmulas ------------------------------------------------------------------
-efectos_fijos <- "factor(edad_nac) + factor(ola_num)"
-f_m1 <- function(y) as.formula(paste(y, "~ W +", efectos_fijos))
-f_m2 <- function(y) as.formula(paste0(y, " ~ W:(", paste(celdas_tr$nombre, collapse = " + "),
-                                     ") + ", efectos_fijos))
+efectos_fijos <- c("factor(edad_nac)", "factor(ola_num)")
+# M1: efecto constante
+rhs_m1 <- c("W", efectos_fijos)
+# M2: un efecto por celda tratada
+rhs_m2 <- c(paste0("W:", celdas_tr$nombre), efectos_fijos)
+
+# Opciones comunes para los efectos parciales promedio de W sobre los tratados
+tratados <- subset(d_est, W == 1)
 ```
 
 # Modelos lineales
@@ -204,14 +170,22 @@ M1 supone un efecto constante del tratamiento. M2 permite un efecto distinto par
 
 ```{r}
 ## Modelos -------------------------------------------------------------------
-m1_lin <- lm(f_m1("int_pol"), data = d_est)
-m2_lin <- lm(f_m2("int_pol"), data = d_est)
+m1_lin <- lm(reformulate(rhs_m1, "int_pol"), data = d_est)
+m2_lin <- lm(reformulate(rhs_m2, "int_pol"), data = d_est)
 
-lmtest::coeftest(m1_lin, vcov. = vc(m1_lin))["W", ]
+lmtest::coeftest(m1_lin, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
 
 ## ATT agregado de M2 --------------------------------------------------------
+# Pesos de la combinación lineal: n de cada celda sobre el total de tratados
 coefs_m2 <- paste0("W:", celdas_tr$nombre)
-att_m2 <- combinar(m2_lin, coefs_m2, celdas_tr$n)
+pesos_att <- setNames(numeric(length(coef(m2_lin))), names(coef(m2_lin)))
+pesos_att[coefs_m2] <- celdas_tr$n / sum(celdas_tr$n)
+
+att_m2 <- marginaleffects::hypotheses(m2_lin, hypothesis = matrix(pesos_att, ncol = 1),
+                                      vcov = "HC1") %>%
+  as.data.frame() %>%
+  dplyr::transmute(estimacion = estimate, ee = std.error, p = p.value,
+                   ic_inf = conf.low, ic_sup = conf.high)
 att_m2
 
 ## Agregación por años de exposición -----------------------------------------
@@ -221,37 +195,49 @@ anio_ola <- c("85" = 2021, "88" = 2022, "89" = 2023, "90" = 2023, "91" = 2024,
 celdas_tr <- celdas_tr %>%
   dplyr::mutate(exposicion = anio_ola[as.character(ola_num)] - anio_ola[as.character(g)])
 
-att_exposicion <- celdas_tr %>%
-  dplyr::group_by(exposicion) %>%
-  dplyr::group_modify(~ cbind(n = sum(.x$n),
-                              combinar(m2_lin, paste0("W:", .x$nombre), .x$n))) %>%
-  dplyr::ungroup()
+# Una columna de pesos por nivel de exposición
+exposiciones <- sort(unique(celdas_tr$exposicion))
+pesos_exp <- sapply(exposiciones, function(e) {
+  x <- celdas_tr[celdas_tr$exposicion == e, ]
+  w <- setNames(numeric(length(coef(m2_lin))), names(coef(m2_lin)))
+  w[paste0("W:", x$nombre)] <- x$n / sum(x$n)
+  w
+})
+
+att_exposicion <- marginaleffects::hypotheses(m2_lin, hypothesis = pesos_exp, vcov = "HC1") %>%
+  as.data.frame() %>%
+  dplyr::transmute(exposicion = exposiciones,
+                   n = as.numeric(tapply(celdas_tr$n, celdas_tr$exposicion, sum)),
+                   estimacion = estimate, ee = std.error, p = p.value,
+                   ic_inf = conf.low, ic_sup = conf.high)
 att_exposicion
 
 ## Comparación M1 y M2 -------------------------------------------------------
-comparacion_lineal <- rbind(
-  cbind(modelo = "M1: efecto constante",
-        as.data.frame(t(lmtest::coeftest(m1_lin, vcov. = vc(m1_lin))["W", ]))[, 1:2] %>%
-          stats::setNames(c("estimacion", "ee"))),
-  cbind(modelo = "M2: ATT ponderado por n", att_m2[, c("estimacion", "ee")])
+w_m1 <- lmtest::coeftest(m1_lin, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
+comparacion_lineal <- data.frame(
+  modelo = c("M1: efecto constante", "M2: ATT ponderado por n"),
+  estimacion = c(w_m1[1], att_m2$estimacion),
+  ee = c(w_m1[2], att_m2$ee)
 )
 comparacion_lineal
 
-texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m2_lin)),
-                custom.model.names = c("M1", "M2"),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
-                custom.note = "%stars. Errores estándar HC1 entre paréntesis.",
-                file = "output/tables/did_interes_lineal.html")
+## Tabla con errores HC1 -----------------------------------------------------
+modelos_lin <- list(m1_lin, m2_lin)
+ct_lin <- lapply(modelos_lin, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+args_lin <- list(modelos_lin,
+                 custom.model.names = c("M1", "M2"),
+                 override.se = lapply(ct_lin, function(ct) ct[, 2]),
+                 override.pvalues = lapply(ct_lin, function(ct) ct[, 4]),
+                 omit.coef = "^factor\\(",
+                 custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
+                 custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+
+do.call(texreg::htmlreg, c(args_lin, file = "output/tables/did_interes_lineal.html"))
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m2_lin)),
-                custom.model.names = c("M1", "M2"),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
-                custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+do.call(texreg::htmlreg, args_lin)
 ```
 
 # Modelos no lineales
@@ -260,28 +246,38 @@ Se reestiman M1 y M2 con dos funciones de enlace logit. El logit fraccional usa 
 
 ```{r}
 ## Modelos -------------------------------------------------------------------
-m1_frac <- glm(f_m1("y01"), family = quasibinomial(link = "logit"), data = d_est)
-m2_frac <- glm(f_m2("y01"), family = quasibinomial(link = "logit"), data = d_est)
-m1_logit <- glm(f_m1("int_alto"), family = binomial(link = "logit"), data = d_est)
-m2_logit <- glm(f_m2("int_alto"), family = binomial(link = "logit"), data = d_est)
+m1_frac <- glm(reformulate(rhs_m1, "y01"), family = quasibinomial(link = "logit"), data = d_est)
+m2_frac <- glm(reformulate(rhs_m2, "y01"), family = quasibinomial(link = "logit"), data = d_est)
+m1_logit <- glm(reformulate(rhs_m1, "int_alto"), family = binomial(link = "logit"), data = d_est)
+m2_logit <- glm(reformulate(rhs_m2, "int_alto"), family = binomial(link = "logit"), data = d_est)
 
-texreg::htmlreg(lapply(list(m1_frac, m2_frac, m1_logit, m2_logit), extraer_hc1),
-                custom.model.names = c("M1 fraccional", "M2 fraccional",
-                                       "M1 logit", "M2 logit"),
+## Tabla con errores HC1 -----------------------------------------------------
+modelos_nl <- list(m1_frac, m2_frac, m1_logit, m2_logit)
+ct_nl <- lapply(modelos_nl, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+args_nl <- list(modelos_nl,
+                custom.model.names = c("M1 fraccional", "M2 fraccional", "M1 logit", "M2 logit"),
+                override.se = lapply(ct_nl, function(ct) ct[, 2]),
+                override.pvalues = lapply(ct_nl, function(ct) ct[, 4]),
                 omit.coef = "^factor\\(",
                 custom.gof.rows = list("EF edad" = rep("Sí", 4), "EF ola" = rep("Sí", 4)),
-                custom.note = "%stars. Coeficientes del índice. Errores estándar HC1 entre paréntesis.",
-                file = "output/tables/did_interes_no_lineal.html")
+                custom.note = "%stars. Coeficientes del índice. Errores estándar HC1 entre paréntesis.")
+
+do.call(texreg::htmlreg, c(args_nl, file = "output/tables/did_interes_no_lineal.html"))
 
 ## Efectos parciales promedio de W sobre los tratados ------------------------
+modelos_w <- list("M1 lineal (escala 1-5)" = m1_lin,
+                  "M2 lineal (escala 1-5)" = m2_lin,
+                  "M1 logit fraccional (escala 0-1)" = m1_frac,
+                  "M2 logit fraccional (escala 0-1)" = m2_frac,
+                  "M1 logit binario (probabilidad)" = m1_logit,
+                  "M2 logit binario (probabilidad)" = m2_logit)
+
 efectos_w <- dplyr::bind_rows(
-  cbind(modelo = "M1 lineal (escala 1-5)", ape_w(m1_lin)),
-  cbind(modelo = "M2 lineal (escala 1-5)", ape_w(m2_lin)),
-  cbind(modelo = "M1 logit fraccional (escala 0-1)", ape_w(m1_frac)),
-  cbind(modelo = "M2 logit fraccional (escala 0-1)", ape_w(m2_frac)),
-  cbind(modelo = "M1 logit binario (probabilidad)", ape_w(m1_logit)),
-  cbind(modelo = "M2 logit binario (probabilidad)", ape_w(m2_logit))
-) %>%
+  lapply(modelos_w, function(m) as.data.frame(marginaleffects::avg_comparisons(
+    m, variables = list(W = c(0, 1)), newdata = tratados, vcov = "HC1"))),
+  .id = "modelo") %>%
+  dplyr::transmute(modelo, estimacion = estimate, ee = std.error, p = p.value,
+                   ic_inf = conf.low, ic_sup = conf.high) %>%
   # El logit fraccional se lleva a la escala 1-5 multiplicando por 4
   dplyr::mutate(escala_1_5 = dplyr::if_else(grepl("fraccional", modelo),
                                             estimacion * 4, NA_real_))
@@ -294,12 +290,7 @@ writeLines(knitr::kable(efectos_w, format = "html", digits = 3,
 
 ```{r}
 #| results: asis
-texreg::htmlreg(lapply(list(m1_frac, m2_frac, m1_logit, m2_logit), extraer_hc1),
-                custom.model.names = c("M1 fraccional", "M2 fraccional",
-                                       "M1 logit", "M2 logit"),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = rep("Sí", 4), "EF ola" = rep("Sí", 4)),
-                custom.note = "%stars. Coeficientes del índice. Errores estándar HC1 entre paréntesis.")
+do.call(texreg::htmlreg, args_nl)
 ```
 
 ```{r}
@@ -321,7 +312,7 @@ adelantos <- cohortes %>%
   dplyr::rowwise() %>%
   dplyr::reframe(edad_nac = edad_nac, g = g,
                  ola_num = head(olas[olas < g], -1)) %>%
-  dplyr::mutate(nombre = paste0("lead_", edad_nac, "_", ola_num))
+  dplyr::mutate(nombre = paste0("adelanto_edad", edad_nac, "_ola", ola_num))
 adelantos
 
 for (i in seq_len(nrow(adelantos))) {
@@ -329,16 +320,17 @@ for (i in seq_len(nrow(adelantos))) {
                                                d_est$ola_num == adelantos$ola_num[i])
 }
 
-f_adelantos <- function(y) as.formula(paste(y, "~ W +", paste(adelantos$nombre, collapse = " + "),
-                                            "+", efectos_fijos))
+rhs_adelantos <- c("W", adelantos$nombre, efectos_fijos)
 
 ## Modelos -------------------------------------------------------------------
-m1_lin_ad <- lm(f_adelantos("int_pol"), data = d_est)
-m1_frac_ad <- glm(f_adelantos("y01"), family = quasibinomial(link = "logit"), data = d_est)
+m1_lin_ad <- lm(reformulate(rhs_adelantos, "int_pol"), data = d_est)
+m1_frac_ad <- glm(reformulate(rhs_adelantos, "y01"), family = quasibinomial(link = "logit"), data = d_est)
 
 ## Prueba conjunta (Wald, HC1) -----------------------------------------------
-prueba_ad_lin <- lmtest::waldtest(m1_lin, m1_lin_ad, vcov = vc(m1_lin_ad), test = "F")
-prueba_ad_frac <- lmtest::waldtest(m1_frac, m1_frac_ad, vcov = vc(m1_frac_ad), test = "Chisq")
+prueba_ad_lin <- lmtest::waldtest(m1_lin, m1_lin_ad,
+                                  vcov = sandwich::vcovHC(m1_lin_ad, type = "HC1"), test = "F")
+prueba_ad_frac <- lmtest::waldtest(m1_frac, m1_frac_ad,
+                                   vcov = sandwich::vcovHC(m1_frac_ad, type = "HC1"), test = "Chisq")
 prueba_ad_lin
 prueba_ad_frac
 
@@ -350,30 +342,30 @@ pruebas_adelantos <- data.frame(
 )
 pruebas_adelantos
 
-texreg::htmlreg(list(extraer_hc1(m1_lin_ad), extraer_hc1(m1_frac_ad)),
+## Tabla con errores HC1 -----------------------------------------------------
+modelos_ad <- list(m1_lin_ad, m1_frac_ad)
+ct_ad <- lapply(modelos_ad, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+args_ad <- list(modelos_ad,
                 custom.model.names = c("M1 lineal con adelantos", "M1 fraccional con adelantos"),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí"),
-                                       "Prueba conjunta de adelantos (p)" =
-                                         formatC(pruebas_adelantos$p, format = "f", digits = 3)),
-                custom.note = "%stars. Errores estándar HC1 entre paréntesis.",
-                file = "output/tables/did_interes_adelantos.html")
-```
-
-```{r}
-#| results: asis
-texreg::htmlreg(list(extraer_hc1(m1_lin_ad), extraer_hc1(m1_frac_ad)),
-                custom.model.names = c("M1 lineal con adelantos", "M1 fraccional con adelantos"),
+                override.se = lapply(ct_ad, function(ct) ct[, 2]),
+                override.pvalues = lapply(ct_ad, function(ct) ct[, 4]),
                 omit.coef = "^factor\\(",
                 custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí"),
                                        "Prueba conjunta de adelantos (p)" =
                                          formatC(pruebas_adelantos$p, format = "f", digits = 3)),
                 custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+
+do.call(texreg::htmlreg, c(args_ad, file = "output/tables/did_interes_adelantos.html"))
 ```
 
-# Robustez: sin celdas mixtas
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_ad)
+```
 
-Las celdas mixtas combinan personas con y sin la asignatura, por lo que su clasificación en W es imprecisa. Se reestima M1 lineal excluyéndolas.
+# Robustez: sin celdas mixtas y sin fechas imputadas
+
+Las celdas mixtas combinan personas con y sin la asignatura, por lo que su clasificación en W es imprecisa. Se reestima M1 lineal excluyéndolas. También se reestima M1 excluyendo los casos cuya fecha de nacimiento se imputó desde la edad declarada, lo que deja fuera toda la CEP 96 y los casos sin fecha de las olas 85, 92 y 93. La definición de las cohortes de adopción y de W se mantiene.
 
 ```{r}
 mixtas <- celdas %>% dplyr::filter(mixta) %>% dplyr::select(edad_nac, ola_num)
@@ -381,24 +373,63 @@ d_sin_mixtas <- d_est %>% dplyr::anti_join(mixtas, by = c("edad_nac", "ola_num")
 
 nrow(d_est) - nrow(d_sin_mixtas)
 
-m1_lin_sm <- lm(f_m1("int_pol"), data = d_sin_mixtas)
-lmtest::coeftest(m1_lin_sm, vcov. = vc(m1_lin_sm))["W", ]
+m1_lin_sm <- lm(reformulate(rhs_m1, "int_pol"), data = d_sin_mixtas)
+lmtest::coeftest(m1_lin_sm, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
 
-texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m1_lin_sm)),
-                custom.model.names = c("M1", "M1 sin celdas mixtas"),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
-                custom.note = "%stars. Errores estándar HC1 entre paréntesis.",
-                file = "output/tables/did_interes_robustez.html")
+## Sin fechas imputadas --------------------------------------------------------
+d_sin_imputadas <- d_est %>% dplyr::filter(!fecha_nac_imputada)
+nrow(d_est) - nrow(d_sin_imputadas)
+dplyr::count(d_sin_imputadas, W)
+
+m1_lin_sinimp <- lm(reformulate(rhs_m1, "int_pol"), data = d_sin_imputadas)
+lmtest::coeftest(m1_lin_sinimp, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
+
+## Tabla con errores HC1 -----------------------------------------------------
+modelos_rob <- list(m1_lin, m1_lin_sm, m1_lin_sinimp)
+ct_rob <- lapply(modelos_rob, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+args_rob <- list(modelos_rob,
+                 custom.model.names = c("M1", "M1 sin celdas mixtas", "M1 sin fechas imputadas"),
+                 override.se = lapply(ct_rob, function(ct) ct[, 2]),
+                 override.pvalues = lapply(ct_rob, function(ct) ct[, 4]),
+                 omit.coef = "^factor\\(",
+                 custom.gof.rows = list("EF edad" = rep("Sí", 3), "EF ola" = rep("Sí", 3)),
+                 custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+
+do.call(texreg::htmlreg, c(args_rob, file = "output/tables/did_interes_robustez.html"))
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(list(extraer_hc1(m1_lin), extraer_hc1(m1_lin_sm)),
-                custom.model.names = c("M1", "M1 sin celdas mixtas"),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
-                custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+do.call(texreg::htmlreg, args_rob)
+```
+
+# Prueba de equivalencia
+
+Un resultado no significativo no permite afirmar que el efecto sea nulo. La prueba de equivalencia (dos pruebas unilaterales) evalúa si el efecto de W en M1 lineal es menor que un umbral considerado sustantivamente pequeño. Se usa un umbral provisional de ±0,2 desviaciones estándar de `int_pol` en la muestra de estimación, con `marginaleffects::hypotheses` y errores HC1. Si el valor p de equivalencia es menor que 0,05, los datos permiten descartar efectos de magnitud igual o mayor al umbral. El intervalo de confianza al 90% corresponde a esta prueba: hay equivalencia al 5% cuando queda completamente dentro del umbral.
+
+```{r}
+## Umbral --------------------------------------------------------------------
+de_int_pol <- sd(d_est$int_pol)
+umbral_equiv <- 0.2 * de_int_pol
+c(de_int_pol = de_int_pol, umbral = umbral_equiv)
+
+## Prueba --------------------------------------------------------------------
+equivalencia_w <- marginaleffects::hypotheses(
+  m1_lin, hypothesis = "W = 0", vcov = "HC1",
+  equivalence = c(-umbral_equiv, umbral_equiv), conf_level = 0.90) %>%
+  as.data.frame() %>%
+  dplyr::transmute(estimacion = estimate, ee = std.error,
+                   ic90_inf = conf.low, ic90_sup = conf.high,
+                   umbral = umbral_equiv,
+                   p_no_inferioridad = p.value.noninf, p_no_superioridad = p.value.nonsup,
+                   p_equivalencia = p.value.equiv)
+
+knitr::kable(equivalencia_w, digits = 3,
+             caption = "Prueba de equivalencia para W en M1 lineal (umbral ±0,2 DE de int_pol, errores HC1)")
+
+writeLines(knitr::kable(equivalencia_w, format = "html", digits = 3,
+                        caption = "Prueba de equivalencia para W en M1 lineal (umbral ±0,2 DE de int_pol, errores HC1)"),
+           "output/tables/did_interes_equivalencia.html")
 ```
 
 # Robustez: controles sin Plan
@@ -424,17 +455,23 @@ knitr::kable(controles_sinplan,
              caption = "Edades de control sin Plan por ola: edad (n)")
 
 ## Modelos -------------------------------------------------------------------
-m1_lin_sinplan <- lm(f_m1("int_pol"), data = d_sinplan)
-m1_frac_sinplan <- glm(f_m1("y01"), family = quasibinomial(link = "logit"),
+m1_lin_sinplan <- lm(reformulate(rhs_m1, "int_pol"), data = d_sinplan)
+m1_frac_sinplan <- glm(reformulate(rhs_m1, "y01"), family = quasibinomial(link = "logit"),
                        data = d_sinplan)
 
 ## Comparación con M1 --------------------------------------------------------
+modelos_plan <- list("M1 lineal, todos los controles" = m1_lin,
+                     "M1 lineal, controles sin Plan" = m1_lin_sinplan,
+                     "M1 logit fraccional, todos los controles" = m1_frac,
+                     "M1 logit fraccional, controles sin Plan" = m1_frac_sinplan)
+
 comparacion_plan <- dplyr::bind_rows(
-  cbind(modelo = "M1 lineal, todos los controles", ape_w(m1_lin), n = nobs(m1_lin)),
-  cbind(modelo = "M1 lineal, controles sin Plan", ape_w(m1_lin_sinplan), n = nobs(m1_lin_sinplan)),
-  cbind(modelo = "M1 logit fraccional, todos los controles", ape_w(m1_frac), n = nobs(m1_frac)),
-  cbind(modelo = "M1 logit fraccional, controles sin Plan", ape_w(m1_frac_sinplan), n = nobs(m1_frac_sinplan))
-) %>%
+  lapply(modelos_plan, function(m) as.data.frame(marginaleffects::avg_comparisons(
+    m, variables = list(W = c(0, 1)), newdata = tratados, vcov = "HC1"))),
+  .id = "modelo") %>%
+  dplyr::transmute(modelo, estimacion = estimate, ee = std.error, p = p.value,
+                   ic_inf = conf.low, ic_sup = conf.high,
+                   n = sapply(modelos_plan, nobs)[modelo]) %>%
   dplyr::mutate(escala_1_5 = dplyr::if_else(grepl("fraccional", modelo),
                                             estimacion * 4, NA_real_))
 
@@ -456,7 +493,7 @@ El tratamiento W varía por celda de edad y ola, y la asignación depende de la 
 
 ```{r}
 ## Errores HC1 y agrupados por celda -----------------------------------------
-ct_hc1 <- lmtest::coeftest(m1_lin, vcov. = vc(m1_lin))["W", ]
+ct_hc1 <- lmtest::coeftest(m1_lin, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
 ct_celda <- lmtest::coeftest(m1_lin, vcov. = sandwich::vcovCL(m1_lin, cluster = ~celda, type = "HC1"))["W", ]
 
 ape_frac_hc1 <- marginaleffects::avg_comparisons(
@@ -548,7 +585,9 @@ knitr::kable(verificacion_etwfe, digits = 4,
 ## ATT agregado --------------------------------------------------------------
 att_etwfe <- etwfe::emfx(m_etwfe, type = "simple")
 att_etwfe
-combinar(m2_lin_cohorte, paste0("W:", celdas_gt$nombre), celdas_gt$n)
+pesos_gt <- setNames(numeric(length(coef(m2_lin_cohorte))), names(coef(m2_lin_cohorte)))
+pesos_gt[paste0("W:", celdas_gt$nombre)] <- celdas_gt$n / sum(celdas_gt$n)
+marginaleffects::hypotheses(m2_lin_cohorte, hypothesis = matrix(pesos_gt, ncol = 1), vcov = "HC1")
 att_m2
 ```
 
@@ -563,7 +602,8 @@ saveRDS(list(muestra = d_est, celdas = celdas, cohortes = cohortes,
                             m1_lin_ad = m1_lin_ad, m1_frac_ad = m1_frac_ad,
                             m1_lin_sm = m1_lin_sm, m2_lin_cohorte = m2_lin_cohorte,
                             m1_lin_sinplan = m1_lin_sinplan,
-                            m1_frac_sinplan = m1_frac_sinplan),
+                            m1_frac_sinplan = m1_frac_sinplan,
+                            m1_lin_sinimp = m1_lin_sinimp),
              muestra_sinplan = d_sinplan,
              resumen = list(comparacion_lineal = comparacion_lineal, att_m2 = att_m2,
                             att_exposicion = att_exposicion, efectos_w = efectos_w,
@@ -572,6 +612,7 @@ saveRDS(list(muestra = d_est, celdas = celdas, cohortes = cohortes,
                             dosis_ola_grupo = dosis_ola_grupo,
                             controles_sinplan = controles_sinplan,
                             comparacion_plan = comparacion_plan,
-                            errores_w = errores_w)),
+                            errores_w = errores_w,
+                            equivalencia_w = equivalencia_w)),
         "output/models/did_interes.rds")
 ```

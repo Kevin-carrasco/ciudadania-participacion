@@ -940,9 +940,162 @@ sjmisc::frq(base_95$elec_part_4)
 sjmisc::frq(base_95$edad)
 ```
 
+# Inventario de las olas 77 a 84 para interés político
+
+Antes de extender la base de interés político a olas anteriores a 2021, se revisa en cada ola 77 a 84 si existe la pregunta general de interés en la política, con qué categorías, y si están las variables necesarias para aplicar las mismas reglas que en `data_int`: fecha de nacimiento (`DS_P2A_DIA`, `DS_P2A_MES`, `DS_P2A_ANO`), edad declarada, ponderador, grupo socioeconómico, estrato y fecha de entrevista. Los nombres de las variables difieren entre olas y se identificaron revisando las etiquetas de cada base.
+
+```{r}
+## Variables por ola ---------------------------------------------------------
+bases_pre <- list("77" = base_77, "78" = base_78, "79" = base_79, "80" = base_80,
+                  "81" = base_81, "82" = base_82, "83" = base_83, "84" = base_84)
+
+inventario_vars <- tibble::tribble(
+  ~ola, ~var_interes, ~var_pond,     ~var_gse,  ~var_fecha,
+  "77", "SP_15",      "pond",        "GSE_REC", "FECHA1",
+  "78", NA,           "Ponderador",  "GSE_REC", "FECHAINI",
+  "79", NA,           "pond",        "GSE_REC", "FECHAINI",
+  "80", NA,           "POND",        "GSE_REC", NA,
+  "81", "DPP_4",      "POND",        "GSE_REC", "FECHAINI",
+  "82", "MB_P16",     "PONDERADOR",  "GSE",     "FECHAINI",
+  "83", "MB_P17",     "FACTOR",      "GSE",     "FECHAINI",
+  "84", "MB_P14",     "PONDERADOR",  NA,        "FECHAFIN"
+)
+
+inventario <- dplyr::bind_rows(lapply(seq_len(nrow(inventario_vars)), function(i) {
+  v <- inventario_vars[i, ]
+  b <- bases_pre[[v$ola]]
+  interes <- if (is.na(v$var_interes)) NULL else b[[v$var_interes]]
+  cats <- if (is.null(interes)) NA else {
+    l <- attr(interes, "labels"); paste0(l[l < 8], "=", names(l)[l < 8], collapse = "; ")
+  }
+  anio <- suppressWarnings(as.numeric(b$DS_P2A_ANO))
+  fecha <- if (is.na(v$var_fecha)) NA else as.Date(b[[v$var_fecha]], format = "%d-%m-%Y")
+  tibble::tibble(
+    ola = v$ola, n = nrow(b),
+    pregunta = if (is.null(interes)) "no existe" else attr(interes, "label"),
+    variable = v$var_interes, categorias = cats,
+    fecha_nac_valida = sum(!is.na(anio) & anio >= 1900 & anio <= 2010),
+    edad_declarada = if ("DS_P2_EXACTA" %in% names(b)) "DS_P2_EXACTA" else "no existe",
+    ponderador = v$var_pond,
+    gse = if (is.na(v$var_gse)) "no existe" else paste(v$var_gse, "(", length(attr(b[[v$var_gse]], "labels")), "categorías )"),
+    estrato = if ("estrato" %in% tolower(names(b))) "existe" else "no existe",
+    fecha_terreno = if (all(is.na(fecha))) "no existe" else
+      paste(v$var_fecha, "| mediana", format(stats::median(fecha, na.rm = TRUE)))
+  )
+}))
+
+knitr::kable(inventario, caption = "Inventario de las olas 77 a 84")
+
+# Categorías de referencia (interes_pol_1_b, CEP 88)
+attr(base_88$interes_pol_1_b, "labels")
+```
+
+El inventario muestra lo siguiente:
+
+- **Pregunta.** La pregunta "¿Cuán interesado está Ud. en la política?" está en las olas 77, 81, 82, 83 y 84. En las olas 77, 82, 83 y 84 tiene las mismas cinco categorías que `interes_pol_1_b` (muy, bastante, algo, no muy y nada interesado). En la ola 81 tiene cuatro categorías, sin "no muy interesado", por lo que quienes habrían elegido esa opción quedan repartidos entre "algo" y "nada" y la dicotomización no es equivalente. Las olas 78, 79 y 80 no tienen la pregunta general; la variable `ELE_3` de las olas 79 y 80 pregunta por el interés en la elección presidencial de 2017, que es un concepto distinto.
+- **Fecha de nacimiento.** Las tres variables existen en todas las olas, con entre 22% y 33% de casos sin fecha. En las olas 80, 81 y 82 los faltantes vienen codificados como 99 y 9999.
+- **Edad declarada.** `DS_P2_EXACTA` existe en todas las olas, lo que permite imputar la fecha de nacimiento faltante con la misma regla que en `data_int`.
+- **Ponderador.** Existe en todas las olas con distintos nombres y suma el número de casos de cada ola.
+- **Grupo socioeconómico.** En las olas 77 a 81 solo existe una versión de tres categorías (alto, medio y bajo), cuya correspondencia con las categorías ABC1 a E no está documentada; en las olas 82 y 83 existe la versión de cinco categorías; en la ola 84 no existe.
+- **Estrato.** No existe en ninguna de las olas 77 a 84.
+- **Fecha de terreno.** Existe una fecha de entrevista por caso en todas las olas con la pregunta. Algunas fechas son claramente erróneas (por ejemplo, 1923 en la ola 83), por lo que la fecha de referencia de cada ola se calcula como la mediana de las fechas de entrevista.
+
+# Base extendida de interés político (olas 77 a 96)
+
+La base extendida agrega a `data_int` las olas 77, 81, 82, 83 y 84. Se aplican las mismas reglas que en `data_int`:
+
+- La fecha de nacimiento proviene de `DS_P2A_DIA`, `DS_P2A_MES` y `DS_P2A_ANO`; cuando falta o es imposible, se imputa desde la edad declarada en el punto medio del rango compatible con ella.
+- `edad_nac` se calcula a la fecha de referencia de la ola (mediana de las fechas de entrevista).
+- `educacion_ciudadana` y `dosis_plan` se calculan desde la fecha de nacimiento. En estas olas nadie tuvo la asignatura.
+- `gse` se mantiene solo donde existe la versión de cinco categorías (olas 82 y 83); en las olas 77, 81 y 84 queda en NA. El ponderador se renombra como `pond`.
+
+Se agregan tres variables de resultado:
+
+- `int_alto`: 1 si la persona está algo, bastante o muy interesada, y 0 si está no muy o nada interesada. Es el resultado principal. En la ola 81 queda en NA, porque su escala de cuatro categorías no permite una dicotomización equivalente.
+- `int_z`: interés estandarizado dentro de cada ola, con la escala propia de cada ola invertida para que valores altos indiquen mayor interés. Es el resultado secundario e incluye la ola 81.
+- `escala`: versión de la pregunta (cinco categorías, o cuatro categorías sin "no muy interesado").
+
+```{r}
+## Olas 77 a 84 ----------------------------------------------------------------
+olas_ext <- inventario_vars %>% dplyr::filter(!is.na(var_interes))
+
+base_pre <- dplyr::bind_rows(lapply(seq_len(nrow(olas_ext)), function(i) {
+  v <- olas_ext[i, ]
+  b <- haven::zap_labels(bases_pre[[v$ola]])
+  fecha_ent <- as.Date(b[[v$var_fecha]], format = "%d-%m-%Y")
+  tibble::tibble(
+    ola = v$ola,
+    id_bu = paste0(seq_len(nrow(b)), "-", v$ola),
+    fecha_terreno = stats::median(fecha_ent, na.rm = TRUE),
+    fecha_nac = as.Date(sprintf("%04d-%02d-%02d", as.integer(b$DS_P2A_ANO),
+                                as.integer(b$DS_P2A_MES), as.integer(b$DS_P2A_DIA)),
+                        format = "%Y-%m-%d"),
+    edad = as.numeric(b$DS_P2_EXACTA),
+    pond = as.numeric(b[[v$var_pond]]),
+    gse = if (!is.na(v$var_gse) && v$var_gse == "GSE") as.numeric(b$GSE) else NA_real_,
+    interes_orig = as.numeric(b[[v$var_interes]]),
+    escala = if (v$ola == "81") "4 categorías (sin 'no muy')" else "5 categorías"
+  )
+}))
+
+# Fechas de nacimiento fuera de rango (códigos 9999) quedan en NA
+base_pre <- base_pre %>%
+  dplyr::mutate(fecha_nac = dplyr::if_else(fecha_nac > as.Date("2010-01-01"),
+                                           as.Date(NA), fecha_nac))
+
+base_pre <- base_pre %>%
+  dplyr::mutate(
+    # Punto medio del rango de nacimiento compatible con la edad declarada
+    fecha_nac_imputada = is.na(fecha_nac) & !is.na(edad),
+    fecha_nac = dplyr::if_else(fecha_nac_imputada,
+                               fecha_terreno - round(365.25 * (edad + 0.5)),
+                               fecha_nac),
+    edad_nac = edad_a(fecha_nac, fecha_terreno),
+    educacion_ciudadana = dplyr::if_else(fecha_nac >= as.Date("2003-04-01"), 1L, 0L),
+    gse = factor(gse, levels = 1:5, labels = c("ABC1", "C2", "C3", "D", "E")),
+    # Escala invertida: valores altos indican mayor interés
+    interes_orig = dplyr::if_else(interes_orig %in% 1:5, interes_orig, NA_real_),
+    int_pol = dplyr::if_else(escala == "5 categorías", 6 - interes_orig, NA_real_),
+    int_inv = dplyr::if_else(escala == "5 categorías", 6 - interes_orig, 5 - interes_orig)
+  )
+
+## Olas 85 a 96 (data_int) -----------------------------------------------------
+base_post <- data_int %>%
+  dplyr::transmute(ola = as.character(ola), id_bu, fecha_terreno, fecha_nac,
+                   fecha_nac_imputada, edad, edad_nac, educacion_ciudadana, gse,
+                   pond, int_pol, int_inv = int_pol, escala = "5 categorías")
+
+## Base extendida ----------------------------------------------------------------
+data_int_ext <- dplyr::bind_rows(base_pre %>% dplyr::select(-interes_orig), base_post) %>%
+  dplyr::mutate(
+    cohorte_4m = as.integer(format(fecha_nac, "%Y")) +
+      dplyr::if_else(as.integer(format(fecha_nac, "%m")) >= 4, 18L, 17L),
+    dosis_plan = pmax(0L, cohorte_4m - 2015L),
+    int_alto = as.integer(int_pol >= 3),
+    ola = factor(ola, levels = sort(unique(as.numeric(ola))))
+  ) %>%
+  dplyr::group_by(ola) %>%
+  dplyr::mutate(int_z = as.numeric(scale(int_inv))) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-int_inv) %>%
+  dplyr::relocate(ola, escala, fecha_terreno, fecha_nac, fecha_nac_imputada, edad,
+                  edad_nac, educacion_ciudadana, cohorte_4m, dosis_plan, int_pol,
+                  int_alto, int_z)
+
+## Chequeo -----------------------------------------------------------------------
+data_int_ext %>%
+  dplyr::group_by(ola, escala) %>%
+  dplyr::summarise(n = dplyr::n(), fecha_terreno = dplyr::first(fecha_terreno),
+                   imputadas = sum(fecha_nac_imputada, na.rm = TRUE),
+                   tratados = sum(educacion_ciudadana, na.rm = TRUE),
+                   prop_int_alto = mean(int_alto, na.rm = TRUE),
+                   suma_pond = sum(pond), .groups = "drop")
+```
+
 # Guardar datos procesados
 
 ```{r}
 saveRDS(data_voto, "input/data/proc/data_voto.rds")
 saveRDS(data_int, "input/data/proc/data_int.rds")
+saveRDS(data_int_ext, "input/data/proc/data_int_ext.rds")
 ```
