@@ -15,7 +15,8 @@ Ni los controles ni los períodos previos de las cohortes tratadas están libres
 # Librerías
 
 ```{r}
-pacman::p_load(dplyr, tidyr, texreg, sandwich, lmtest, marginaleffects, etwfe)
+pacman::p_load(dplyr, tidyr, texreg, sandwich, lmtest, marginaleffects, etwfe,
+               fwildclusterboot)
 ```
 
 # Datos procesados
@@ -126,7 +127,9 @@ d_est <- did %>%
     W       = as.integer(g > 0 & ola_num >= g),
     y01     = (int_pol - 1) / 4,
     # algo, bastante o muy interesado
-    int_alto = as.integer(int_pol >= 3)
+    int_alto = as.integer(int_pol >= 3),
+    # celda de edad y ola, para errores agrupados
+    celda    = interaction(edad_nac, ola_num, drop = TRUE)
   )
 
 nrow(d_est)
@@ -447,6 +450,53 @@ writeLines(c(knitr::kable(dosis_ola_grupo, format = "html", digits = 2,
            "output/tables/did_interes_plan.html")
 ```
 
+# Errores estándar agrupados
+
+El tratamiento W varía por celda de edad y ola, y la asignación depende de la cohorte de nacimiento, por lo que los errores HC1, que tratan cada observación como independiente, pueden subestimar la incertidumbre. Como robustez, y sin reemplazar los errores HC1 de las secciones anteriores, el estimador de W en M1 se reporta con tres tipos de error: HC1, agrupados por celda de edad y ola (`sandwich::vcovCL`) y, para M1 lineal, un *wild cluster bootstrap* agrupado por cohorte de 4° medio (`cohorte_4m`) con `fwildclusterboot::boottest` (9.999 réplicas, pesos de Webb, hipótesis nula impuesta). El bootstrap entrega un valor p y un intervalo de confianza, no un error estándar.
+
+```{r}
+## Errores HC1 y agrupados por celda -----------------------------------------
+ct_hc1 <- lmtest::coeftest(m1_lin, vcov. = vc(m1_lin))["W", ]
+ct_celda <- lmtest::coeftest(m1_lin, vcov. = sandwich::vcovCL(m1_lin, cluster = ~celda, type = "HC1"))["W", ]
+
+ape_frac_hc1 <- marginaleffects::avg_comparisons(
+  m1_frac, variables = list(W = c(0, 1)), newdata = subset(d_est, W == 1), vcov = "HC1")
+ape_frac_celda <- marginaleffects::avg_comparisons(
+  m1_frac, variables = list(W = c(0, 1)), newdata = subset(d_est, W == 1), vcov = ~celda)
+
+## Wild cluster bootstrap por cohorte ----------------------------------------
+dplyr::n_distinct(d_est$cohorte_4m)
+set.seed(20260928)
+dqrng::dqset.seed(20260928)
+boot_cohorte <- fwildclusterboot::boottest(m1_lin, param = "W", clustid = "cohorte_4m",
+                                           B = 9999, type = "webb")
+summary(boot_cohorte)
+
+## Tabla ---------------------------------------------------------------------
+errores_w <- data.frame(
+  modelo = c(rep("M1 lineal", 3), rep("M1 logit fraccional (APE, escala 0-1)", 2)),
+  error = c("HC1", "Agrupado por celda (edad x ola)", "Wild cluster bootstrap por cohorte",
+            "HC1", "Agrupado por celda (edad x ola)"),
+  n_grupos = c(NA, nlevels(d_est$celda), dplyr::n_distinct(d_est$cohorte_4m),
+               NA, nlevels(d_est$celda)),
+  estimacion = c(ct_hc1[1], ct_celda[1], boot_cohorte$point_estimate,
+                 ape_frac_hc1$estimate, ape_frac_celda$estimate),
+  ee = c(ct_hc1[2], ct_celda[2], NA, ape_frac_hc1$std.error, ape_frac_celda$std.error),
+  p = c(ct_hc1[4], ct_celda[4], boot_cohorte$p_val, ape_frac_hc1$p.value, ape_frac_celda$p.value),
+  ic_inf = c(ct_hc1[1] - 1.96 * ct_hc1[2], ct_celda[1] - 1.96 * ct_celda[2],
+             boot_cohorte$conf_int[1], ape_frac_hc1$conf.low, ape_frac_celda$conf.low),
+  ic_sup = c(ct_hc1[1] + 1.96 * ct_hc1[2], ct_celda[1] + 1.96 * ct_celda[2],
+             boot_cohorte$conf_int[2], ape_frac_hc1$conf.high, ape_frac_celda$conf.high)
+)
+
+knitr::kable(errores_w, digits = 3,
+             caption = "Estimador de W en M1 con distintos errores estándar")
+
+writeLines(knitr::kable(errores_w, format = "html", digits = 3,
+                        caption = "Estimador de W en M1 con distintos errores estándar"),
+           "output/tables/did_interes_errores.html")
+```
+
 # Verificación con etwfe
 
 El paquete `etwfe` implementa el estimador de Wooldridge. Sin `ivar`, los efectos fijos de grupo que incluye corresponden a la cohorte de adopción `g`, no a cada edad, y los efectos de tratamiento se estiman por combinación de cohorte y ola. Cuando una cohorte agrupa más de una edad, M2 de este documento estima un efecto distinto para cada edad dentro de la cohorte. Por eso la verificación se hace con una versión manual equivalente a `etwfe`, con efectos fijos de cohorte y un efecto por combinación de cohorte y ola, que debe coincidir exactamente. La tabla muestra también el efecto de cohorte y ola implícito en M2, calculado como el promedio de sus efectos por edad ponderado por n.
@@ -521,6 +571,7 @@ saveRDS(list(muestra = d_est, celdas = celdas, cohortes = cohortes,
                             verificacion_etwfe = verificacion_etwfe,
                             dosis_ola_grupo = dosis_ola_grupo,
                             controles_sinplan = controles_sinplan,
-                            comparacion_plan = comparacion_plan)),
+                            comparacion_plan = comparacion_plan,
+                            errores_w = errores_w)),
         "output/models/did_interes.rds")
 ```

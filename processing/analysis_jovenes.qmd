@@ -8,7 +8,7 @@ lang: es
 
 Este documento replica las regresiones de interés político de `analysis.qmd` y `analysis_gse.qmd` restringiendo la muestra a personas jóvenes: menores de 30 años en la primera sección y menores de 35 en la segunda, según `edad_nac`. Carga los datos procesados en `preparation.qmd`. Las tablas se guardan en `output/tables/jovenes_*.html`, y las muestras y modelos en `output/models/modelos_jovenes.rds`.
 
-Al restringir la edad, el grupo de comparación queda más cerca en edad de quienes cursaron la asignatura, que tienen entre 18 y 23 años. En cada sección se estiman cinco modelos sobre la misma muestra de casos completos: sin controles (1), con nivel educacional (2), con nivel educacional y edad (3), con grupo socioeconómico (4) y con grupo socioeconómico y edad (5). En estas edades muchas personas siguen estudiando, por lo que el nivel educacional puede ser afectado por el tratamiento; el grupo socioeconómico no tiene ese problema.
+Al restringir la edad, el grupo de comparación queda más cerca en edad de quienes cursaron la asignatura, que tienen entre 18 y 23 años. En cada sección se estiman cinco modelos sobre la misma muestra de casos completos, todos con efectos fijos de ola: sin otros controles (1), con nivel educacional (2), con nivel educacional y edad (3), con grupo socioeconómico (4) y con grupo socioeconómico y edad (5). En estas edades muchas personas siguen estudiando, por lo que el nivel educacional puede ser afectado por el tratamiento; el grupo socioeconómico no tiene ese problema.
 
 # Librerías
 
@@ -42,15 +42,15 @@ muestra_edad <- function(edad_limite) {
 # Los cinco modelos de cada sección
 estimar_modelos <- function(d) {
   list(
-    lm(int_pol ~ educacion_ciudadana, data = d),
-    lm(int_pol ~ educacion_ciudadana + educ, data = d),
-    lm(int_pol ~ educacion_ciudadana + educ + edad_nac, data = d),
-    lm(int_pol ~ educacion_ciudadana + gse3, data = d),
-    lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac, data = d)
+    lm(int_pol ~ educacion_ciudadana + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + educ + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + educ + edad_nac + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + gse3 + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), data = d)
   )
 }
 
-nombres_modelos <- c("1: sin controles", "2: + educ", "3: + educ y edad",
+nombres_modelos <- c("1: solo EF ola", "2: + educ", "3: + educ y edad",
                      "4: + gse", "5: + gse y edad")
 ```
 
@@ -68,12 +68,14 @@ dplyr::count(int_30, ola, educacion_ciudadana)
 modelos_30 <- estimar_modelos(int_30)
 
 texreg::htmlreg(modelos_30, custom.model.names = nombres_modelos,
+                omit.coef = "factor[(]ola[)]", custom.gof.rows = list("EF ola" = rep("Sí", 5)),
                 file = "output/tables/jovenes_interes_menores30.html")
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(modelos_30, custom.model.names = nombres_modelos)
+texreg::htmlreg(modelos_30, custom.model.names = nombres_modelos,
+                omit.coef = "factor[(]ola[)]", custom.gof.rows = list("EF ola" = rep("Sí", 5)))
 ```
 
 # Menores de 35 años
@@ -90,12 +92,14 @@ dplyr::count(int_35, ola, educacion_ciudadana)
 modelos_35 <- estimar_modelos(int_35)
 
 texreg::htmlreg(modelos_35, custom.model.names = nombres_modelos,
+                omit.coef = "factor[(]ola[)]", custom.gof.rows = list("EF ola" = rep("Sí", 5)),
                 file = "output/tables/jovenes_interes_menores35.html")
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(modelos_35, custom.model.names = nombres_modelos)
+texreg::htmlreg(modelos_35, custom.model.names = nombres_modelos,
+                omit.coef = "factor[(]ola[)]", custom.gof.rows = list("EF ola" = rep("Sí", 5)))
 ```
 
 # Guardar muestras y modelos

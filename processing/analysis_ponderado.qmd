@@ -8,14 +8,19 @@ lang: es
 
 Este documento reestima los análisis de interés político usando el ponderador de la Encuesta CEP (`pond`), como prueba de robustez. Cada especificación se estima sin ponderar y ponderada sobre la misma muestra, con errores estándar robustos HC1 en ambas versiones, por lo que los errores de la columna sin ponderar pueden diferir levemente de los reportados en los documentos principales. Carga los datos procesados en `preparation.qmd`. La tabla de comparación se guarda en `output/tables/ponderado_comparacion.html` y los resultados en `output/models/modelos_ponderados.rds`.
 
-El ponderador de cada ola suma el número de casos de la ola, de modo que las olas agrupadas conservan su peso relativo. Las bases no incluyen identificadores de conglomerado, por lo que no es posible calcular errores estándar que consideren el diseño muestral completo. Los jóvenes están subrepresentados en la muestra y reciben ponderadores mayores que el promedio, lo que aumenta su peso en las estimaciones y también la varianza.
+El ponderador de cada ola suma el número de casos de la ola, de modo que las olas agrupadas conservan su peso relativo. Los jóvenes están subrepresentados en la muestra y reciben ponderadores mayores que el promedio, lo que aumenta su peso en las estimaciones y también la varianza.
 
-Las muestras, especificaciones y definiciones de tratamiento son las mismas de `analysis.qmd`, `analysis_gse.qmd`, `analysis_jovenes.qmd` y `analysis_did_interes.qmd`.
+Además de la versión ponderada con errores HC1, cada especificación se estima considerando el diseño muestral con `survey::svydesign(ids = ~1, strata = ~interaction(ola, estrato), weights = ~pond)` y `survey::svyglm`. El estrato se combina con la ola porque cada ola es una muestra independiente y porque en la CEP 85 el estrato se define de otra forma. Las bases no traen identificadores de conglomerado, por lo que el diseño trata a cada persona como unidad primaria de muestreo; si la muestra se seleccionó por conglomerados, estos errores pueden subestimar la incertidumbre. El diseño se define sobre la muestra de cada especificación, y los estratos con una sola observación se tratan con `options(survey.lonely.psu = "adjust")`.
+
+Las muestras, especificaciones y definiciones de tratamiento son las mismas de `analysis.qmd`, `analysis_gse.qmd`, `analysis_jovenes.qmd` y `analysis_did_interes.qmd`. Las regresiones que agrupan olas incluyen efectos fijos de ola, igual que en esos documentos.
 
 # Librerías
 
 ```{r}
-pacman::p_load(dplyr, tidyr, sandwich, lmtest, marginaleffects)
+pacman::p_load(dplyr, tidyr, sandwich, lmtest, marginaleffects, survey)
+
+# Estratos con una sola observación en la muestra de una especificación
+options(survey.lonely.psu = "adjust")
 ```
 
 # Datos procesados
@@ -51,14 +56,29 @@ coef_hc1 <- function(m, v) {
   c(estimacion = unname(s[1]), ee = unname(s[2]), p = unname(s[4]))
 }
 
-# Estima un modelo lineal sin ponderar y ponderado y devuelve el coeficiente v
+# Diseño muestral de una muestra de análisis (sin conglomerados)
+diseno <- function(datos) {
+  survey::svydesign(ids = ~1, strata = ~interaction(ola, estrato), weights = ~pond,
+                    data = datos)
+}
+
+# Coeficiente de un modelo svyglm (errores del diseño)
+coef_svy <- function(m, v) {
+  s <- summary(m)$coefficients[v, ]
+  c(estimacion = unname(s[1]), ee = unname(s[2]), p = unname(s[4]))
+}
+
+# Estima un modelo lineal sin ponderar, ponderado y con diseño muestral, y
+# devuelve el coeficiente v de cada versión
 comparar_lm <- function(analisis, modelo, formula, datos, v) {
   m0 <- lm(formula, data = datos)
   m1 <- lm(formula, data = datos, weights = pond)
-  a <- coef_hc1(m0, v); b <- coef_hc1(m1, v)
+  m2 <- survey::svyglm(formula, design = diseno(datos))
+  a <- coef_hc1(m0, v); b <- coef_hc1(m1, v); d <- coef_svy(m2, v)
   data.frame(analisis, modelo, n = nobs(m0),
              sin_ponderar = a["estimacion"], ee_sin = a["ee"], p_sin = a["p"],
-             ponderado = b["estimacion"], ee_pond = b["ee"], p_pond = b["p"])
+             ponderado = b["estimacion"], ee_pond = b["ee"], p_pond = b["p"],
+             ee_diseno = d["ee"], p_diseno = d["p"])
 }
 
 resultados <- list()
@@ -69,39 +89,40 @@ agregar <- function(x) resultados[[length(resultados) + 1]] <<- x
 
 ```{r}
 ## Con nivel educacional (analysis.qmd) --------------------------------------
+# Todas las regresiones con efectos fijos de ola
 int_df <- data_int %>%
-  dplyr::select(ola, int_pol, educacion_ciudadana, educ, edad_nac, pond) %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, educ, edad_nac, pond, estrato) %>%
   na.omit()
 
-agregar(comparar_lm("Regresión (educ)", "1: sin controles",
-                    int_pol ~ educacion_ciudadana, int_df, "educacion_ciudadana"))
+agregar(comparar_lm("Regresión (educ)", "1: solo EF ola",
+                    int_pol ~ educacion_ciudadana + factor(ola), int_df, "educacion_ciudadana"))
 agregar(comparar_lm("Regresión (educ)", "2: + educ",
-                    int_pol ~ educacion_ciudadana + educ, int_df, "educacion_ciudadana"))
+                    int_pol ~ educacion_ciudadana + educ + factor(ola), int_df, "educacion_ciudadana"))
 agregar(comparar_lm("Regresión (educ)", "3: + educ y edad",
-                    int_pol ~ educacion_ciudadana + educ + edad_nac, int_df, "educacion_ciudadana"))
+                    int_pol ~ educacion_ciudadana + educ + edad_nac + factor(ola), int_df, "educacion_ciudadana"))
 
 ## Con grupo socioeconómico (analysis_gse.qmd) -------------------------------
 int_gse <- data_int %>%
-  dplyr::select(ola, int_pol, educacion_ciudadana, gse3, edad_nac, pond) %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, gse3, edad_nac, pond, estrato) %>%
   na.omit()
 
 agregar(comparar_lm("Regresión (gse)", "2: + gse",
-                    int_pol ~ educacion_ciudadana + gse3, int_gse, "educacion_ciudadana"))
+                    int_pol ~ educacion_ciudadana + gse3 + factor(ola), int_gse, "educacion_ciudadana"))
 agregar(comparar_lm("Regresión (gse)", "3: + gse y edad",
-                    int_pol ~ educacion_ciudadana + gse3 + edad_nac, int_gse, "educacion_ciudadana"))
+                    int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), int_gse, "educacion_ciudadana"))
 
 ## Jóvenes (analysis_jovenes.qmd) --------------------------------------------
 for (lim in c(30, 35)) {
   dj <- data_int %>%
     dplyr::filter(edad_nac < lim) %>%
-    dplyr::select(ola, int_pol, educacion_ciudadana, educ, gse3, edad_nac, pond) %>%
+    dplyr::select(ola, int_pol, educacion_ciudadana, educ, gse3, edad_nac, pond, estrato) %>%
     na.omit()
   etiqueta <- paste("Menores de", lim)
-  agregar(comparar_lm(etiqueta, "1: sin controles", int_pol ~ educacion_ciudadana, dj, "educacion_ciudadana"))
-  agregar(comparar_lm(etiqueta, "2: + educ", int_pol ~ educacion_ciudadana + educ, dj, "educacion_ciudadana"))
-  agregar(comparar_lm(etiqueta, "3: + educ y edad", int_pol ~ educacion_ciudadana + educ + edad_nac, dj, "educacion_ciudadana"))
-  agregar(comparar_lm(etiqueta, "4: + gse", int_pol ~ educacion_ciudadana + gse3, dj, "educacion_ciudadana"))
-  agregar(comparar_lm(etiqueta, "5: + gse y edad", int_pol ~ educacion_ciudadana + gse3 + edad_nac, dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "1: solo EF ola", int_pol ~ educacion_ciudadana + factor(ola), dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "2: + educ", int_pol ~ educacion_ciudadana + educ + factor(ola), dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "3: + educ y edad", int_pol ~ educacion_ciudadana + educ + edad_nac + factor(ola), dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "4: + gse", int_pol ~ educacion_ciudadana + gse3 + factor(ola), dj, "educacion_ciudadana"))
+  agregar(comparar_lm(etiqueta, "5: + gse y edad", int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), dj, "educacion_ciudadana"))
 }
 ```
 
@@ -139,7 +160,7 @@ agregar(comparar_lm("DiD analysis.qmd", "2x2 con EF edad, controles sin Plan",
 
 # Diferencia en diferencias escalonada (analysis_did_interes.qmd)
 
-La estructura del diseño (cohortes de adopción `g`, tratamiento `W` y celdas mixtas) se define igual que en el documento principal, con proporciones de tratados sin ponderar, para que la comparación refleje solo el efecto de ponderar la estimación. El ATT agregado de M2 pondera los efectos de celda por la suma de ponderadores de cada celda en la versión ponderada y por su número de casos en la versión sin ponderar. Los efectos parciales promedio sobre los tratados de los modelos no lineales se promedian con el ponderador en la versión ponderada. El logit binario se estima por cuasi verosimilitud, que entrega los mismos coeficientes que el logit y admite ponderadores no enteros.
+La estructura del diseño (cohortes de adopción `g`, tratamiento `W` y celdas mixtas) se define igual que en el documento principal, con proporciones de tratados sin ponderar, para que la comparación refleje solo el efecto de ponderar la estimación. El ATT agregado de M2 pondera los efectos de celda por la suma de ponderadores de cada celda en la versión ponderada y por su número de casos en la versión sin ponderar. Los efectos parciales promedio sobre los tratados de los modelos no lineales se promedian con el ponderador en las versiones ponderada y con diseño muestral. La versión con diseño muestral comparte las estimaciones puntuales de la versión ponderada y solo cambia sus errores estándar. El logit binario se estima por cuasi verosimilitud, que entrega los mismos coeficientes que el logit y admite ponderadores no enteros.
 
 ```{r}
 ## Estructura ----------------------------------------------------------------
@@ -188,35 +209,43 @@ f_m2 <- function(y) as.formula(paste0(y, " ~ W:(", paste(celdas_tr$nombre, colla
                                      ") + ", efectos_fijos))
 
 ## Funciones -----------------------------------------------------------------
-# ATT agregado de M2: combinación lineal de efectos de celda
-att_m2 <- function(m, pesos) {
+# ATT agregado de M2: combinación lineal de efectos de celda. V es la matriz
+# de varianzas del modelo (HC1 para lm, la del diseño para svyglm)
+att_m2 <- function(m, pesos, V = vc(m)) {
   coefs <- paste0("W:", celdas_tr$nombre)
   w <- pesos / sum(pesos)
   est <- sum(w * coef(m)[coefs])
-  ee <- sqrt(as.numeric(t(w) %*% vc(m)[coefs, coefs] %*% w))
+  ee <- sqrt(as.numeric(t(w) %*% V[coefs, coefs] %*% w))
   c(estimacion = est, ee = ee, p = 2 * pnorm(-abs(est / ee)))
 }
 
-# Efecto parcial promedio de W sobre los tratados
-ape_w <- function(m, datos, ponderar) {
+# Efecto parcial promedio de W sobre los tratados. Para svyglm se usa la
+# matriz de varianzas del diseño (vcov = TRUE)
+ape_w <- function(m, datos, ponderar, vcov = "HC1") {
   a <- marginaleffects::avg_comparisons(
     m, variables = list(W = c(0, 1)), newdata = subset(datos, W == 1),
-    wts = if (ponderar) "pond" else FALSE, vcov = "HC1")
+    wts = if (ponderar) "pond" else FALSE, vcov = vcov)
   c(estimacion = a$estimate, ee = a$std.error, p = a$p.value)
 }
 
-fila <- function(modelo, n, a, b) {
+fila <- function(modelo, n, a, b, d) {
   data.frame(analisis = "DiD escalonado", modelo, n,
              sin_ponderar = a["estimacion"], ee_sin = a["ee"], p_sin = a["p"],
-             ponderado = b["estimacion"], ee_pond = b["ee"], p_pond = b["p"])
+             ponderado = b["estimacion"], ee_pond = b["ee"], p_pond = b["p"],
+             ee_diseno = d["ee"], p_diseno = d["p"])
 }
+
+diseno_est <- diseno(d_est)
 
 ## M1 y M2 lineales ----------------------------------------------------------
 agregar(comparar_lm("DiD escalonado", "M1 lineal", f_m1("int_pol"), d_est, "W"))
 
 m2_0 <- lm(f_m2("int_pol"), data = d_est)
 m2_1 <- lm(f_m2("int_pol"), data = d_est, weights = pond)
-agregar(fila("M2 lineal (ATT)", nrow(d_est), att_m2(m2_0, celdas_tr$n), att_m2(m2_1, celdas_tr$suma_pond)))
+m2_s <- survey::svyglm(f_m2("int_pol"), design = diseno_est)
+agregar(fila("M2 lineal (ATT)", nrow(d_est), att_m2(m2_0, celdas_tr$n),
+             att_m2(m2_1, celdas_tr$suma_pond),
+             att_m2(m2_s, celdas_tr$suma_pond, V = vcov(m2_s))))
 
 ## Modelos no lineales (efecto parcial promedio de W) ------------------------
 for (esp in list(list("M1 logit fraccional (APE)", f_m1("y01")),
@@ -225,7 +254,9 @@ for (esp in list(list("M1 logit fraccional (APE)", f_m1("y01")),
                  list("M2 logit binario (APE)", f_m2("int_alto")))) {
   g0 <- glm(esp[[2]], family = quasibinomial(link = "logit"), data = d_est)
   g1 <- glm(esp[[2]], family = quasibinomial(link = "logit"), data = d_est, weights = pond)
-  agregar(fila(esp[[1]], nrow(d_est), ape_w(g0, d_est, FALSE), ape_w(g1, d_est, TRUE)))
+  gs <- survey::svyglm(esp[[2]], design = diseno_est, family = quasibinomial(link = "logit"))
+  agregar(fila(esp[[1]], nrow(d_est), ape_w(g0, d_est, FALSE), ape_w(g1, d_est, TRUE),
+               ape_w(gs, d_est, TRUE, vcov = TRUE)))
 }
 
 ## Robustez ------------------------------------------------------------------
@@ -254,7 +285,12 @@ prueba_adelantos <- function(w) {
   ad <- if (w) lm(f_ad, data = d_est, weights = pond) else lm(f_ad, data = d_est)
   lmtest::waldtest(base, ad, vcov = vc(ad), test = "F")$`Pr(>F)`[2]
 }
-pruebas_adelantos <- c(sin_ponderar = prueba_adelantos(FALSE), ponderado = prueba_adelantos(TRUE))
+# Con diseño muestral: prueba de Wald conjunta de los adelantos
+m_ad_s <- survey::svyglm(f_ad, design = diseno(d_est))
+prueba_ad_s <- survey::regTermTest(m_ad_s, as.formula(paste("~", paste(adelantos$nombre, collapse = " + "))))
+
+pruebas_adelantos <- c(sin_ponderar = prueba_adelantos(FALSE), ponderado = prueba_adelantos(TRUE),
+                       diseno = as.numeric(prueba_ad_s$p))
 pruebas_adelantos
 ```
 
@@ -265,10 +301,10 @@ comparacion <- dplyr::bind_rows(resultados)
 rownames(comparacion) <- NULL
 
 knitr::kable(comparacion, digits = 3,
-             caption = "Estimador del tratamiento sin ponderar y ponderado (errores estándar HC1)")
+             caption = "Estimador del tratamiento sin ponderar, ponderado (errores HC1) y con diseño muestral (ee_diseno, p_diseno)")
 
 writeLines(knitr::kable(comparacion, format = "html", digits = 3,
-                        caption = "Estimador del tratamiento sin ponderar y ponderado (errores estándar HC1)"),
+                        caption = "Estimador del tratamiento sin ponderar, ponderado (errores HC1) y con diseño muestral (ee_diseno, p_diseno)"),
            "output/tables/ponderado_comparacion.html")
 
 saveRDS(list(comparacion = comparacion, pruebas_adelantos = pruebas_adelantos,

@@ -10,6 +10,8 @@ Este documento replica los análisis de regresión de `analysis.qmd` que usan el
 
 A diferencia del nivel educacional, que para quienes siguen estudiando es un resultado posterior al tratamiento, el grupo socioeconómico describe al hogar y difícilmente es afectado por la asignatura. La agrupación principal es ABC1-C2, C3 y D-E, con D-E como categoría de referencia, porque el grupo E tiene muy pocos casos en todas las olas. Los análisis de diferencia en diferencias no usan el nivel educacional y no se replican aquí.
 
+Todos los modelos agrupan olas e incluyen efectos fijos de ola, cuyos coeficientes se omiten en las tablas.
+
 Se reportan todas las especificaciones estimadas. Al comparar muchas especificaciones, es esperable que alguna tenga un valor p bajo 0,05 aunque no haya efecto, por lo que ninguna debe elegirse por su significancia.
 
 # Librerías
@@ -52,19 +54,21 @@ dplyr::count(int_gse, educacion_ciudadana)
 dplyr::count(int_gse, gse3, educacion_ciudadana)
 
 ## Modelos -------------------------------------------------------------------
-reg_int1 <- lm(int_pol ~ educacion_ciudadana, data = int_gse)
+reg_int1 <- lm(int_pol ~ educacion_ciudadana + factor(ola), data = int_gse)
 # gse como control
-reg_int2 <- lm(int_pol ~ educacion_ciudadana + gse3, data = int_gse)
+reg_int2 <- lm(int_pol ~ educacion_ciudadana + gse3 + factor(ola), data = int_gse)
 # gse y edad como controles
-reg_int3 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac, data = int_gse)
+reg_int3 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), data = int_gse)
 
-texreg::htmlreg(list(reg_int1, reg_int2, reg_int3),
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 3)),
                 file = "output/tables/gse_modelos_interes.html")
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(list(reg_int1, reg_int2, reg_int3))
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 3)))
 ```
 
 # Asignatura de Educación Ciudadana y voto en 2021
@@ -81,21 +85,23 @@ dplyr::count(voto_gse, educacion_ciudadana)
 
 ## Modelos -------------------------------------------------------------------
 # Regresiones logísticas
-m1 <- glm(voto ~ educacion_ciudadana,
+m1 <- glm(voto ~ educacion_ciudadana + factor(ola),
           family = binomial(link = "logit"), data = voto_gse)
 # gse como control
-m2 <- glm(voto ~ educacion_ciudadana + gse3,
+m2 <- glm(voto ~ educacion_ciudadana + gse3 + factor(ola),
           family = binomial(link = "logit"), data = voto_gse)
 # gse y edad como controles
-m3 <- glm(voto ~ educacion_ciudadana + gse3 + edad_nac,
+m3 <- glm(voto ~ educacion_ciudadana + gse3 + edad_nac + factor(ola),
           family = binomial(link = "logit"), data = voto_gse)
 
-texreg::htmlreg(list(m1, m2, m3), file = "output/tables/gse_modelos_voto.html")
+texreg::htmlreg(list(m1, m2, m3), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 3)), file = "output/tables/gse_modelos_voto.html")
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(list(m1, m2, m3))
+texreg::htmlreg(list(m1, m2, m3), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 3)))
 ```
 
 # Interacción entre la asignatura y el grupo socioeconómico
@@ -104,22 +110,24 @@ Replica los modelos que interactuaban la asignatura con el nivel educacional, ah
 
 ```{r}
 ## Modelos -------------------------------------------------------------------
-reg_int_x <- lm(int_pol ~ educacion_ciudadana * gse3 + edad_nac, data = int_gse)
-m_x <- glm(voto ~ educacion_ciudadana * gse3 + edad_nac,
+reg_int_x <- lm(int_pol ~ educacion_ciudadana * gse3 + edad_nac + factor(ola), data = int_gse)
+m_x <- glm(voto ~ educacion_ciudadana * gse3 + edad_nac + factor(ola),
            family = binomial(link = "logit"), data = voto_gse)
 
 # Tratados por grupo socioeconómico en cada muestra
 dplyr::count(int_gse, gse3, educacion_ciudadana)
 dplyr::count(voto_gse, gse3, educacion_ciudadana)
 
-texreg::htmlreg(list(reg_int_x, m_x),
+texreg::htmlreg(list(reg_int_x, m_x), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 2)),
                 custom.model.names = c("Interés político (lineal)", "Voto 2021 (logit)"),
                 file = "output/tables/gse_modelos_interaccion.html")
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(list(reg_int_x, m_x),
+texreg::htmlreg(list(reg_int_x, m_x), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 2)),
                 custom.model.names = c("Interés político (lineal)", "Voto 2021 (logit)"))
 ```
 
@@ -148,13 +156,13 @@ sensibilidad_gse <- dplyr::bind_rows(lapply(names(agrupaciones), function(k) {
   dv <- voto_gse %>% dplyr::mutate(g_ = agrupaciones[[k]](gse))
   dplyr::bind_rows(
     cbind(agrupacion = k, resultado = "Interés", modelo = "2: + gse",
-          coef_trat(lm(int_pol ~ educacion_ciudadana + g_, data = di))),
+          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + factor(ola), data = di))),
     cbind(agrupacion = k, resultado = "Interés", modelo = "3: + gse y edad",
-          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + edad_nac, data = di))),
+          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + edad_nac + factor(ola), data = di))),
     cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "2: + gse",
-          coef_trat(glm(voto ~ educacion_ciudadana + g_, family = binomial, data = dv))),
+          coef_trat(glm(voto ~ educacion_ciudadana + g_ + factor(ola), family = binomial, data = dv))),
     cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "3: + gse y edad",
-          coef_trat(glm(voto ~ educacion_ciudadana + g_ + edad_nac, family = binomial, data = dv)))
+          coef_trat(glm(voto ~ educacion_ciudadana + g_ + edad_nac + factor(ola), family = binomial, data = dv)))
   )
 }))
 rownames(sensibilidad_gse) <- NULL
@@ -177,17 +185,19 @@ int_gse_sin85 <- int_gse %>% dplyr::filter(ola != "85") %>% droplevels()
 nrow(int_gse_sin85)
 
 ## Modelos -------------------------------------------------------------------
-reg_int1_sin85 <- lm(int_pol ~ educacion_ciudadana, data = int_gse_sin85)
-reg_int2_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3, data = int_gse_sin85)
-reg_int3_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac, data = int_gse_sin85)
+reg_int1_sin85 <- lm(int_pol ~ educacion_ciudadana + factor(ola), data = int_gse_sin85)
+reg_int2_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3 + factor(ola), data = int_gse_sin85)
+reg_int3_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), data = int_gse_sin85)
 
-texreg::htmlreg(list(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85),
+texreg::htmlreg(list(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 3)),
                 file = "output/tables/gse_modelos_interes_sin85.html")
 ```
 
 ```{r}
 #| results: asis
-texreg::htmlreg(list(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85))
+texreg::htmlreg(list(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85), omit.coef = "factor[(]ola[)]",
+                custom.gof.rows = list("EF ola" = rep("Sí", 3)))
 ```
 
 # Guardar muestras y modelos

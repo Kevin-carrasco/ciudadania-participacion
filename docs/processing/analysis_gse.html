@@ -189,7 +189,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Fecha de publicación</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">26 de septiembre de 2026</p>
+      <p class="date">28 de septiembre de 2026</p>
     </div>
   </div>
   
@@ -203,6 +203,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <p>Este documento replica los análisis de regresión de <code>analysis.qmd</code> que usan el nivel educacional como control, reemplazándolo por el grupo socioeconómico (<code>gse</code>). Carga los datos procesados en <code>preparation.qmd</code>. Las tablas se guardan en <code>output/tables/gse_*.html</code>, y las muestras y modelos en <code>output/models/modelos_gse.rds</code>.</p>
 <p>A diferencia del nivel educacional, que para quienes siguen estudiando es un resultado posterior al tratamiento, el grupo socioeconómico describe al hogar y difícilmente es afectado por la asignatura. La agrupación principal es ABC1-C2, C3 y D-E, con D-E como categoría de referencia, porque el grupo E tiene muy pocos casos en todas las olas. Los análisis de diferencia en diferencias no usan el nivel educacional y no se replican aquí.</p>
+<p>Todos los modelos agrupan olas e incluyen efectos fijos de ola, cuyos coeficientes se omiten en las tablas.</p>
 <p>Se reportan todas las especificaciones estimadas. Al comparar muchas especificaciones, es esperable que alguna tenga un valor p bajo 0,05 aunque no haya efecto, por lo que ninguna debe elegirse por su significancia.</p>
 <section id="librerías" class="level1">
 <h1>Librerías</h1>
@@ -290,19 +291,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <details class="code-fold">
 <summary>Código</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>reg_int1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana, <span class="at">data =</span> int_gse)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>reg_int1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># gse como control</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>reg_int2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3, <span class="at">data =</span> int_gse)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>reg_int2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># gse y edad como controles</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>reg_int3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac, <span class="at">data =</span> int_gse)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>reg_int3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3),</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)),</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <details class="code-fold">
 <summary>Código</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <table class="texreg" style="margin: 10px auto;border-collapse: collapse;border-spacing: 0px;caption-side: bottom;color: #000000;border-top: 2px solid #000000;">
 <caption>
@@ -330,13 +333,13 @@ Model 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.09<sup>***</sup>
+2.11<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.68<sup>***</sup>
+1.77<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.23<sup>***</sup>
+2.31<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -344,10 +347,10 @@ Model 3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.01)
+(0.03)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.03)
+(0.04)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 (0.05)
@@ -358,13 +361,13 @@ Model 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>**</sup>
-</td>
-<td style="padding-left: 5px;padding-right: 5px;">
 0.20<sup>**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.13
+0.17<sup>*</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.16<sup>*</sup>
 </td>
 </tr>
 <tr>
@@ -389,10 +392,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.35<sup>***</sup>
+0.36<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.33<sup>***</sup>
+0.34<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -417,10 +420,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.88<sup>***</sup>
+0.89<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.84<sup>***</sup>
+0.85<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -467,16 +470,30 @@ edad_nac
 </tr>
 <tr style="border-top: 1px solid #000000;">
 <td style="padding-left: 5px;padding-right: 5px;">
+EF ola
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
 R<sup>2</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.00
-</td>
-<td style="padding-left: 5px;padding-right: 5px;">
-0.06
+0.02
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.08
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.10
 </td>
 </tr>
 <tr>
@@ -484,13 +501,13 @@ R<sup>2</sup>
 Adj. R<sup>2</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.00
-</td>
-<td style="padding-left: 5px;padding-right: 5px;">
-0.06
+0.02
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.08
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.10
 </td>
 </tr>
 <tr style="border-bottom: 2px solid #000000;">
@@ -548,21 +565,23 @@ Num. obs.
 <summary>Código</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Regresiones logísticas</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># gse como control</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
 <span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
 <span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co"># gse y edad como controles</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
 <span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
 <span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3), <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_voto.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)), <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_voto.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <details class="code-fold">
 <summary>Código</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <table class="texreg" style="margin: 10px auto;border-collapse: collapse;border-spacing: 0px;caption-side: bottom;color: #000000;border-top: 2px solid #000000;">
 <caption>
@@ -590,13 +609,13 @@ Model 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.52<sup>***</sup>
+0.77<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.19<sup>***</sup>
+0.48<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.30<sup>***</sup>
+-0.40<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -604,13 +623,13 @@ Model 3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.02)
+(0.06)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.05)
+(0.07)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.09)
+(0.11)
 </td>
 </tr>
 <tr>
@@ -618,13 +637,13 @@ Model 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.96<sup>***</sup>
+-1.02<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--1.00<sup>***</sup>
+-1.06<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.49<sup>*</sup>
+-0.56<sup>**</sup>
 </td>
 </tr>
 <tr>
@@ -638,7 +657,7 @@ educacion_ciudadana
 (0.21)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.21)
+(0.22)
 </td>
 </tr>
 <tr>
@@ -649,10 +668,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.31<sup>***</sup>
+0.27<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.34<sup>***</sup>
+0.31<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -677,10 +696,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.82<sup>***</sup>
+0.80<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.87<sup>***</sup>
+0.86<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -727,16 +746,30 @@ edad_nac
 </tr>
 <tr style="border-top: 1px solid #000000;">
 <td style="padding-left: 5px;padding-right: 5px;">
+EF ola
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
 AIC
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10414.54
+10133.48
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10303.78
+10031.90
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10165.93
+9904.39
 </td>
 </tr>
 <tr>
@@ -744,13 +777,13 @@ AIC
 BIC
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10429.15
+10206.53
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10333.00
+10119.57
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10202.45
+9999.37
 </td>
 </tr>
 <tr>
@@ -758,13 +791,13 @@ BIC
 Log Likelihood
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--5205.27
+-5056.74
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--5147.89
+-5003.95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--5077.96
+-4939.20
 </td>
 </tr>
 <tr>
@@ -772,13 +805,13 @@ Log Likelihood
 Deviance
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10410.54
+10113.48
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10295.78
+10007.90
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10155.93
+9878.39
 </td>
 </tr>
 <tr style="border-bottom: 2px solid #000000;">
@@ -812,8 +845,8 @@ Num. obs.
 <details class="code-fold">
 <summary>Código</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>reg_int_x <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac, <span class="at">data =</span> int_gse)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>m_x <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac,</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>reg_int_x <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>m_x <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
 <span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>           <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
 <span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Tratados por grupo socioeconómico en cada muestra</span></span>
@@ -847,15 +880,17 @@ Num. obs.
 </div>
 <details class="code-fold">
 <summary>Código</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x),</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>),</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interaccion.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">2</span>)),</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>),</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interaccion.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <details class="code-fold">
 <summary>Código</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x),</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">2</span>)),</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <table class="texreg" style="margin: 10px auto;border-collapse: collapse;border-spacing: 0px;caption-side: bottom;color: #000000;border-top: 2px solid #000000;">
 <caption>
@@ -880,10 +915,10 @@ Voto 2021 (logit)
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.23<sup>***</sup>
+2.30<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.30<sup>***</sup>
+-0.39<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -894,7 +929,7 @@ Voto 2021 (logit)
 (0.05)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.09)
+(0.11)
 </td>
 </tr>
 <tr>
@@ -902,10 +937,10 @@ Voto 2021 (logit)
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.07
+-0.05
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.75
+-0.90<sup>*</sup>
 </td>
 </tr>
 <tr>
@@ -913,10 +948,10 @@ educacion_ciudadana
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.18)
+(0.17)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.44)
+(0.45)
 </td>
 </tr>
 <tr>
@@ -924,10 +959,10 @@ educacion_ciudadana
 gse3C3
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.32<sup>***</sup>
+0.34<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.33<sup>***</sup>
+0.30<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -946,10 +981,10 @@ gse3C3
 gse3ABC1-C2
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.86<sup>***</sup>
+0.87<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.88<sup>***</sup>
+0.86<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -990,10 +1025,10 @@ edad_nac
 educacion_ciudadana:gse3C3
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09
+0.04
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.45
+0.57
 </td>
 </tr>
 <tr>
@@ -1004,7 +1039,7 @@ educacion_ciudadana:gse3C3
 (0.20)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.52)
+(0.53)
 </td>
 </tr>
 <tr>
@@ -1012,10 +1047,10 @@ educacion_ciudadana:gse3C3
 educacion_ciudadana:gse3ABC1-C2
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.36
+-0.41
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.02
+0.11
 </td>
 </tr>
 <tr>
@@ -1023,18 +1058,29 @@ educacion_ciudadana:gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.22)
+(0.21)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.61)
+(0.63)
 </td>
 </tr>
 <tr style="border-top: 1px solid #000000;">
 <td style="padding-left: 5px;padding-right: 5px;">
+EF ola
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
 R<sup>2</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08
+0.10
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -1045,7 +1091,7 @@ R<sup>2</sup>
 Adj. R<sup>2</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08
+0.10
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -1070,7 +1116,7 @@ AIC
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10168.80
+9906.87
 </td>
 </tr>
 <tr>
@@ -1081,7 +1127,7 @@ BIC
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10219.94
+10016.46
 </td>
 </tr>
 <tr>
@@ -1092,7 +1138,7 @@ Log Likelihood
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--5077.40
+-4938.44
 </td>
 </tr>
 <tr style="border-bottom: 2px solid #000000;">
@@ -1103,7 +1149,7 @@ Deviance
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-10154.80
+9876.87
 </td>
 </tr>
 </tbody>
@@ -1142,13 +1188,13 @@ Deviance
 <span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>  dv <span class="ot">&lt;-</span> voto_gse <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">g_ =</span> agrupaciones[[k]](gse))</span>
 <span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(</span>
 <span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Interés"</span>, <span class="at">modelo =</span> <span class="st">"2: + gse"</span>,</span>
-<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_, <span class="at">data =</span> di))),</span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> di))),</span>
 <span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Interés"</span>, <span class="at">modelo =</span> <span class="st">"3: + gse y edad"</span>,</span>
-<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac, <span class="at">data =</span> di))),</span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> di))),</span>
 <span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Voto (logit)"</span>, <span class="at">modelo =</span> <span class="st">"2: + gse"</span>,</span>
-<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_, <span class="at">family =</span> binomial, <span class="at">data =</span> dv))),</span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">family =</span> binomial, <span class="at">data =</span> dv))),</span>
 <span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Voto (logit)"</span>, <span class="at">modelo =</span> <span class="st">"3: + gse y edad"</span>,</span>
-<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac, <span class="at">family =</span> binomial, <span class="at">data =</span> dv)))</span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">family =</span> binomial, <span class="at">data =</span> dv)))</span>
 <span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>}))</span>
 <span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(sensibilidad_gse) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
@@ -1184,26 +1230,26 @@ Deviance
 <td style="text-align: left;">a) 5 categorías (ABC1, C2, C3, D, E)</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">0.211</td>
+<td style="text-align: right;">0.189</td>
 <td style="text-align: right;">0.071</td>
-<td style="text-align: right;">0.003</td>
+<td style="text-align: right;">0.008</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">a) 5 categorías (ABC1, C2, C3, D, E)</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.115</td>
+<td style="text-align: right;">-0.145</td>
 <td style="text-align: right;">0.074</td>
-<td style="text-align: right;">0.121</td>
+<td style="text-align: right;">0.050</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">a) 5 categorías (ABC1, C2, C3, D, E)</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">-1.000</td>
-<td style="text-align: right;">0.207</td>
+<td style="text-align: right;">-1.054</td>
+<td style="text-align: right;">0.211</td>
 <td style="text-align: right;">0.000</td>
 <td style="text-align: right;">10998</td>
 </tr>
@@ -1211,35 +1257,35 @@ Deviance
 <td style="text-align: left;">a) 5 categorías (ABC1, C2, C3, D, E)</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.491</td>
-<td style="text-align: right;">0.211</td>
-<td style="text-align: right;">0.020</td>
+<td style="text-align: right;">-0.556</td>
+<td style="text-align: right;">0.215</td>
+<td style="text-align: right;">0.010</td>
 <td style="text-align: right;">10998</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">b) 3: ABC1-C2, C3, D-E (principal)</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">0.196</td>
+<td style="text-align: right;">0.174</td>
 <td style="text-align: right;">0.071</td>
-<td style="text-align: right;">0.006</td>
+<td style="text-align: right;">0.014</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">b) 3: ABC1-C2, C3, D-E (principal)</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.128</td>
+<td style="text-align: right;">-0.158</td>
 <td style="text-align: right;">0.074</td>
-<td style="text-align: right;">0.085</td>
+<td style="text-align: right;">0.033</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">b) 3: ABC1-C2, C3, D-E (principal)</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">-1.001</td>
-<td style="text-align: right;">0.207</td>
+<td style="text-align: right;">-1.056</td>
+<td style="text-align: right;">0.211</td>
 <td style="text-align: right;">0.000</td>
 <td style="text-align: right;">10998</td>
 </tr>
@@ -1247,35 +1293,35 @@ Deviance
 <td style="text-align: left;">b) 3: ABC1-C2, C3, D-E (principal)</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.492</td>
-<td style="text-align: right;">0.211</td>
-<td style="text-align: right;">0.020</td>
+<td style="text-align: right;">-0.558</td>
+<td style="text-align: right;">0.215</td>
+<td style="text-align: right;">0.010</td>
 <td style="text-align: right;">10998</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">c) 2: ABC1-C2 vs resto</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">0.205</td>
-<td style="text-align: right;">0.072</td>
-<td style="text-align: right;">0.004</td>
+<td style="text-align: right;">0.177</td>
+<td style="text-align: right;">0.071</td>
+<td style="text-align: right;">0.013</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">c) 2: ABC1-C2 vs resto</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.131</td>
+<td style="text-align: right;">-0.169</td>
 <td style="text-align: right;">0.075</td>
-<td style="text-align: right;">0.081</td>
+<td style="text-align: right;">0.024</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">c) 2: ABC1-C2 vs resto</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">-0.993</td>
-<td style="text-align: right;">0.207</td>
+<td style="text-align: right;">-1.047</td>
+<td style="text-align: right;">0.211</td>
 <td style="text-align: right;">0.000</td>
 <td style="text-align: right;">10998</td>
 </tr>
@@ -1283,71 +1329,71 @@ Deviance
 <td style="text-align: left;">c) 2: ABC1-C2 vs resto</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.494</td>
-<td style="text-align: right;">0.211</td>
-<td style="text-align: right;">0.019</td>
+<td style="text-align: right;">-0.560</td>
+<td style="text-align: right;">0.215</td>
+<td style="text-align: right;">0.009</td>
 <td style="text-align: right;">10998</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">d) 2: D-E vs resto</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">0.219</td>
+<td style="text-align: right;">0.188</td>
 <td style="text-align: right;">0.072</td>
-<td style="text-align: right;">0.003</td>
+<td style="text-align: right;">0.009</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">d) 2: D-E vs resto</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.122</td>
-<td style="text-align: right;">0.076</td>
-<td style="text-align: right;">0.107</td>
+<td style="text-align: right;">-0.162</td>
+<td style="text-align: right;">0.075</td>
+<td style="text-align: right;">0.031</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">d) 2: D-E vs resto</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">-0.982</td>
-<td style="text-align: right;">0.206</td>
-<td style="text-align: right;">0.000</td>
-<td style="text-align: right;">10998</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">d) 2: D-E vs resto</td>
-<td style="text-align: left;">Voto (logit)</td>
-<td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.480</td>
+<td style="text-align: right;">-1.035</td>
 <td style="text-align: right;">0.210</td>
-<td style="text-align: right;">0.022</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">10998</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">d) 2: D-E vs resto</td>
+<td style="text-align: left;">Voto (logit)</td>
+<td style="text-align: left;">3: + gse y edad</td>
+<td style="text-align: right;">-0.547</td>
+<td style="text-align: right;">0.214</td>
+<td style="text-align: right;">0.011</td>
 <td style="text-align: right;">10998</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">e) continua (1 = ABC1 a 5 = E)</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">0.206</td>
+<td style="text-align: right;">0.186</td>
 <td style="text-align: right;">0.071</td>
-<td style="text-align: right;">0.004</td>
+<td style="text-align: right;">0.009</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">e) continua (1 = ABC1 a 5 = E)</td>
 <td style="text-align: left;">Interés</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.118</td>
+<td style="text-align: right;">-0.146</td>
 <td style="text-align: right;">0.074</td>
-<td style="text-align: right;">0.111</td>
+<td style="text-align: right;">0.048</td>
 <td style="text-align: right;">8479</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">e) continua (1 = ABC1 a 5 = E)</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">2: + gse</td>
-<td style="text-align: right;">-0.999</td>
-<td style="text-align: right;">0.207</td>
+<td style="text-align: right;">-1.053</td>
+<td style="text-align: right;">0.210</td>
 <td style="text-align: right;">0.000</td>
 <td style="text-align: right;">10998</td>
 </tr>
@@ -1355,9 +1401,9 @@ Deviance
 <td style="text-align: left;">e) continua (1 = ABC1 a 5 = E)</td>
 <td style="text-align: left;">Voto (logit)</td>
 <td style="text-align: left;">3: + gse y edad</td>
-<td style="text-align: right;">-0.488</td>
-<td style="text-align: right;">0.211</td>
-<td style="text-align: right;">0.021</td>
+<td style="text-align: right;">-0.553</td>
+<td style="text-align: right;">0.215</td>
+<td style="text-align: right;">0.010</td>
 <td style="text-align: right;">10998</td>
 </tr>
 </tbody>
@@ -1387,17 +1433,19 @@ Deviance
 <details class="code-fold">
 <summary>Código</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>reg_int1_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana, <span class="at">data =</span> int_gse_sin85)</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>reg_int2_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3, <span class="at">data =</span> int_gse_sin85)</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>reg_int3_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac, <span class="at">data =</span> int_gse_sin85)</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>reg_int1_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse_sin85)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>reg_int2_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse_sin85)</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>reg_int3_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse_sin85)</span>
 <span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85),</span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes_sin85.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)),</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes_sin85.html"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <details class="code-fold">
 <summary>Código</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <table class="texreg" style="margin: 10px auto;border-collapse: collapse;border-spacing: 0px;caption-side: bottom;color: #000000;border-top: 2px solid #000000;">
 <caption>
@@ -1425,13 +1473,13 @@ Model 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.08<sup>***</sup>
+1.98<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.68<sup>***</sup>
+1.63<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.21<sup>***</sup>
+2.15<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -1439,10 +1487,10 @@ Model 3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.02)
+(0.03)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-(0.03)
+(0.04)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 (0.06)
@@ -1453,13 +1501,13 @@ Model 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>**</sup>
+0.18<sup>*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>**</sup>
+0.16<sup>*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.10
+-0.15<sup>*</sup>
 </td>
 </tr>
 <tr>
@@ -1487,7 +1535,7 @@ gse3C3
 0.33<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.30<sup>***</sup>
+0.31<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -1512,10 +1560,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.83<sup>***</sup>
+0.82<sup>***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.79<sup>***</sup>
+0.78<sup>***</sup>
 </td>
 </tr>
 <tr>
@@ -1562,16 +1610,30 @@ edad_nac
 </tr>
 <tr style="border-top: 1px solid #000000;">
 <td style="padding-left: 5px;padding-right: 5px;">
+EF ola
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
 R<sup>2</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.00
+0.02
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05
+0.08
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07
+0.09
 </td>
 </tr>
 <tr>
@@ -1579,13 +1641,13 @@ R<sup>2</sup>
 Adj. R<sup>2</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.00
-</td>
-<td style="padding-left: 5px;padding-right: 5px;">
-0.05
+0.02
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.07
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.09
 </td>
 </tr>
 <tr style="border-bottom: 2px solid #000000;">
@@ -2096,197 +2158,207 @@ Num. obs.
 <span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>A diferencia del nivel educacional, que para quienes siguen estudiando es un resultado posterior al tratamiento, el grupo socioeconómico describe al hogar y difícilmente es afectado por la asignatura. La agrupación principal es ABC1-C2, C3 y D-E, con D-E como categoría de referencia, porque el grupo E tiene muy pocos casos en todas las olas. Los análisis de diferencia en diferencias no usan el nivel educacional y no se replican aquí.</span>
 <span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>Se reportan todas las especificaciones estimadas. Al comparar muchas especificaciones, es esperable que alguna tenga un valor p bajo 0,05 aunque no haya efecto, por lo que ninguna debe elegirse por su significancia.</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>Todos los modelos agrupan olas e incluyen efectos fijos de ola, cuyos coeficientes se omiten en las tablas.</span>
 <span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a><span class="fu"># Librerías</span></span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>Se reportan todas las especificaciones estimadas. Al comparar muchas especificaciones, es esperable que alguna tenga un valor p bajo 0,05 aunque no haya efecto, por lo que ninguna debe elegirse por su significancia.</span>
 <span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(dplyr, texreg)</span>
-<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a><span class="fu"># Datos procesados</span></span>
+<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a><span class="fu"># Librerías</span></span>
+<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(dplyr, texreg)</span>
+<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb31-24"><a href="#cb31-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-27"><a href="#cb31-27" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-28"><a href="#cb31-28" aria-hidden="true" tabindex="-1"></a>data_voto <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"input/data/proc/data_voto.rds"</span>)</span>
-<span id="cb31-29"><a href="#cb31-29" aria-hidden="true" tabindex="-1"></a>data_int <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"input/data/proc/data_int.rds"</span>)</span>
-<span id="cb31-30"><a href="#cb31-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-31"><a href="#cb31-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Agrupación principal de gse (referencia: D-E)</span></span>
-<span id="cb31-32"><a href="#cb31-32" aria-hidden="true" tabindex="-1"></a>agrupar_gse <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb31-33"><a href="#cb31-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">factor</span>(dplyr<span class="sc">::</span><span class="fu">case_when</span>(x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"ABC1"</span>, <span class="st">"C2"</span>) <span class="sc">~</span> <span class="st">"ABC1-C2"</span>,</span>
-<span id="cb31-34"><a href="#cb31-34" aria-hidden="true" tabindex="-1"></a>                          x <span class="sc">==</span> <span class="st">"C3"</span> <span class="sc">~</span> <span class="st">"C3"</span>,</span>
-<span id="cb31-35"><a href="#cb31-35" aria-hidden="true" tabindex="-1"></a>                          x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"D"</span>, <span class="st">"E"</span>) <span class="sc">~</span> <span class="st">"D-E"</span>),</span>
-<span id="cb31-36"><a href="#cb31-36" aria-hidden="true" tabindex="-1"></a>         <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"D-E"</span>, <span class="st">"C3"</span>, <span class="st">"ABC1-C2"</span>))</span>
-<span id="cb31-37"><a href="#cb31-37" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb31-38"><a href="#cb31-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-39"><a href="#cb31-39" aria-hidden="true" tabindex="-1"></a>data_voto <span class="ot">&lt;-</span> data_voto <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">gse3 =</span> <span class="fu">agrupar_gse</span>(gse))</span>
-<span id="cb31-40"><a href="#cb31-40" aria-hidden="true" tabindex="-1"></a>data_int <span class="ot">&lt;-</span> data_int <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">gse3 =</span> <span class="fu">agrupar_gse</span>(gse))</span>
-<span id="cb31-41"><a href="#cb31-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-42"><a href="#cb31-42" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(data_int<span class="sc">$</span>gse, data_int<span class="sc">$</span>gse3, <span class="at">useNA =</span> <span class="st">"ifany"</span>)</span>
-<span id="cb31-43"><a href="#cb31-43" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-44"><a href="#cb31-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-45"><a href="#cb31-45" aria-hidden="true" tabindex="-1"></a><span class="fu"># Asignatura de Educación Ciudadana e interés político</span></span>
+<span id="cb31-25"><a href="#cb31-25" aria-hidden="true" tabindex="-1"></a><span class="fu"># Datos procesados</span></span>
+<span id="cb31-26"><a href="#cb31-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-29"><a href="#cb31-29" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-30"><a href="#cb31-30" aria-hidden="true" tabindex="-1"></a>data_voto <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"input/data/proc/data_voto.rds"</span>)</span>
+<span id="cb31-31"><a href="#cb31-31" aria-hidden="true" tabindex="-1"></a>data_int <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"input/data/proc/data_int.rds"</span>)</span>
+<span id="cb31-32"><a href="#cb31-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-33"><a href="#cb31-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Agrupación principal de gse (referencia: D-E)</span></span>
+<span id="cb31-34"><a href="#cb31-34" aria-hidden="true" tabindex="-1"></a>agrupar_gse <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb31-35"><a href="#cb31-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">factor</span>(dplyr<span class="sc">::</span><span class="fu">case_when</span>(x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"ABC1"</span>, <span class="st">"C2"</span>) <span class="sc">~</span> <span class="st">"ABC1-C2"</span>,</span>
+<span id="cb31-36"><a href="#cb31-36" aria-hidden="true" tabindex="-1"></a>                          x <span class="sc">==</span> <span class="st">"C3"</span> <span class="sc">~</span> <span class="st">"C3"</span>,</span>
+<span id="cb31-37"><a href="#cb31-37" aria-hidden="true" tabindex="-1"></a>                          x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"D"</span>, <span class="st">"E"</span>) <span class="sc">~</span> <span class="st">"D-E"</span>),</span>
+<span id="cb31-38"><a href="#cb31-38" aria-hidden="true" tabindex="-1"></a>         <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"D-E"</span>, <span class="st">"C3"</span>, <span class="st">"ABC1-C2"</span>))</span>
+<span id="cb31-39"><a href="#cb31-39" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb31-40"><a href="#cb31-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-41"><a href="#cb31-41" aria-hidden="true" tabindex="-1"></a>data_voto <span class="ot">&lt;-</span> data_voto <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">gse3 =</span> <span class="fu">agrupar_gse</span>(gse))</span>
+<span id="cb31-42"><a href="#cb31-42" aria-hidden="true" tabindex="-1"></a>data_int <span class="ot">&lt;-</span> data_int <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">gse3 =</span> <span class="fu">agrupar_gse</span>(gse))</span>
+<span id="cb31-43"><a href="#cb31-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-44"><a href="#cb31-44" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(data_int<span class="sc">$</span>gse, data_int<span class="sc">$</span>gse3, <span class="at">useNA =</span> <span class="st">"ifany"</span>)</span>
+<span id="cb31-45"><a href="#cb31-45" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb31-46"><a href="#cb31-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-49"><a href="#cb31-49" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-50"><a href="#cb31-50" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra -------------------------------------------------------------------</span></span>
-<span id="cb31-51"><a href="#cb31-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Casos completos en las variables de los modelos</span></span>
-<span id="cb31-52"><a href="#cb31-52" aria-hidden="true" tabindex="-1"></a>int_gse <span class="ot">&lt;-</span> data_int <span class="sc">%&gt;%</span></span>
-<span id="cb31-53"><a href="#cb31-53" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(ola, int_pol, educacion_ciudadana, gse, gse3, edad_nac) <span class="sc">%&gt;%</span></span>
-<span id="cb31-54"><a href="#cb31-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>()</span>
-<span id="cb31-55"><a href="#cb31-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-56"><a href="#cb31-56" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(int_gse)</span>
-<span id="cb31-57"><a href="#cb31-57" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(int_gse, educacion_ciudadana)</span>
-<span id="cb31-58"><a href="#cb31-58" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(int_gse, gse3, educacion_ciudadana)</span>
-<span id="cb31-59"><a href="#cb31-59" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-60"><a href="#cb31-60" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
-<span id="cb31-61"><a href="#cb31-61" aria-hidden="true" tabindex="-1"></a>reg_int1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana, <span class="at">data =</span> int_gse)</span>
-<span id="cb31-62"><a href="#cb31-62" aria-hidden="true" tabindex="-1"></a><span class="co"># gse como control</span></span>
-<span id="cb31-63"><a href="#cb31-63" aria-hidden="true" tabindex="-1"></a>reg_int2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3, <span class="at">data =</span> int_gse)</span>
-<span id="cb31-64"><a href="#cb31-64" aria-hidden="true" tabindex="-1"></a><span class="co"># gse y edad como controles</span></span>
-<span id="cb31-65"><a href="#cb31-65" aria-hidden="true" tabindex="-1"></a>reg_int3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac, <span class="at">data =</span> int_gse)</span>
-<span id="cb31-66"><a href="#cb31-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-67"><a href="#cb31-67" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3),</span>
-<span id="cb31-68"><a href="#cb31-68" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes.html"</span>)</span>
-<span id="cb31-69"><a href="#cb31-69" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-70"><a href="#cb31-70" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-73"><a href="#cb31-73" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-74"><a href="#cb31-74" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
-<span id="cb31-75"><a href="#cb31-75" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3))</span>
-<span id="cb31-76"><a href="#cb31-76" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-77"><a href="#cb31-77" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-78"><a href="#cb31-78" aria-hidden="true" tabindex="-1"></a><span class="fu"># Asignatura de Educación Ciudadana y voto en 2021</span></span>
-<span id="cb31-79"><a href="#cb31-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-82"><a href="#cb31-82" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-83"><a href="#cb31-83" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra -------------------------------------------------------------------</span></span>
-<span id="cb31-84"><a href="#cb31-84" aria-hidden="true" tabindex="-1"></a><span class="co"># Habilitados para votar en la 2ª vuelta según su fecha de nacimiento</span></span>
-<span id="cb31-85"><a href="#cb31-85" aria-hidden="true" tabindex="-1"></a>voto_gse <span class="ot">&lt;-</span> data_voto <span class="sc">%&gt;%</span></span>
-<span id="cb31-86"><a href="#cb31-86" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(habilitado_2v <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb31-87"><a href="#cb31-87" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(voto), <span class="sc">!</span><span class="fu">is.na</span>(educacion_ciudadana), <span class="sc">!</span><span class="fu">is.na</span>(gse3))</span>
-<span id="cb31-88"><a href="#cb31-88" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-89"><a href="#cb31-89" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(voto_gse)</span>
-<span id="cb31-90"><a href="#cb31-90" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(voto_gse, educacion_ciudadana)</span>
-<span id="cb31-91"><a href="#cb31-91" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-92"><a href="#cb31-92" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
-<span id="cb31-93"><a href="#cb31-93" aria-hidden="true" tabindex="-1"></a><span class="co"># Regresiones logísticas</span></span>
-<span id="cb31-94"><a href="#cb31-94" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana,</span>
-<span id="cb31-95"><a href="#cb31-95" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
-<span id="cb31-96"><a href="#cb31-96" aria-hidden="true" tabindex="-1"></a><span class="co"># gse como control</span></span>
-<span id="cb31-97"><a href="#cb31-97" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3,</span>
-<span id="cb31-98"><a href="#cb31-98" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
-<span id="cb31-99"><a href="#cb31-99" aria-hidden="true" tabindex="-1"></a><span class="co"># gse y edad como controles</span></span>
-<span id="cb31-100"><a href="#cb31-100" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac,</span>
-<span id="cb31-101"><a href="#cb31-101" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
-<span id="cb31-102"><a href="#cb31-102" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-103"><a href="#cb31-103" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3), <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_voto.html"</span>)</span>
-<span id="cb31-104"><a href="#cb31-104" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-105"><a href="#cb31-105" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-108"><a href="#cb31-108" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-109"><a href="#cb31-109" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
-<span id="cb31-110"><a href="#cb31-110" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3))</span>
-<span id="cb31-111"><a href="#cb31-111" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-112"><a href="#cb31-112" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-113"><a href="#cb31-113" aria-hidden="true" tabindex="-1"></a><span class="fu"># Interacción entre la asignatura y el grupo socioeconómico</span></span>
-<span id="cb31-114"><a href="#cb31-114" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-115"><a href="#cb31-115" aria-hidden="true" tabindex="-1"></a>Replica los modelos que interactuaban la asignatura con el nivel educacional, ahora con el grupo socioeconómico: el efecto de la asignatura puede variar según el nivel socioeconómico del hogar.</span>
-<span id="cb31-116"><a href="#cb31-116" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-119"><a href="#cb31-119" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-120"><a href="#cb31-120" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
-<span id="cb31-121"><a href="#cb31-121" aria-hidden="true" tabindex="-1"></a>reg_int_x <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac, <span class="at">data =</span> int_gse)</span>
-<span id="cb31-122"><a href="#cb31-122" aria-hidden="true" tabindex="-1"></a>m_x <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac,</span>
-<span id="cb31-123"><a href="#cb31-123" aria-hidden="true" tabindex="-1"></a>           <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
-<span id="cb31-124"><a href="#cb31-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-125"><a href="#cb31-125" aria-hidden="true" tabindex="-1"></a><span class="co"># Tratados por grupo socioeconómico en cada muestra</span></span>
-<span id="cb31-126"><a href="#cb31-126" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(int_gse, gse3, educacion_ciudadana)</span>
-<span id="cb31-127"><a href="#cb31-127" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(voto_gse, gse3, educacion_ciudadana)</span>
-<span id="cb31-128"><a href="#cb31-128" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-129"><a href="#cb31-129" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x),</span>
-<span id="cb31-130"><a href="#cb31-130" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>),</span>
-<span id="cb31-131"><a href="#cb31-131" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interaccion.html"</span>)</span>
-<span id="cb31-132"><a href="#cb31-132" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-133"><a href="#cb31-133" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-136"><a href="#cb31-136" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-137"><a href="#cb31-137" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
-<span id="cb31-138"><a href="#cb31-138" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x),</span>
-<span id="cb31-139"><a href="#cb31-139" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>))</span>
-<span id="cb31-140"><a href="#cb31-140" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-141"><a href="#cb31-141" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-142"><a href="#cb31-142" aria-hidden="true" tabindex="-1"></a><span class="fu"># Sensibilidad a la agrupación del grupo socioeconómico</span></span>
-<span id="cb31-143"><a href="#cb31-143" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-144"><a href="#cb31-144" aria-hidden="true" tabindex="-1"></a>Replica la comparación de agrupaciones del nivel educacional. Para cada agrupación de <span class="in">`gse`</span> se estima el modelo con el control (2) y con el control y la edad (3), en interés político y en voto.</span>
-<span id="cb31-145"><a href="#cb31-145" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-148"><a href="#cb31-148" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-149"><a href="#cb31-149" aria-hidden="true" tabindex="-1"></a><span class="do">## Agrupaciones --------------------------------------------------------------</span></span>
-<span id="cb31-150"><a href="#cb31-150" aria-hidden="true" tabindex="-1"></a>agrupaciones <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb31-151"><a href="#cb31-151" aria-hidden="true" tabindex="-1"></a>  <span class="st">"a) 5 categorías (ABC1, C2, C3, D, E)"</span> <span class="ot">=</span> <span class="cf">function</span>(x) x,</span>
-<span id="cb31-152"><a href="#cb31-152" aria-hidden="true" tabindex="-1"></a>  <span class="st">"b) 3: ABC1-C2, C3, D-E (principal)"</span>   <span class="ot">=</span> agrupar_gse,</span>
-<span id="cb31-153"><a href="#cb31-153" aria-hidden="true" tabindex="-1"></a>  <span class="st">"c) 2: ABC1-C2 vs resto"</span>               <span class="ot">=</span> <span class="cf">function</span>(x) <span class="fu">factor</span>(x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"ABC1"</span>, <span class="st">"C2"</span>)),</span>
-<span id="cb31-154"><a href="#cb31-154" aria-hidden="true" tabindex="-1"></a>  <span class="st">"d) 2: D-E vs resto"</span>                   <span class="ot">=</span> <span class="cf">function</span>(x) <span class="fu">factor</span>(x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"D"</span>, <span class="st">"E"</span>)),</span>
-<span id="cb31-155"><a href="#cb31-155" aria-hidden="true" tabindex="-1"></a>  <span class="st">"e) continua (1 = ABC1 a 5 = E)"</span>       <span class="ot">=</span> <span class="cf">function</span>(x) <span class="fu">as.integer</span>(x)</span>
-<span id="cb31-156"><a href="#cb31-156" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-157"><a href="#cb31-157" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-158"><a href="#cb31-158" aria-hidden="true" tabindex="-1"></a><span class="co"># Coeficiente de educacion_ciudadana en una especificación</span></span>
-<span id="cb31-159"><a href="#cb31-159" aria-hidden="true" tabindex="-1"></a>coef_trat <span class="ot">&lt;-</span> <span class="cf">function</span>(m) {</span>
-<span id="cb31-160"><a href="#cb31-160" aria-hidden="true" tabindex="-1"></a>  s <span class="ot">&lt;-</span> <span class="fu">summary</span>(m)<span class="sc">$</span>coefficients[<span class="st">"educacion_ciudadana"</span>, ]</span>
-<span id="cb31-161"><a href="#cb31-161" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">estimacion =</span> s[<span class="dv">1</span>], <span class="at">ee =</span> s[<span class="dv">2</span>], <span class="at">p =</span> s[<span class="dv">4</span>], <span class="at">n =</span> <span class="fu">nobs</span>(m))</span>
-<span id="cb31-162"><a href="#cb31-162" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb31-163"><a href="#cb31-163" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-164"><a href="#cb31-164" aria-hidden="true" tabindex="-1"></a>sensibilidad_gse <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">names</span>(agrupaciones), <span class="cf">function</span>(k) {</span>
-<span id="cb31-165"><a href="#cb31-165" aria-hidden="true" tabindex="-1"></a>  di <span class="ot">&lt;-</span> int_gse <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">g_ =</span> agrupaciones[[k]](gse))</span>
-<span id="cb31-166"><a href="#cb31-166" aria-hidden="true" tabindex="-1"></a>  dv <span class="ot">&lt;-</span> voto_gse <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">g_ =</span> agrupaciones[[k]](gse))</span>
-<span id="cb31-167"><a href="#cb31-167" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(</span>
-<span id="cb31-168"><a href="#cb31-168" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Interés"</span>, <span class="at">modelo =</span> <span class="st">"2: + gse"</span>,</span>
-<span id="cb31-169"><a href="#cb31-169" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_, <span class="at">data =</span> di))),</span>
-<span id="cb31-170"><a href="#cb31-170" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Interés"</span>, <span class="at">modelo =</span> <span class="st">"3: + gse y edad"</span>,</span>
-<span id="cb31-171"><a href="#cb31-171" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac, <span class="at">data =</span> di))),</span>
-<span id="cb31-172"><a href="#cb31-172" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Voto (logit)"</span>, <span class="at">modelo =</span> <span class="st">"2: + gse"</span>,</span>
-<span id="cb31-173"><a href="#cb31-173" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_, <span class="at">family =</span> binomial, <span class="at">data =</span> dv))),</span>
-<span id="cb31-174"><a href="#cb31-174" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Voto (logit)"</span>, <span class="at">modelo =</span> <span class="st">"3: + gse y edad"</span>,</span>
-<span id="cb31-175"><a href="#cb31-175" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac, <span class="at">family =</span> binomial, <span class="at">data =</span> dv)))</span>
-<span id="cb31-176"><a href="#cb31-176" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb31-177"><a href="#cb31-177" aria-hidden="true" tabindex="-1"></a>}))</span>
-<span id="cb31-178"><a href="#cb31-178" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(sensibilidad_gse) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb31-179"><a href="#cb31-179" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-180"><a href="#cb31-180" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(sensibilidad_gse, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb31-181"><a href="#cb31-181" aria-hidden="true" tabindex="-1"></a>             <span class="at">caption =</span> <span class="st">"Coeficiente de educacion_ciudadana según la agrupación de gse"</span>)</span>
-<span id="cb31-182"><a href="#cb31-182" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-183"><a href="#cb31-183" aria-hidden="true" tabindex="-1"></a><span class="fu">writeLines</span>(knitr<span class="sc">::</span><span class="fu">kable</span>(sensibilidad_gse, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb31-184"><a href="#cb31-184" aria-hidden="true" tabindex="-1"></a>                        <span class="at">caption =</span> <span class="st">"Coeficiente de educacion_ciudadana según la agrupación de gse"</span>),</span>
-<span id="cb31-185"><a href="#cb31-185" aria-hidden="true" tabindex="-1"></a>           <span class="st">"output/tables/gse_sensibilidad_agrupacion.html"</span>)</span>
-<span id="cb31-186"><a href="#cb31-186" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-47"><a href="#cb31-47" aria-hidden="true" tabindex="-1"></a><span class="fu"># Asignatura de Educación Ciudadana e interés político</span></span>
+<span id="cb31-48"><a href="#cb31-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-51"><a href="#cb31-51" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-52"><a href="#cb31-52" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra -------------------------------------------------------------------</span></span>
+<span id="cb31-53"><a href="#cb31-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Casos completos en las variables de los modelos</span></span>
+<span id="cb31-54"><a href="#cb31-54" aria-hidden="true" tabindex="-1"></a>int_gse <span class="ot">&lt;-</span> data_int <span class="sc">%&gt;%</span></span>
+<span id="cb31-55"><a href="#cb31-55" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(ola, int_pol, educacion_ciudadana, gse, gse3, edad_nac) <span class="sc">%&gt;%</span></span>
+<span id="cb31-56"><a href="#cb31-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>()</span>
+<span id="cb31-57"><a href="#cb31-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-58"><a href="#cb31-58" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(int_gse)</span>
+<span id="cb31-59"><a href="#cb31-59" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(int_gse, educacion_ciudadana)</span>
+<span id="cb31-60"><a href="#cb31-60" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(int_gse, gse3, educacion_ciudadana)</span>
+<span id="cb31-61"><a href="#cb31-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-62"><a href="#cb31-62" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
+<span id="cb31-63"><a href="#cb31-63" aria-hidden="true" tabindex="-1"></a>reg_int1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
+<span id="cb31-64"><a href="#cb31-64" aria-hidden="true" tabindex="-1"></a><span class="co"># gse como control</span></span>
+<span id="cb31-65"><a href="#cb31-65" aria-hidden="true" tabindex="-1"></a>reg_int2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
+<span id="cb31-66"><a href="#cb31-66" aria-hidden="true" tabindex="-1"></a><span class="co"># gse y edad como controles</span></span>
+<span id="cb31-67"><a href="#cb31-67" aria-hidden="true" tabindex="-1"></a>reg_int3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
+<span id="cb31-68"><a href="#cb31-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-69"><a href="#cb31-69" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-70"><a href="#cb31-70" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)),</span>
+<span id="cb31-71"><a href="#cb31-71" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes.html"</span>)</span>
+<span id="cb31-72"><a href="#cb31-72" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-73"><a href="#cb31-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-76"><a href="#cb31-76" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-77"><a href="#cb31-77" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
+<span id="cb31-78"><a href="#cb31-78" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1, reg_int2, reg_int3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-79"><a href="#cb31-79" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)))</span>
+<span id="cb31-80"><a href="#cb31-80" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-81"><a href="#cb31-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-82"><a href="#cb31-82" aria-hidden="true" tabindex="-1"></a><span class="fu"># Asignatura de Educación Ciudadana y voto en 2021</span></span>
+<span id="cb31-83"><a href="#cb31-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-86"><a href="#cb31-86" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-87"><a href="#cb31-87" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra -------------------------------------------------------------------</span></span>
+<span id="cb31-88"><a href="#cb31-88" aria-hidden="true" tabindex="-1"></a><span class="co"># Habilitados para votar en la 2ª vuelta según su fecha de nacimiento</span></span>
+<span id="cb31-89"><a href="#cb31-89" aria-hidden="true" tabindex="-1"></a>voto_gse <span class="ot">&lt;-</span> data_voto <span class="sc">%&gt;%</span></span>
+<span id="cb31-90"><a href="#cb31-90" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(habilitado_2v <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb31-91"><a href="#cb31-91" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(voto), <span class="sc">!</span><span class="fu">is.na</span>(educacion_ciudadana), <span class="sc">!</span><span class="fu">is.na</span>(gse3))</span>
+<span id="cb31-92"><a href="#cb31-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-93"><a href="#cb31-93" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(voto_gse)</span>
+<span id="cb31-94"><a href="#cb31-94" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(voto_gse, educacion_ciudadana)</span>
+<span id="cb31-95"><a href="#cb31-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-96"><a href="#cb31-96" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
+<span id="cb31-97"><a href="#cb31-97" aria-hidden="true" tabindex="-1"></a><span class="co"># Regresiones logísticas</span></span>
+<span id="cb31-98"><a href="#cb31-98" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
+<span id="cb31-99"><a href="#cb31-99" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
+<span id="cb31-100"><a href="#cb31-100" aria-hidden="true" tabindex="-1"></a><span class="co"># gse como control</span></span>
+<span id="cb31-101"><a href="#cb31-101" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
+<span id="cb31-102"><a href="#cb31-102" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
+<span id="cb31-103"><a href="#cb31-103" aria-hidden="true" tabindex="-1"></a><span class="co"># gse y edad como controles</span></span>
+<span id="cb31-104"><a href="#cb31-104" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
+<span id="cb31-105"><a href="#cb31-105" aria-hidden="true" tabindex="-1"></a>          <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
+<span id="cb31-106"><a href="#cb31-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-107"><a href="#cb31-107" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-108"><a href="#cb31-108" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)), <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_voto.html"</span>)</span>
+<span id="cb31-109"><a href="#cb31-109" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-110"><a href="#cb31-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-113"><a href="#cb31-113" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-114"><a href="#cb31-114" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
+<span id="cb31-115"><a href="#cb31-115" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(m1, m2, m3), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-116"><a href="#cb31-116" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)))</span>
+<span id="cb31-117"><a href="#cb31-117" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-118"><a href="#cb31-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-119"><a href="#cb31-119" aria-hidden="true" tabindex="-1"></a><span class="fu"># Interacción entre la asignatura y el grupo socioeconómico</span></span>
+<span id="cb31-120"><a href="#cb31-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-121"><a href="#cb31-121" aria-hidden="true" tabindex="-1"></a>Replica los modelos que interactuaban la asignatura con el nivel educacional, ahora con el grupo socioeconómico: el efecto de la asignatura puede variar según el nivel socioeconómico del hogar.</span>
+<span id="cb31-122"><a href="#cb31-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-125"><a href="#cb31-125" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-126"><a href="#cb31-126" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
+<span id="cb31-127"><a href="#cb31-127" aria-hidden="true" tabindex="-1"></a>reg_int_x <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse)</span>
+<span id="cb31-128"><a href="#cb31-128" aria-hidden="true" tabindex="-1"></a>m_x <span class="ot">&lt;-</span> <span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">*</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola),</span>
+<span id="cb31-129"><a href="#cb31-129" aria-hidden="true" tabindex="-1"></a>           <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>), <span class="at">data =</span> voto_gse)</span>
+<span id="cb31-130"><a href="#cb31-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-131"><a href="#cb31-131" aria-hidden="true" tabindex="-1"></a><span class="co"># Tratados por grupo socioeconómico en cada muestra</span></span>
+<span id="cb31-132"><a href="#cb31-132" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(int_gse, gse3, educacion_ciudadana)</span>
+<span id="cb31-133"><a href="#cb31-133" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">count</span>(voto_gse, gse3, educacion_ciudadana)</span>
+<span id="cb31-134"><a href="#cb31-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-135"><a href="#cb31-135" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-136"><a href="#cb31-136" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">2</span>)),</span>
+<span id="cb31-137"><a href="#cb31-137" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>),</span>
+<span id="cb31-138"><a href="#cb31-138" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interaccion.html"</span>)</span>
+<span id="cb31-139"><a href="#cb31-139" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-140"><a href="#cb31-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-143"><a href="#cb31-143" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-144"><a href="#cb31-144" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
+<span id="cb31-145"><a href="#cb31-145" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int_x, m_x), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-146"><a href="#cb31-146" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">2</span>)),</span>
+<span id="cb31-147"><a href="#cb31-147" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.model.names =</span> <span class="fu">c</span>(<span class="st">"Interés político (lineal)"</span>, <span class="st">"Voto 2021 (logit)"</span>))</span>
+<span id="cb31-148"><a href="#cb31-148" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-149"><a href="#cb31-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-150"><a href="#cb31-150" aria-hidden="true" tabindex="-1"></a><span class="fu"># Sensibilidad a la agrupación del grupo socioeconómico</span></span>
+<span id="cb31-151"><a href="#cb31-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-152"><a href="#cb31-152" aria-hidden="true" tabindex="-1"></a>Replica la comparación de agrupaciones del nivel educacional. Para cada agrupación de <span class="in">`gse`</span> se estima el modelo con el control (2) y con el control y la edad (3), en interés político y en voto.</span>
+<span id="cb31-153"><a href="#cb31-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-156"><a href="#cb31-156" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-157"><a href="#cb31-157" aria-hidden="true" tabindex="-1"></a><span class="do">## Agrupaciones --------------------------------------------------------------</span></span>
+<span id="cb31-158"><a href="#cb31-158" aria-hidden="true" tabindex="-1"></a>agrupaciones <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb31-159"><a href="#cb31-159" aria-hidden="true" tabindex="-1"></a>  <span class="st">"a) 5 categorías (ABC1, C2, C3, D, E)"</span> <span class="ot">=</span> <span class="cf">function</span>(x) x,</span>
+<span id="cb31-160"><a href="#cb31-160" aria-hidden="true" tabindex="-1"></a>  <span class="st">"b) 3: ABC1-C2, C3, D-E (principal)"</span>   <span class="ot">=</span> agrupar_gse,</span>
+<span id="cb31-161"><a href="#cb31-161" aria-hidden="true" tabindex="-1"></a>  <span class="st">"c) 2: ABC1-C2 vs resto"</span>               <span class="ot">=</span> <span class="cf">function</span>(x) <span class="fu">factor</span>(x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"ABC1"</span>, <span class="st">"C2"</span>)),</span>
+<span id="cb31-162"><a href="#cb31-162" aria-hidden="true" tabindex="-1"></a>  <span class="st">"d) 2: D-E vs resto"</span>                   <span class="ot">=</span> <span class="cf">function</span>(x) <span class="fu">factor</span>(x <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"D"</span>, <span class="st">"E"</span>)),</span>
+<span id="cb31-163"><a href="#cb31-163" aria-hidden="true" tabindex="-1"></a>  <span class="st">"e) continua (1 = ABC1 a 5 = E)"</span>       <span class="ot">=</span> <span class="cf">function</span>(x) <span class="fu">as.integer</span>(x)</span>
+<span id="cb31-164"><a href="#cb31-164" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-165"><a href="#cb31-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-166"><a href="#cb31-166" aria-hidden="true" tabindex="-1"></a><span class="co"># Coeficiente de educacion_ciudadana en una especificación</span></span>
+<span id="cb31-167"><a href="#cb31-167" aria-hidden="true" tabindex="-1"></a>coef_trat <span class="ot">&lt;-</span> <span class="cf">function</span>(m) {</span>
+<span id="cb31-168"><a href="#cb31-168" aria-hidden="true" tabindex="-1"></a>  s <span class="ot">&lt;-</span> <span class="fu">summary</span>(m)<span class="sc">$</span>coefficients[<span class="st">"educacion_ciudadana"</span>, ]</span>
+<span id="cb31-169"><a href="#cb31-169" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">estimacion =</span> s[<span class="dv">1</span>], <span class="at">ee =</span> s[<span class="dv">2</span>], <span class="at">p =</span> s[<span class="dv">4</span>], <span class="at">n =</span> <span class="fu">nobs</span>(m))</span>
+<span id="cb31-170"><a href="#cb31-170" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb31-171"><a href="#cb31-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-172"><a href="#cb31-172" aria-hidden="true" tabindex="-1"></a>sensibilidad_gse <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">names</span>(agrupaciones), <span class="cf">function</span>(k) {</span>
+<span id="cb31-173"><a href="#cb31-173" aria-hidden="true" tabindex="-1"></a>  di <span class="ot">&lt;-</span> int_gse <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">g_ =</span> agrupaciones[[k]](gse))</span>
+<span id="cb31-174"><a href="#cb31-174" aria-hidden="true" tabindex="-1"></a>  dv <span class="ot">&lt;-</span> voto_gse <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">g_ =</span> agrupaciones[[k]](gse))</span>
+<span id="cb31-175"><a href="#cb31-175" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(</span>
+<span id="cb31-176"><a href="#cb31-176" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Interés"</span>, <span class="at">modelo =</span> <span class="st">"2: + gse"</span>,</span>
+<span id="cb31-177"><a href="#cb31-177" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> di))),</span>
+<span id="cb31-178"><a href="#cb31-178" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Interés"</span>, <span class="at">modelo =</span> <span class="st">"3: + gse y edad"</span>,</span>
+<span id="cb31-179"><a href="#cb31-179" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> di))),</span>
+<span id="cb31-180"><a href="#cb31-180" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Voto (logit)"</span>, <span class="at">modelo =</span> <span class="st">"2: + gse"</span>,</span>
+<span id="cb31-181"><a href="#cb31-181" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">family =</span> binomial, <span class="at">data =</span> dv))),</span>
+<span id="cb31-182"><a href="#cb31-182" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cbind</span>(<span class="at">agrupacion =</span> k, <span class="at">resultado =</span> <span class="st">"Voto (logit)"</span>, <span class="at">modelo =</span> <span class="st">"3: + gse y edad"</span>,</span>
+<span id="cb31-183"><a href="#cb31-183" aria-hidden="true" tabindex="-1"></a>          <span class="fu">coef_trat</span>(<span class="fu">glm</span>(voto <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> g_ <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">family =</span> binomial, <span class="at">data =</span> dv)))</span>
+<span id="cb31-184"><a href="#cb31-184" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb31-185"><a href="#cb31-185" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb31-186"><a href="#cb31-186" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(sensibilidad_gse) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
 <span id="cb31-187"><a href="#cb31-187" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-188"><a href="#cb31-188" aria-hidden="true" tabindex="-1"></a><span class="fu"># Interés político sin la ola 85</span></span>
-<span id="cb31-189"><a href="#cb31-189" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-190"><a href="#cb31-190" aria-hidden="true" tabindex="-1"></a>Replica la prueba de los modelos de interés político excluyendo la CEP 85.</span>
-<span id="cb31-191"><a href="#cb31-191" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-194"><a href="#cb31-194" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-195"><a href="#cb31-195" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra -------------------------------------------------------------------</span></span>
-<span id="cb31-196"><a href="#cb31-196" aria-hidden="true" tabindex="-1"></a>int_gse_sin85 <span class="ot">&lt;-</span> int_gse <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(ola <span class="sc">!=</span> <span class="st">"85"</span>) <span class="sc">%&gt;%</span> <span class="fu">droplevels</span>()</span>
-<span id="cb31-197"><a href="#cb31-197" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(int_gse_sin85)</span>
-<span id="cb31-198"><a href="#cb31-198" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-199"><a href="#cb31-199" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
-<span id="cb31-200"><a href="#cb31-200" aria-hidden="true" tabindex="-1"></a>reg_int1_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana, <span class="at">data =</span> int_gse_sin85)</span>
-<span id="cb31-201"><a href="#cb31-201" aria-hidden="true" tabindex="-1"></a>reg_int2_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3, <span class="at">data =</span> int_gse_sin85)</span>
-<span id="cb31-202"><a href="#cb31-202" aria-hidden="true" tabindex="-1"></a>reg_int3_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac, <span class="at">data =</span> int_gse_sin85)</span>
-<span id="cb31-203"><a href="#cb31-203" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-204"><a href="#cb31-204" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85),</span>
-<span id="cb31-205"><a href="#cb31-205" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes_sin85.html"</span>)</span>
-<span id="cb31-206"><a href="#cb31-206" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-207"><a href="#cb31-207" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-210"><a href="#cb31-210" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-211"><a href="#cb31-211" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
-<span id="cb31-212"><a href="#cb31-212" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85))</span>
-<span id="cb31-213"><a href="#cb31-213" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-214"><a href="#cb31-214" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-215"><a href="#cb31-215" aria-hidden="true" tabindex="-1"></a><span class="fu"># Guardar muestras y modelos</span></span>
+<span id="cb31-188"><a href="#cb31-188" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(sensibilidad_gse, <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb31-189"><a href="#cb31-189" aria-hidden="true" tabindex="-1"></a>             <span class="at">caption =</span> <span class="st">"Coeficiente de educacion_ciudadana según la agrupación de gse"</span>)</span>
+<span id="cb31-190"><a href="#cb31-190" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-191"><a href="#cb31-191" aria-hidden="true" tabindex="-1"></a><span class="fu">writeLines</span>(knitr<span class="sc">::</span><span class="fu">kable</span>(sensibilidad_gse, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb31-192"><a href="#cb31-192" aria-hidden="true" tabindex="-1"></a>                        <span class="at">caption =</span> <span class="st">"Coeficiente de educacion_ciudadana según la agrupación de gse"</span>),</span>
+<span id="cb31-193"><a href="#cb31-193" aria-hidden="true" tabindex="-1"></a>           <span class="st">"output/tables/gse_sensibilidad_agrupacion.html"</span>)</span>
+<span id="cb31-194"><a href="#cb31-194" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-195"><a href="#cb31-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-196"><a href="#cb31-196" aria-hidden="true" tabindex="-1"></a><span class="fu"># Interés político sin la ola 85</span></span>
+<span id="cb31-197"><a href="#cb31-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-198"><a href="#cb31-198" aria-hidden="true" tabindex="-1"></a>Replica la prueba de los modelos de interés político excluyendo la CEP 85.</span>
+<span id="cb31-199"><a href="#cb31-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-202"><a href="#cb31-202" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-203"><a href="#cb31-203" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra -------------------------------------------------------------------</span></span>
+<span id="cb31-204"><a href="#cb31-204" aria-hidden="true" tabindex="-1"></a>int_gse_sin85 <span class="ot">&lt;-</span> int_gse <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(ola <span class="sc">!=</span> <span class="st">"85"</span>) <span class="sc">%&gt;%</span> <span class="fu">droplevels</span>()</span>
+<span id="cb31-205"><a href="#cb31-205" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(int_gse_sin85)</span>
+<span id="cb31-206"><a href="#cb31-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-207"><a href="#cb31-207" aria-hidden="true" tabindex="-1"></a><span class="do">## Modelos -------------------------------------------------------------------</span></span>
+<span id="cb31-208"><a href="#cb31-208" aria-hidden="true" tabindex="-1"></a>reg_int1_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse_sin85)</span>
+<span id="cb31-209"><a href="#cb31-209" aria-hidden="true" tabindex="-1"></a>reg_int2_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse_sin85)</span>
+<span id="cb31-210"><a href="#cb31-210" aria-hidden="true" tabindex="-1"></a>reg_int3_sin85 <span class="ot">&lt;-</span> <span class="fu">lm</span>(int_pol <span class="sc">~</span> educacion_ciudadana <span class="sc">+</span> gse3 <span class="sc">+</span> edad_nac <span class="sc">+</span> <span class="fu">factor</span>(ola), <span class="at">data =</span> int_gse_sin85)</span>
+<span id="cb31-211"><a href="#cb31-211" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-212"><a href="#cb31-212" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-213"><a href="#cb31-213" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)),</span>
+<span id="cb31-214"><a href="#cb31-214" aria-hidden="true" tabindex="-1"></a>                <span class="at">file =</span> <span class="st">"output/tables/gse_modelos_interes_sin85.html"</span>)</span>
+<span id="cb31-215"><a href="#cb31-215" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb31-216"><a href="#cb31-216" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb31-219"><a href="#cb31-219" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-220"><a href="#cb31-220" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">list</span>(<span class="at">datos_interes =</span> int_gse, <span class="at">datos_voto =</span> voto_gse,</span>
-<span id="cb31-221"><a href="#cb31-221" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_interes =</span> <span class="fu">list</span>(reg_int1, reg_int2, reg_int3),</span>
-<span id="cb31-222"><a href="#cb31-222" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_voto =</span> <span class="fu">list</span>(m1, m2, m3),</span>
-<span id="cb31-223"><a href="#cb31-223" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_interaccion =</span> <span class="fu">list</span>(<span class="at">interes =</span> reg_int_x, <span class="at">voto =</span> m_x),</span>
-<span id="cb31-224"><a href="#cb31-224" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_interes_sin85 =</span> <span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85),</span>
-<span id="cb31-225"><a href="#cb31-225" aria-hidden="true" tabindex="-1"></a>             <span class="at">sensibilidad =</span> sensibilidad_gse),</span>
-<span id="cb31-226"><a href="#cb31-226" aria-hidden="true" tabindex="-1"></a>        <span class="st">"output/models/modelos_gse.rds"</span>)</span>
-<span id="cb31-227"><a href="#cb31-227" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-220"><a href="#cb31-220" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
+<span id="cb31-221"><a href="#cb31-221" aria-hidden="true" tabindex="-1"></a>texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85), <span class="at">omit.coef =</span> <span class="st">"factor[(]ola[)]"</span>,</span>
+<span id="cb31-222"><a href="#cb31-222" aria-hidden="true" tabindex="-1"></a>                <span class="at">custom.gof.rows =</span> <span class="fu">list</span>(<span class="st">"EF ola"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="st">"Sí"</span>, <span class="dv">3</span>)))</span>
+<span id="cb31-223"><a href="#cb31-223" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb31-224"><a href="#cb31-224" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-225"><a href="#cb31-225" aria-hidden="true" tabindex="-1"></a><span class="fu"># Guardar muestras y modelos</span></span>
+<span id="cb31-226"><a href="#cb31-226" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-229"><a href="#cb31-229" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb31-230"><a href="#cb31-230" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">list</span>(<span class="at">datos_interes =</span> int_gse, <span class="at">datos_voto =</span> voto_gse,</span>
+<span id="cb31-231"><a href="#cb31-231" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_interes =</span> <span class="fu">list</span>(reg_int1, reg_int2, reg_int3),</span>
+<span id="cb31-232"><a href="#cb31-232" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_voto =</span> <span class="fu">list</span>(m1, m2, m3),</span>
+<span id="cb31-233"><a href="#cb31-233" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_interaccion =</span> <span class="fu">list</span>(<span class="at">interes =</span> reg_int_x, <span class="at">voto =</span> m_x),</span>
+<span id="cb31-234"><a href="#cb31-234" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos_interes_sin85 =</span> <span class="fu">list</span>(reg_int1_sin85, reg_int2_sin85, reg_int3_sin85),</span>
+<span id="cb31-235"><a href="#cb31-235" aria-hidden="true" tabindex="-1"></a>             <span class="at">sensibilidad =</span> sensibilidad_gse),</span>
+<span id="cb31-236"><a href="#cb31-236" aria-hidden="true" tabindex="-1"></a>        <span class="st">"output/models/modelos_gse.rds"</span>)</span>
+<span id="cb31-237"><a href="#cb31-237" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code></pre></div><button title="Copiar al portapapeles" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

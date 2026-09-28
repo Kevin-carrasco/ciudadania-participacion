@@ -68,7 +68,7 @@ res_int$datos %>%
 
 ## Regresiones
 
-Modelos lineales para el interés político: sin controles (1), con nivel educacional como control (2) y con nivel educacional y edad como controles (3). La edad se calcula desde la fecha de nacimiento a la fecha de terreno de cada ola. El nivel educacional se agrupa en básica, media, técnica y universitaria o más (nivel más alto cursado, completo o no); la categoría de referencia es "Básica".
+Modelos lineales para el interés político, todos con efectos fijos de ola: sin otros controles (1), con nivel educacional como control (2) y con nivel educacional y edad como controles (3). Los efectos fijos de ola hacen que la comparación entre quienes cursaron la asignatura y el resto se realice dentro de cada ola. La edad se calcula desde la fecha de nacimiento a la fecha de terreno de cada ola. El nivel educacional se agrupa en básica, media, técnica y universitaria o más (nivel más alto cursado, completo o no); la categoría de referencia es "Básica".
 
 ```{r}
 #| label: reg-interes
@@ -78,6 +78,8 @@ Modelos lineales para el interés político: sin controles (1), con nivel educac
 texreg::htmlreg(
   lapply(res_int$modelos, renombrar),
   custom.model.names = paste("Modelo", seq_along(res_int$modelos)),
+  omit.coef = "factor[(]ola[)]",
+  custom.gof.rows = list("EF ola" = rep("Sí", length(res_int$modelos))),
   caption = "Asignatura de Educación Ciudadana e interés político",
   caption.above = TRUE,
   custom.note = "%stars. Errores estándar entre paréntesis."
@@ -98,7 +100,7 @@ res_comb$tabla_ancha %>%
   knitr::kable(caption = "Coeficiente de la asignatura de Educación Ciudadana sobre el interés político según la especificación")
 ```
 
-Modelo 1: sin controles. Modelo 2: con el control socioeconómico. Modelo 3: con el control socioeconómico y la edad. \* p < 0,05; \*\* p < 0,01; \*\*\* p < 0,001. Errores estándar HC1 entre paréntesis.
+Todos los modelos incluyen efectos fijos de ola. Modelo 1: sin otros controles. Modelo 2: con el control socioeconómico. Modelo 3: con el control socioeconómico y la edad. \* p < 0,05; \*\* p < 0,01; \*\*\* p < 0,001. Errores estándar HC1 entre paréntesis.
 
 ```{r}
 #| label: interp-combinaciones
@@ -114,7 +116,7 @@ m3 <- tc %>% dplyr::filter(modelo == 3)
 m3_sig <- m3 %>% dplyr::filter(p < 0.05)
 ```
 
-Sin controles (modelo 1), la asociación entre la asignatura y el interés político es positiva en todas las especificaciones, con coeficientes entre `r rango(m1$estimacion)`. Es significativa sin ponderar; al ponderar, el coeficiente se reduce a cerca de la mitad y el error estándar aumenta, por lo que deja de ser significativa. Al agregar el control socioeconómico (modelo 2), el coeficiente se acerca a cero con el nivel educacional (entre `r rango(m2_educ$estimacion)`) y se mantiene en torno a `r f2(mean(m2_gse$estimacion))` con el grupo socioeconómico sin ponderar. Esa diferencia se debe a que el nivel educacional absorbe en parte la edad de quienes cursaron la asignatura, mientras que el grupo socioeconómico no lo hace. Al controlar además por la edad (modelo 3), los coeficientes quedan entre `r rango(m3$estimacion)`. `r if (nrow(m3_sig) == 0) "Ninguno es significativo al 5%." else paste0("Solo ", nrow(m3_sig), " de las ", nrow(m3), " especificaciones es significativa al 5%, y su coeficiente es negativo (", f2(m3_sig$estimacion[1]), ").")` Con ninguna combinación de decisiones de análisis aparece un efecto positivo de la asignatura sobre el interés político una vez considerada la edad.
+Solo con efectos fijos de ola (modelo 1), la asociación entre la asignatura y el interés político es positiva en todas las especificaciones, con coeficientes entre `r rango(m1$estimacion)`. Es significativa sin ponderar; al ponderar, el coeficiente se reduce y el error estándar aumenta, por lo que deja de ser significativa. Al agregar el control socioeconómico (modelo 2), el coeficiente se acerca a cero con el nivel educacional (entre `r rango(m2_educ$estimacion)`) y se mantiene en torno a `r f2(mean(m2_gse$estimacion))` con el grupo socioeconómico sin ponderar. Esa diferencia se debe a que el nivel educacional absorbe en parte la edad de quienes cursaron la asignatura, mientras que el grupo socioeconómico no lo hace. Al controlar además por la edad (modelo 3), los coeficientes quedan entre `r rango(m3$estimacion)`. `r if (nrow(m3_sig) == 0) "Ninguno es significativo al 5%." else if (nrow(m3_sig) == 1) paste0("Solo 1 de las ", nrow(m3), " especificaciones es significativa al 5%, con un coeficiente de ", f2(m3_sig$estimacion), ".") else paste0("En ", nrow(m3_sig), " de las ", nrow(m3), " especificaciones el coeficiente es significativo al 5%, con valores entre ", rango(m3_sig$estimacion), ".")` Con ninguna combinación de decisiones de análisis aparece un efecto positivo de la asignatura sobre el interés político una vez considerada la edad.
 
 # Diferencia en diferencias: interés político
 
@@ -212,7 +214,7 @@ res_voto$datos %>%
 
 ## Regresiones
 
-Regresiones logísticas para haber votado (coeficientes en log-odds): sin controles (1), con nivel educacional como control (2) y con nivel educacional y edad como controles (3). La edad se calcula desde la fecha de nacimiento a la fecha de terreno de cada ola. El nivel educacional se agrupa en básica, media, técnica y universitaria o más (nivel más alto cursado, completo o no); la categoría de referencia es "Básica".
+Regresiones logísticas para haber votado (coeficientes en log-odds), todas con efectos fijos de ola: sin otros controles (1), con nivel educacional como control (2) y con nivel educacional y edad como controles (3). La edad se calcula desde la fecha de nacimiento a la fecha de terreno de cada ola. El nivel educacional se agrupa en básica, media, técnica y universitaria o más (nivel más alto cursado, completo o no); la categoría de referencia es "Básica".
 
 ```{r}
 #| label: reg-voto
@@ -226,6 +228,8 @@ nombres_voto[es_logit] <- paste(nombres_voto[es_logit], "(logit)")
 texreg::htmlreg(
   lapply(res_voto$modelos, renombrar),
   custom.model.names = nombres_voto,
+  omit.coef = "factor[(]ola[)]",
+  custom.gof.rows = list("EF ola" = rep("Sí", length(res_voto$modelos))),
   caption = "Asignatura de Educación Ciudadana y voto en la 2ª vuelta de 2021",
   caption.above = TRUE,
   custom.note = "%stars. Errores estándar entre paréntesis."

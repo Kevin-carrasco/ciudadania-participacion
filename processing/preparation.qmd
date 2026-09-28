@@ -266,7 +266,7 @@ sjmisc::frq(base_85$esc_nivel_1)
 
 sjmisc::frq(base_85$interes_pol_1_b)
 
-base_2021 <- base_85 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
+base_2021 <- base_85 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
 int_pol=interes_pol_1_b)
 ```
 
@@ -286,7 +286,7 @@ sjmisc::frq(base_86$elec_part_37)
 sjmisc::frq(base_86$esc_nivel_1)
 sjmisc::frq(base_86$edad)
 
-base_2022 <- base_86 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
+base_2022 <- base_86 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
 primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37)
 ```
 
@@ -314,7 +314,7 @@ sjmisc::frq(base_88$elec_part_37)
 
 sjmisc::frq(base_88$interes_pol_1_b)
 
-base_2022_2 <- base_88 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
+base_2022_2 <- base_88 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
 const_1=constitucion_4_a, const_2=constitucion_19,
 primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
@@ -342,7 +342,7 @@ sjmisc::frq(base_89$constitucion_34)
 
 sjmisc::frq(base_89$edad)
 
-base_2023 <- base_89 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1,
+base_2023 <- base_89 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
 const_1=constitucion_19, const_2=constitucion_34,
 segunda_vuelta=elec_part_37)
 ```
@@ -370,7 +370,7 @@ sjmisc::frq(base_90$constitucion_34)
 
 sjmisc::frq(base_90$edad)
 
-base_2023_2 <- base_90 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
+base_2023_2 <- base_90 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
 const_1=constitucion_19, const_2=constitucion_34,
 segunda_vuelta=elec_part_37)
 ```
@@ -387,7 +387,7 @@ sjmisc::frq(base_91$elec_part_37)
 
 sjmisc::frq(base_91$edad)
 
-base_2024 <- base_91 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
+base_2024 <- base_91 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37)
 ```
 
@@ -402,7 +402,7 @@ sjmisc::frq(base_92$elec_part_37)
 
 sjmisc::frq(base_92$interes_pol_1_b)
 
-base_2024_2 <- base_92 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
+base_2024_2 <- base_92 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -417,7 +417,7 @@ sjmisc::frq(base_93$elec_part_37)
 sjmisc::frq(base_93$esc_nivel_1_c)
 sjmisc::frq(base_93$interes_pol_1_b)
 
-base_2025 <- base_93 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
+base_2025 <- base_93 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -431,7 +431,7 @@ sjmisc::find_var(base_94, "elec")
 sjmisc::frq(base_94$elec_part_37)
 sjmisc::frq(base_94$edad)
 
-base_2025_2 <- base_94 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
+base_2025_2 <- base_94 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37)
 ```
 
@@ -451,7 +451,7 @@ sjmisc::frq(base_95$elec_part_4)
 
 sjmisc::frq(base_95$interes_pol_1_b)
 
-base_2025_3 <- base_95 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
+base_2025_3 <- base_95 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -465,7 +465,7 @@ sjmisc::frq(base_96$interes_pol_1_b)
 sjmisc::frq(base_96$esc_nivel_1_c)
 sjmisc::frq(base_96$edad)
 
-base_2026 <- base_96 %>% dplyr::select(id_bu, edad, gse, pond, educ=esc_nivel_1_c,
+base_2026 <- base_96 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
 int_pol=interes_pol_1_b)
 ```
 
@@ -555,7 +555,7 @@ Se conservan las 11 categorías en `educ_det`. `educ` las agrupa en cuatro segú
 
 El grupo socioeconómico (`gse`) tiene los mismos códigos en todas las olas (1 = ABC1, 2 = C2, 3 = C3, 4 = D, 5 = E) y casi no tiene casos perdidos. En la CEP 85 corresponde a una asignación visual del encuestador ("GSE VISUAL"); en las demás olas la base no documenta el método de construcción.
 
-El ponderador de cada ola (`pond`) está normalizado para que su suma sea igual al número de casos de la ola (media 1), por lo que las olas agrupadas conservan su peso relativo. Las bases no incluyen identificadores de conglomerado, solo `estrato`.
+El ponderador de cada ola (`pond`) está normalizado para que su suma sea igual al número de casos de la ola (media 1), por lo que las olas agrupadas conservan su peso relativo. Las bases no incluyen identificadores de conglomerado; sí incluyen el estrato muestral (`estrato`), presente en todas las olas. En la CEP 85 el estrato corresponde a la combinación de región y zona urbano/rural (24 valores) y en las demás olas tiene 26 valores, por lo que en los análisis se usa combinado con la ola.
 
 ```{r}
 # Etiquetas de nivel educacional, códigos 0 a 10
