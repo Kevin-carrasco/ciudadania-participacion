@@ -1,0 +1,32 @@
+---
+title: "Satisfacción con la democracia"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento repite para la satisfacción con la democracia los análisis realizados para el interés político: regresiones con distintos controles y muestras, diferencia en diferencias 2x2 y diferencia en diferencias escalonada, con sus pruebas de adelantos, errores agrupados, prueba de equivalencia y pruebas de robustez. El resultado proviene de la pregunta "¿Qué tan bien o qué tan mal cree usted que funciona la democracia en Chile?" (`democracia_20`). La variable `satisf_dem` invierte la escala para que 1 indique muy mal y 5 muy bien. La pregunta está en las olas 85, 88, 89, 95 y 96.
+
+No se incluye la extensión a las olas 77 a 84, que requeriría armonizar esta pregunta en las bases antiguas. La ponderación se evalúa dentro de la tabla de combinaciones de especificaciones.
+
+## Por qué se hace
+
+La satisfacción con el funcionamiento de la democracia complementa el apoyo a la democracia: una persona puede preferir la democracia como forma de gobierno y, al mismo tiempo, evaluar críticamente cómo funciona en el país. La formación ciudadana podría afectar ambas dimensiones de forma distinta. Este resultado tiene menos olas que los demás, con solo dos olas posteriores a 2023 (95 y 96), por lo que sus estimaciones son menos precisas. Además, la satisfacción depende del contexto político de cada ola, como el cambio de gobierno de 2026; los efectos fijos de ola absorben esas diferencias comunes a todas las edades.
+
+```{r}
+#| label: parametros
+# Parámetros del resultado para el documento compartido
+y_var <- "satisf_dem"
+y_nombre <- "la satisfacción con la democracia"
+y_etiqueta <- "Satisfacción con la democracia (1-5)"
+y_tipo <- "continua"
+y_rango <- c(1, 5)
+prefijo <- "satisfaccion_democracia"
+```
+
+{{< include _analisis_actitudes.qmd >}}

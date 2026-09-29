@@ -1092,10 +1092,77 @@ data_int_ext %>%
                    suma_pond = sum(pond), .groups = "drop")
 ```
 
+# Base de actitudes hacia la democracia y confianza política
+
+Esta base reúne las olas 85 a 96 para tres resultados adicionales, con las mismas reglas de fecha de nacimiento, imputación desde la edad declarada, nivel educacional, grupo socioeconómico y ponderador que la base de interés político:
+
+- **Apoyo a la democracia** (`democracia_21`): "¿Con cuál de las siguientes frases está Ud. más de acuerdo?". `apoyo_dem` vale 1 si la persona responde que la democracia es preferible a cualquier otra forma de gobierno, y 0 si responde que en algunas circunstancias un gobierno autoritario puede ser preferible o que le da lo mismo. Está en las olas 85, 88 a 93, 95 y 96.
+- **Satisfacción con la democracia** (`democracia_20`): "¿Qué tan bien o qué tan mal cree usted que funciona la democracia en Chile?". `satisf_dem` invierte la escala para que 1 indique muy mal y 5 muy bien. Está en las olas 85, 88, 89, 95 y 96.
+- **Confianza política** (`confianza_6_j`, `confianza_6_k` y `confianza_6_i`): confianza en los partidos políticos, el Congreso y el Gobierno, cada una con cuatro categorías invertidas para que 1 indique nada de confianza y 4 mucha confianza. `conf_pol` es el promedio de las tres y se calcula solo cuando las tres tienen respuesta válida. Está en las olas 85, 88, 89 y 91 a 96; la ola 86 no pregunta por el Congreso y la ola 90 no incluye la batería.
+
+Los códigos de no respuesta (-9, -8, 8, 9, 88 y 99) quedan como NA.
+
+```{r}
+## Variables por ola -----------------------------------------------------------
+bases_act <- list("85" = base_85, "86" = base_86, "88" = base_88, "89" = base_89,
+                  "90" = base_90, "91" = base_91, "92" = base_92, "93" = base_93,
+                  "94" = base_94, "95" = base_95, "96" = base_96)
+
+vars_act <- c("democracia_21", "democracia_20", "confianza_6_j", "confianza_6_k", "confianza_6_i")
+
+base_pooled_act <- dplyr::bind_rows(lapply(names(bases_act), function(o) {
+  b <- haven::zap_labels(bases_act[[o]])
+  var_educ <- if ("esc_nivel_1_c" %in% names(b)) "esc_nivel_1_c" else "esc_nivel_1"
+  d <- tibble::tibble(ola = o, id_bu = b$id_bu, edad = as.numeric(b$edad),
+                      gse = as.numeric(b$gse), pond = as.numeric(b$pond),
+                      estrato = as.numeric(b$estrato), educ = as.numeric(b[[var_educ]]))
+  # Las variables que no existen en una ola quedan en NA
+  for (v in vars_act) d[[v]] <- if (v %in% names(b)) as.numeric(b[[v]]) else NA_real_
+  d
+}))
+
+## Fecha de nacimiento, educación y resultados -----------------------------------
+data_actitudes <- base_pooled_act %>%
+  agregar_nacimiento(imputar_faltantes = TRUE) %>%
+  dplyr::mutate(
+    educ     = dplyr::if_else(educ %in% c(-9, -8, 88, 99), NA_real_, educ),
+    # En la CEP 85 el nivel educacional va de 1 a 11
+    educ     = dplyr::if_else(ola == "85", educ - 1, educ),
+    educ_det = etiquetar_educ(educ),
+    educ     = agrupar_educ(educ),
+    gse      = factor(gse, levels = 1:5, labels = c("ABC1", "C2", "C3", "D", "E")),
+    apoyo_dem = dplyr::case_when(democracia_21 == 1 ~ 1L,
+                                 democracia_21 %in% 2:3 ~ 0L),
+    satisf_dem = dplyr::if_else(democracia_20 %in% 1:5, 6 - democracia_20, NA_real_),
+    conf_partidos = dplyr::if_else(confianza_6_j %in% 1:4, 5 - confianza_6_j, NA_real_),
+    conf_congreso = dplyr::if_else(confianza_6_k %in% 1:4, 5 - confianza_6_k, NA_real_),
+    conf_gobierno = dplyr::if_else(confianza_6_i %in% 1:4, 5 - confianza_6_i, NA_real_),
+    conf_pol = (conf_partidos + conf_congreso + conf_gobierno) / 3,
+    ola = factor(ola, levels = names(bases_act))
+  ) %>%
+  dplyr::relocate(ola, fecha_terreno, fecha_nac, fecha_nac_imputada, edad, edad_nac,
+                  educacion_ciudadana, apoyo_dem, satisf_dem, conf_pol)
+
+## Chequeo -------------------------------------------------------------------------
+data_actitudes %>%
+  dplyr::group_by(ola) %>%
+  dplyr::summarise(n = dplyr::n(),
+                   imputadas = sum(fecha_nac_imputada),
+                   tratados = sum(educacion_ciudadana, na.rm = TRUE),
+                   apoyo_dem = mean(apoyo_dem, na.rm = TRUE),
+                   satisf_dem = mean(satisf_dem, na.rm = TRUE),
+                   conf_pol = mean(conf_pol, na.rm = TRUE),
+                   .groups = "drop")
+
+# Consistencia interna del índice de confianza política
+cor(data_actitudes[, c("conf_partidos", "conf_congreso", "conf_gobierno")], use = "complete.obs")
+```
+
 # Guardar datos procesados
 
 ```{r}
 saveRDS(data_voto, "input/data/proc/data_voto.rds")
 saveRDS(data_int, "input/data/proc/data_int.rds")
 saveRDS(data_int_ext, "input/data/proc/data_int_ext.rds")
+saveRDS(data_actitudes, "input/data/proc/data_actitudes.rds")
 ```

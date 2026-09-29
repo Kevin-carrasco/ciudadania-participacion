@@ -5,12 +5,14 @@ project:
   # index.qmd va al final: lee los modelos que guarda analysis.qmd
   render:
     - processing/preparation.qmd
-    - processing/analysis.qmd
+    - processing/analysis_regresiones.qmd
+    - processing/analysis_did_2x2.qmd
     - processing/analysis_did_interes.qmd
     - processing/analysis_did_interes_ext.qmd
-    - processing/analysis_gse.qmd
-    - processing/analysis_jovenes.qmd
     - processing/analysis_ponderado.qmd
+    - processing/analysis_apoyo_democracia.qmd
+    - processing/analysis_confianza_politica.qmd
+    - processing/analysis_satisfaccion_democracia.qmd
     - index.qmd
 
 website:
@@ -23,20 +25,24 @@ website:
         text: Preparación
       - text: Análisis
         menu:
-          - href: processing/analysis.qmd
-            text: Regresiones y diferencia en diferencias 2x2
+          - href: processing/analysis_regresiones.qmd
+            text: Regresiones
+          - href: processing/analysis_did_2x2.qmd
+            text: Diferencia en diferencias 2x2
           - href: processing/analysis_did_interes.qmd
             text: Diferencia en diferencias escalonada
           - href: processing/analysis_did_interes_ext.qmd
-            text: Diferencia en diferencias con olas 77 a 96
-      - text: Robustez
-        menu:
-          - href: processing/analysis_gse.qmd
-            text: Grupo socioeconómico
-          - href: processing/analysis_jovenes.qmd
-            text: Jóvenes
+            text: Olas 77 a 96 y estudio de eventos
           - href: processing/analysis_ponderado.qmd
-            text: Ponderadores y diseño muestral
+            text: Ponderación y diseño muestral
+      - text: Otros resultados
+        menu:
+          - href: processing/analysis_apoyo_democracia.qmd
+            text: Apoyo a la democracia
+          - href: processing/analysis_confianza_politica.qmd
+            text: Confianza política
+          - href: processing/analysis_satisfaccion_democracia.qmd
+            text: Satisfacción con la democracia
   page-footer:
     center: "Kevin Carrasco"
 

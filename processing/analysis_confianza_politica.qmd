@@ -1,0 +1,32 @@
+---
+title: "Confianza política"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento repite para la confianza política los análisis realizados para el interés político: regresiones con distintos controles y muestras, diferencia en diferencias 2x2 y diferencia en diferencias escalonada, con sus pruebas de adelantos, errores agrupados, prueba de equivalencia y pruebas de robustez. El resultado (`conf_pol`) es el promedio de la confianza en los partidos políticos, el Congreso y el Gobierno (`confianza_6_j`, `confianza_6_k` y `confianza_6_i`), cada una en una escala de 1 (nada de confianza) a 4 (mucha confianza). Se calcula solo cuando las tres preguntas tienen respuesta válida y está disponible en las olas 85, 88, 89 y 91 a 96.
+
+No se incluye la extensión a las olas 77 a 84, que requeriría armonizar estas preguntas en las bases antiguas. La ponderación se evalúa dentro de la tabla de combinaciones de especificaciones.
+
+## Por qué se hace
+
+La confianza en las instituciones representativas es una dimensión central de la relación de las personas con la política. La formación ciudadana busca que los estudiantes conozcan el funcionamiento de esas instituciones, lo que podría aumentar la confianza en ellas o, al contrario, una evaluación más crítica de su desempeño. Las tres instituciones se promedian porque son las instituciones políticas representativas de la batería; incluir otras (como las Fuerzas Armadas o las iglesias) mezclaría la confianza política con otras dimensiones. La pregunta está en nueve olas, lo que aumenta los períodos disponibles para los diseños de diferencia en diferencias.
+
+```{r}
+#| label: parametros
+# Parámetros del resultado para el documento compartido
+y_var <- "conf_pol"
+y_nombre <- "la confianza política"
+y_etiqueta <- "Confianza en partidos, Congreso y Gobierno (1-4)"
+y_tipo <- "continua"
+y_rango <- c(1, 4)
+prefijo <- "confianza_politica"
+```
+
+{{< include _analisis_actitudes.qmd >}}

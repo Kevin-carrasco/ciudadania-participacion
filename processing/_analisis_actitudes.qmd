@@ -1,0 +1,434 @@
+<!-- Documento compartido. Lo incluyen analysis_apoyo_democracia.qmd,
+analysis_confianza_politica.qmd y analysis_satisfaccion_democracia.qmd, que
+definen antes y_var, y_nombre, y_etiqueta, y_tipo, y_rango y prefijo. -->
+
+# Datos
+
+```{r}
+pacman::p_load(dplyr, tidyr, texreg, gtsummary, sandwich, lmtest, marginaleffects,
+               fwildclusterboot)
+
+data_actitudes <- readRDS("input/data/proc/data_actitudes.rds")
+
+# Agrupación de gse (referencia: D-E), igual que en analysis_regresiones.qmd
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+
+## Muestra: olas y casos con el resultado --------------------------------------
+dat <- data_actitudes %>%
+  dplyr::filter(!is.na(.data[[y_var]])) %>%
+  droplevels() %>%
+  dplyr::mutate(
+    gse3 = agrupar_gse(gse),
+    ola_num = as.numeric(as.character(ola)),
+    anio_terreno = as.integer(format(fecha_terreno, "%Y")),
+    cohorte_4m = as.integer(format(fecha_nac, "%Y")) +
+      dplyr::if_else(as.integer(format(fecha_nac, "%m")) >= 4, 18L, 17L),
+    dosis_plan = pmax(0L, cohorte_4m - 2015L)
+  )
+
+olas_y <- levels(dat$ola)
+olas_y
+
+dat %>%
+  dplyr::group_by(ola) %>%
+  dplyr::summarise(n = dplyr::n(), tratados = sum(educacion_ciudadana, na.rm = TRUE),
+                   media = mean(.data[[y_var]]), .groups = "drop")
+```
+
+El resultado está disponible en las olas `r paste(olas_y, collapse = ", ")`, con `r format(nrow(dat), big.mark = ".", decimal.mark = ",")` casos.
+
+```{r}
+dat %>%
+  dplyr::select(dplyr::all_of(c(y_var, "educacion_ciudadana", "educ", "gse3", "edad_nac"))) %>%
+  gtsummary::tbl_summary(
+    label = setNames(list(y_etiqueta, "Tuvo la asignatura de Educación Ciudadana",
+                          "Nivel educacional", "Grupo socioeconómico", "Edad"),
+                     c(y_var, "educacion_ciudadana", "educ", "gse3", "edad_nac")),
+    type = setNames(list(if (y_tipo == "binaria") "dichotomous" else "continuous", "dichotomous"),
+                    c(y_var, "educacion_ciudadana")),
+    statistic = list(gtsummary::all_continuous() ~ "{mean} ({sd})"),
+    missing_text = "Sin dato") %>%
+  gtsummary::modify_header(label ~ "**Variable**") %>%
+  gtsummary::modify_caption("Descriptivos")
+```
+
+# Regresiones
+
+Se estiman las mismas regresiones que para el interés político, todas lineales y con efectos fijos de ola: solo efectos fijos de ola (1), con un control socioeconómico (2) y con el control y la edad (3). `r if (y_tipo == "binaria") "Como el resultado es dicotómico, los modelos lineales son modelos de probabilidad lineal: los coeficientes se leen como diferencias en la probabilidad. La versión logística se estima en el diseño escalonado." else ""` Estas regresiones cuantifican la asociación con la asignatura, pero la mezclan con diferencias de edad, porque quienes la cursaron son siempre los más jóvenes de cada ola.
+
+## Modelos con nivel educacional
+
+```{r}
+reg_df <- dat %>%
+  dplyr::select(dplyr::all_of(c("ola", y_var, "educacion_ciudadana", "educ", "edad_nac"))) %>%
+  na.omit()
+
+reg1 <- lm(reformulate(c("educacion_ciudadana", "factor(ola)"), y_var), data = reg_df)
+reg2 <- lm(reformulate(c("educacion_ciudadana", "educ", "factor(ola)"), y_var), data = reg_df)
+reg3 <- lm(reformulate(c("educacion_ciudadana", "educ", "edad_nac", "factor(ola)"), y_var), data = reg_df)
+
+args_reg <- list(list(reg1, reg2, reg3), omit.coef = "factor[(]ola[)]",
+                 custom.gof.rows = list("EF ola" = rep("Sí", 3)))
+do.call(texreg::htmlreg, c(args_reg, file = paste0("output/tables/", prefijo, "_regresiones_educ.html")))
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_reg)
+```
+
+## Modelos con grupo socioeconómico
+
+```{r}
+reg_gse_df <- dat %>%
+  dplyr::select(dplyr::all_of(c("ola", y_var, "educacion_ciudadana", "gse3", "edad_nac"))) %>%
+  na.omit()
+
+reg_gse1 <- lm(reformulate(c("educacion_ciudadana", "factor(ola)"), y_var), data = reg_gse_df)
+reg_gse2 <- lm(reformulate(c("educacion_ciudadana", "gse3", "factor(ola)"), y_var), data = reg_gse_df)
+reg_gse3 <- lm(reformulate(c("educacion_ciudadana", "gse3", "edad_nac", "factor(ola)"), y_var), data = reg_gse_df)
+reg_gse_x <- lm(reformulate(c("educacion_ciudadana * gse3", "edad_nac", "factor(ola)"), y_var), data = reg_gse_df)
+
+args_gse <- list(list(reg_gse1, reg_gse2, reg_gse3, reg_gse_x), omit.coef = "factor[(]ola[)]",
+                 custom.model.names = c("Modelo 1", "Modelo 2", "Modelo 3", "Interacción con GSE"),
+                 custom.gof.rows = list("EF ola" = rep("Sí", 4)))
+do.call(texreg::htmlreg, c(args_gse, file = paste0("output/tables/", prefijo, "_regresiones_gse.html")))
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_gse)
+```
+
+## Muestras de jóvenes
+
+Coeficiente de la asignatura en cinco modelos con efectos fijos de ola, restringiendo la muestra a menores de 30 y de 35 años: sin otros controles (1), con nivel educacional (2), con nivel educacional y edad (3), con grupo socioeconómico (4) y con grupo socioeconómico y edad (5).
+
+```{r}
+rhs_jovenes <- list(c("educacion_ciudadana", "factor(ola)"),
+                    c("educacion_ciudadana", "educ", "factor(ola)"),
+                    c("educacion_ciudadana", "educ", "edad_nac", "factor(ola)"),
+                    c("educacion_ciudadana", "gse3", "factor(ola)"),
+                    c("educacion_ciudadana", "gse3", "edad_nac", "factor(ola)"))
+
+jovenes <- dplyr::bind_rows(lapply(c(30, 35), function(lim) {
+  dj <- dat %>%
+    dplyr::filter(edad_nac < lim) %>%
+    dplyr::select(dplyr::all_of(c("ola", y_var, "educacion_ciudadana", "educ", "gse3", "edad_nac"))) %>%
+    na.omit()
+  dplyr::bind_rows(lapply(seq_along(rhs_jovenes), function(k) {
+    s <- summary(lm(reformulate(rhs_jovenes[[k]], y_var), data = dj))$coefficients["educacion_ciudadana", ]
+    data.frame(muestra = paste("Menores de", lim), n = nrow(dj), modelo = k,
+               estimacion = s[1], ee = s[2], p = s[4])
+  }))
+}))
+rownames(jovenes) <- NULL
+
+knitr::kable(jovenes, digits = 3, caption = "Coeficiente de la asignatura en muestras de jóvenes")
+```
+
+## Combinaciones de especificaciones
+
+El coeficiente de la asignatura en los tres modelos, con todas las combinaciones de control socioeconómico, tratamiento de los casos sin fecha de nacimiento (imputarlos o excluirlos; la CEP 96 se mantiene siempre) y ponderación. Errores estándar HC1.
+
+```{r}
+combinaciones <- expand.grid(control = c("Nivel educacional", "Grupo socioeconómico"),
+                             imputacion = c("Con imputación", "Sin imputación"),
+                             ponderacion = c("Sin ponderar", "Ponderado"),
+                             stringsAsFactors = FALSE)
+
+tabla_comb <- dplyr::bind_rows(lapply(seq_len(nrow(combinaciones)), function(i) {
+  cc <- combinaciones[i, ]
+  control <- if (cc$control == "Nivel educacional") "educ" else "gse3"
+  d <- dat
+  if (cc$imputacion == "Sin imputación") d <- d %>% dplyr::filter(!fecha_nac_imputada | ola == "96")
+  d <- d %>%
+    dplyr::select(dplyr::all_of(c("ola", y_var, "educacion_ciudadana", control, "edad_nac", "pond"))) %>%
+    na.omit() %>%
+    dplyr::mutate(peso = if (cc$ponderacion == "Ponderado") pond else 1)
+  rhs <- list(c("educacion_ciudadana", "factor(ola)"),
+              c("educacion_ciudadana", control, "factor(ola)"),
+              c("educacion_ciudadana", control, "edad_nac", "factor(ola)"))
+  dplyr::bind_rows(lapply(1:3, function(k) {
+    m <- lm(reformulate(rhs[[k]], y_var), data = d, weights = peso)
+    x <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["educacion_ciudadana", ]
+    data.frame(cc, modelo = k, n = nobs(m), estimacion = x[1], ee = x[2], p = x[4])
+  }))
+}))
+rownames(tabla_comb) <- NULL
+
+tabla_comb %>%
+  dplyr::mutate(celda = sprintf("%.3f (%.3f)%s", estimacion, ee,
+                                dplyr::case_when(p < 0.001 ~ "***", p < 0.01 ~ "**", p < 0.05 ~ "*", TRUE ~ ""))) %>%
+  dplyr::select(control, imputacion, ponderacion, modelo, celda) %>%
+  tidyr::pivot_wider(names_from = modelo, values_from = celda, names_prefix = "Modelo ") %>%
+  knitr::kable(caption = "Coeficiente de la asignatura según la especificación (errores estándar HC1)")
+```
+
+# Diferencia en diferencias 2x2
+
+Se compara el cambio en el resultado entre la ola 85, en la que casi ningún joven había cursado la asignatura, y las olas posteriores a 2023 disponibles (`r paste(olas_y[as.numeric(olas_y) >= 92], collapse = ", ")`), para jóvenes de 18 a 21 años frente a personas de 23 a 30 años. Las olas intermedias se excluyen porque en ellas parte de los jóvenes de 18 a 21 años ya había cursado la asignatura y parte no, y las personas de 22 años se excluyen porque mezclan tratados y no tratados. El tercer modelo usa efectos fijos de edad y de ola con el tratamiento individual, sobre todas las olas y las edades de 18 a 30 años. Como en el interés político, el grupo de comparación tiene exposición positiva al Plan de Formación Ciudadana, por lo que el estimador corresponde al efecto de la asignatura junto con una mayor exposición al Plan; el último modelo restringe los controles a cohortes sin Plan.
+
+```{r}
+did_df <- dat %>%
+  dplyr::filter(edad_nac >= 18, edad_nac <= 30, !is.na(educacion_ciudadana))
+
+did_2x2 <- did_df %>%
+  dplyr::filter(edad_nac != 22, ola_num == 85 | ola_num >= 92) %>%
+  droplevels() %>%
+  dplyr::mutate(joven = as.integer(edad_nac <= 21), post = as.integer(ola_num >= 92),
+                celda = interaction(edad_nac, ola, drop = TRUE))
+did_2x2_sinplan <- did_2x2 %>% dplyr::filter(joven == 1 | dosis_plan == 0)
+
+did_2x2 %>%
+  dplyr::group_by(ola, joven) %>%
+  dplyr::summarise(n = dplyr::n(), tratados = sum(educacion_ciudadana),
+                   media = mean(.data[[y_var]]), de = sd(.data[[y_var]]), .groups = "drop") %>%
+  knitr::kable(digits = 3, caption = "Resultado por ola y grupo de edad (joven = 18 a 21 años)")
+
+m_2x2 <- lm(reformulate(c("joven", "ola", "joven:post"), y_var), data = did_2x2)
+m_2x2_edad <- lm(reformulate(c("factor(edad_nac)", "ola", "joven:post"), y_var), data = did_2x2)
+m_twfe <- lm(reformulate(c("educacion_ciudadana", "factor(edad_nac)", "ola"), y_var), data = did_df)
+m_2x2_sinplan <- lm(reformulate(c("factor(edad_nac)", "ola", "joven:post"), y_var), data = did_2x2_sinplan)
+
+args_did <- list(list(m_2x2, m_2x2_edad, m_twfe, m_2x2_sinplan),
+                 custom.model.names = c("2x2", "2x2 con EF edad", "EF edad y ola",
+                                        "2x2 con EF edad, controles sin Plan"),
+                 omit.coef = "^ola|^factor\\(",
+                 custom.gof.rows = list("EF ola" = rep("Sí", 4), "EF edad" = c("No", "Sí", "Sí", "Sí")))
+do.call(texreg::htmlreg, c(args_did, file = paste0("output/tables/", prefijo, "_did_2x2.html")))
+
+## Errores HC1 y agrupados por celda ----------------------------------------------
+errores_2x2 <- dplyr::bind_rows(lapply(
+  list("2x2" = m_2x2, "2x2 con EF edad" = m_2x2_edad, "2x2 con EF edad, controles sin Plan" = m_2x2_sinplan),
+  function(m) {
+    hc1 <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["joven:post", ]
+    cl <- lmtest::coeftest(m, vcov. = sandwich::vcovCL, cluster = ~celda, type = "HC1")["joven:post", ]
+    data.frame(estimacion = hc1[1], ee_hc1 = hc1[2], p_hc1 = hc1[4], ee_celda = cl[2], p_celda = cl[4])
+  }), .id = "modelo")
+rownames(errores_2x2) <- NULL
+knitr::kable(errores_2x2, digits = 3, caption = "joven:post con errores HC1 y agrupados por celda de edad y ola")
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_did)
+```
+
+# Diferencia en diferencias escalonada
+
+Se aplica el diseño de `analysis_did_interes.qmd`: las edades de 18 a 30 años son los grupos y las olas los períodos; la cohorte de adopción `g` de cada edad es la primera ola en que al menos la mitad de la celda está tratada, y `W` vale 1 desde esa ola. M1 estima un efecto constante y M2 un efecto por celda tratada, agregado en un efecto promedio sobre los tratados (ATT) y por años de exposición. La versión no lineal usa `r if (y_tipo == "binaria") "un logit binario" else "un logit fraccional sobre el resultado reescalado al intervalo de 0 a 1"`, y se reporta el efecto parcial promedio de `W` sobre los tratados.
+
+## Estructura del diseño
+
+```{r}
+celdas <- did_df %>%
+  dplyr::group_by(edad_nac, ola_num) %>%
+  dplyr::summarise(n = dplyr::n(), prop_trat = mean(educacion_ciudadana), .groups = "drop")
+
+cohortes <- celdas %>%
+  dplyr::group_by(edad_nac) %>%
+  dplyr::summarise(g = if (any(prop_trat >= 0.5)) min(ola_num[prop_trat >= 0.5]) else 0)
+
+celdas <- celdas %>%
+  dplyr::left_join(cohortes, by = "edad_nac") %>%
+  dplyr::mutate(W = as.integer(g > 0 & ola_num >= g),
+                mixta = prop_trat >= 0.1 & prop_trat <= 0.9)
+
+knitr::kable(t(as.data.frame(cohortes)), caption = "Cohorte de adopción g por edad (0 = nunca tratada)")
+celdas %>% dplyr::filter(mixta)
+
+# Una cohorte tratada desde la primera ola no tiene período previo y se excluye
+primera_ola <- min(did_df$ola_num)
+anio_ola <- dplyr::distinct(did_df, ola_num, anio_terreno)
+
+d_est <- did_df %>%
+  dplyr::left_join(cohortes, by = "edad_nac") %>%
+  dplyr::filter(g != primera_ola) %>%
+  dplyr::mutate(W = as.integer(g > 0 & ola_num >= g),
+                y01 = (.data[[y_var]] - y_rango[1]) / (y_rango[2] - y_rango[1]),
+                celda = interaction(edad_nac, ola_num, drop = TRUE))
+
+celdas_tr <- celdas %>%
+  dplyr::filter(W == 1, g != primera_ola) %>%
+  dplyr::mutate(nombre = paste0("edad", edad_nac, "_ola", ola_num)) %>%
+  dplyr::left_join(anio_ola, by = "ola_num") %>%
+  dplyr::left_join(anio_ola %>% dplyr::rename(g = ola_num, anio_g = anio_terreno), by = "g") %>%
+  dplyr::mutate(exposicion = anio_terreno - anio_g)
+
+for (i in seq_len(nrow(celdas_tr))) {
+  d_est[[celdas_tr$nombre[i]]] <- as.integer(d_est$edad_nac == celdas_tr$edad_nac[i] &
+                                               d_est$ola_num == celdas_tr$ola_num[i])
+}
+
+rhs_m1 <- c("W", "factor(edad_nac)", "factor(ola_num)")
+rhs_m2 <- c(paste0("W:", celdas_tr$nombre), "factor(edad_nac)", "factor(ola_num)")
+tratados <- subset(d_est, W == 1)
+c(n = nrow(d_est), tratados_W = nrow(tratados))
+```
+
+## M1 y M2
+
+```{r}
+m1 <- lm(reformulate(rhs_m1, y_var), data = d_est)
+m2 <- lm(reformulate(rhs_m2, y_var), data = d_est)
+
+## ATT de M2 y agregación por años de exposición ------------------------------
+pesos <- function(celdas_sel) {
+  w <- setNames(numeric(length(coef(m2))), names(coef(m2)))
+  w[paste0("W:", celdas_sel$nombre)] <- celdas_sel$n / sum(celdas_sel$n)
+  w
+}
+exposiciones <- sort(unique(celdas_tr$exposicion))
+matriz_pesos <- cbind(ATT = pesos(celdas_tr),
+                      sapply(exposiciones, function(e) pesos(celdas_tr[celdas_tr$exposicion == e, ])))
+
+att <- marginaleffects::hypotheses(m2, hypothesis = matriz_pesos, vcov = "HC1") %>%
+  as.data.frame() %>%
+  dplyr::transmute(agregacion = c("ATT", paste("Exposición", exposiciones, "años")),
+                   estimacion = estimate, ee = std.error, p = p.value)
+knitr::kable(att, digits = 3, caption = "ATT de M2 y por años de exposición (errores estándar HC1)")
+
+## No lineal -------------------------------------------------------------------
+familia <- if (y_tipo == "binaria") binomial(link = "logit") else quasibinomial(link = "logit")
+m1_nl <- glm(reformulate(rhs_m1, "y01"), family = familia, data = d_est)
+m2_nl <- glm(reformulate(rhs_m2, "y01"), family = familia, data = d_est)
+
+efectos_w <- dplyr::bind_rows(
+  lapply(list("M1 lineal" = m1, "M2 lineal" = m2, "M1 no lineal" = m1_nl, "M2 no lineal" = m2_nl),
+         function(m) as.data.frame(marginaleffects::avg_comparisons(
+           m, variables = list(W = c(0, 1)), newdata = tratados, vcov = "HC1"))),
+  .id = "modelo") %>%
+  dplyr::transmute(modelo, estimacion = estimate, ee = std.error, p = p.value,
+                   ic_inf = conf.low, ic_sup = conf.high)
+
+knitr::kable(efectos_w, digits = 3,
+             caption = paste0("Efecto de W sobre los tratados (errores HC1). En los modelos no lineales el efecto está en la escala ",
+                              if (y_tipo == "binaria") "de probabilidad" else "de 0 a 1 del resultado reescalado"))
+```
+
+## Adelantos
+
+Se agregan a M1 indicadores de los períodos previos de las cohortes con más de un período previo, con el período inmediatamente anterior a la adopción como referencia, y se prueba si son cero en conjunto.
+
+```{r}
+olas_num <- sort(unique(d_est$ola_num))
+adelantos <- cohortes %>%
+  dplyr::filter(g > 0, g != primera_ola) %>%
+  dplyr::rowwise() %>%
+  dplyr::reframe(edad_nac = edad_nac, g = g, ola_num = head(olas_num[olas_num < g], -1)) %>%
+  dplyr::mutate(nombre = paste0("adelanto_edad", edad_nac, "_ola", ola_num))
+adelantos
+
+prueba_adelantos <- if (nrow(adelantos) > 0) {
+  for (i in seq_len(nrow(adelantos))) {
+    d_est[[adelantos$nombre[i]]] <- as.integer(d_est$edad_nac == adelantos$edad_nac[i] &
+                                                 d_est$ola_num == adelantos$ola_num[i])
+  }
+  m1_ad <- lm(reformulate(c(rhs_m1, adelantos$nombre), y_var), data = d_est)
+  w <- lmtest::waldtest(m1, m1_ad, vcov = sandwich::vcovHC(m1_ad, type = "HC1"), test = "F")
+  data.frame(indicadores = nrow(adelantos), estadistico = w$F[2], gl = w$Df[2], p = w$`Pr(>F)`[2])
+} else data.frame(indicadores = 0, estadistico = NA, gl = NA, p = NA)
+prueba_adelantos
+```
+
+## Errores agrupados, equivalencia y robustez
+
+El estimador de M1 se reporta con errores HC1, agrupados por celda de edad y ola, y con un *wild cluster bootstrap* por cohorte de 4° medio. La prueba de equivalencia usa un umbral de ±0,2 desviaciones estándar del resultado en la muestra de estimación. Las pruebas de robustez excluyen las celdas mixtas, los casos con fecha de nacimiento imputada y los controles con exposición al Plan.
+
+```{r}
+## Errores -----------------------------------------------------------------------
+ct_hc1 <- lmtest::coeftest(m1, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
+ct_celda <- lmtest::coeftest(m1, vcov. = sandwich::vcovCL, cluster = ~celda, type = "HC1")["W", ]
+set.seed(20260929)
+dqrng::dqset.seed(20260929)
+boot <- fwildclusterboot::boottest(m1, param = "W", clustid = "cohorte_4m", B = 9999, type = "webb")
+
+errores_w <- data.frame(
+  error = c("HC1", "Agrupado por celda", "Wild cluster bootstrap por cohorte"),
+  estimacion = ct_hc1[1], ee = c(ct_hc1[2], ct_celda[2], NA),
+  p = c(ct_hc1[4], ct_celda[4], boot$p_val),
+  ic_inf = c(ct_hc1[1] - 1.96 * ct_hc1[2], ct_celda[1] - 1.96 * ct_celda[2], boot$conf_int[1]),
+  ic_sup = c(ct_hc1[1] + 1.96 * ct_hc1[2], ct_celda[1] + 1.96 * ct_celda[2], boot$conf_int[2]))
+rownames(errores_w) <- NULL
+knitr::kable(errores_w, digits = 3, caption = "W en M1 con distintos errores estándar")
+
+## Equivalencia --------------------------------------------------------------------
+umbral <- 0.2 * sd(d_est[[y_var]])
+equivalencia <- marginaleffects::hypotheses(m1, hypothesis = "W = 0", vcov = "HC1",
+                                            equivalence = c(-umbral, umbral), conf_level = 0.90) %>%
+  as.data.frame() %>%
+  dplyr::transmute(estimacion = estimate, ic90_inf = conf.low, ic90_sup = conf.high,
+                   umbral = umbral, p_equivalencia = p.value.equiv)
+knitr::kable(equivalencia, digits = 3, caption = "Prueba de equivalencia para W en M1 (umbral ±0,2 DE)")
+
+## Robustez --------------------------------------------------------------------------
+mixtas <- celdas %>% dplyr::filter(mixta) %>% dplyr::select(edad_nac, ola_num)
+robustez <- dplyr::bind_rows(lapply(
+  list("M1" = d_est,
+       "Sin celdas mixtas" = dplyr::anti_join(d_est, mixtas, by = c("edad_nac", "ola_num")),
+       "Sin fechas imputadas" = dplyr::filter(d_est, !fecha_nac_imputada),
+       "Controles sin Plan" = dplyr::filter(d_est, g > 0 | dosis_plan == 0)),
+  function(d) {
+    m <- lm(reformulate(rhs_m1, y_var), data = d)
+    x <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
+    data.frame(n = nobs(m), estimacion = x[1], ee = x[2], p = x[4])
+  }), .id = "modelo")
+rownames(robustez) <- NULL
+knitr::kable(robustez, digits = 3, caption = "W en M1: pruebas de robustez (errores estándar HC1)")
+```
+
+# Resumen
+
+```{r}
+coef_hc1 <- function(m, v) {
+  x <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")[v, ]
+  data.frame(estimacion = x[1], ee = x[2], p = x[4], n = nobs(m))
+}
+
+resumen <- dplyr::bind_rows(
+  cbind(analisis = "Regresión con educación y edad", coef_hc1(reg3, "educacion_ciudadana")),
+  cbind(analisis = "Regresión con GSE y edad", coef_hc1(reg_gse3, "educacion_ciudadana")),
+  cbind(analisis = "Diferencia en diferencias 2x2 con EF edad", coef_hc1(m_2x2_edad, "joven:post")),
+  cbind(analisis = "EF edad y ola con tratamiento individual", coef_hc1(m_twfe, "educacion_ciudadana")),
+  cbind(analisis = "Escalonado M1", coef_hc1(m1, "W")),
+  data.frame(analisis = "Escalonado M2 (ATT)", estimacion = att$estimacion[1], ee = att$ee[1],
+             p = att$p[1], n = nobs(m2)),
+  data.frame(analisis = "Escalonado M1 no lineal (efecto parcial promedio)",
+             estimacion = efectos_w$estimacion[3], ee = efectos_w$ee[3], p = efectos_w$p[3],
+             n = nobs(m1_nl))
+)
+rownames(resumen) <- NULL
+
+knitr::kable(resumen, digits = 3,
+             caption = paste("Efecto de la asignatura sobre", y_nombre, "según el diseño (errores estándar HC1)"))
+
+writeLines(knitr::kable(resumen, format = "html", digits = 3,
+                        caption = paste("Efecto de la asignatura sobre", y_nombre, "según el diseño")),
+           paste0("output/tables/", prefijo, "_resumen.html"))
+
+saveRDS(list(resultado = y_var, datos = dat, muestra_escalonado = d_est, cohortes = cohortes,
+             regresiones = list(educ = list(reg1, reg2, reg3), gse = list(reg_gse1, reg_gse2, reg_gse3, reg_gse_x)),
+             jovenes = jovenes, combinaciones = tabla_comb,
+             did_2x2 = list(modelos = list(m_2x2, m_2x2_edad, m_twfe, m_2x2_sinplan), errores = errores_2x2),
+             escalonado = list(m1 = m1, m2 = m2, m1_nl = m1_nl, m2_nl = m2_nl, att = att, efectos_w = efectos_w,
+                               adelantos = prueba_adelantos, errores = errores_w,
+                               equivalencia = equivalencia, robustez = robustez),
+             resumen = resumen),
+        paste0("output/models/actitudes_", prefijo, ".rds"))
+```
+
+```{r}
+#| label: interpretacion
+#| echo: false
+
+num <- function(x, d = 2) formatC(round(x, d) + 0, format = "f", digits = d, decimal.mark = ",")
+sig <- resumen %>% dplyr::filter(p < 0.05)
+```
+
+En las regresiones con edad como control y en los diseños de diferencia en diferencias, los estimadores del efecto de la asignatura sobre `r y_nombre` van de `r num(min(resumen$estimacion), 3)` a `r num(max(resumen$estimacion), 3)`, en la escala de cada modelo. `r if (nrow(sig) == 0) "Ninguno de los estimadores del resumen es significativo al 5%." else paste0("Son significativos al 5% los siguientes: ", paste(sig$analisis, collapse = "; "), ".")` La prueba de adelantos entrega un valor p de `r if (is.na(prueba_adelantos$p)) "NA (no hay cohortes con más de un período previo)" else num(prueba_adelantos$p, 3)`, y la prueba de equivalencia con un umbral de ±0,2 desviaciones estándar entrega un valor p de `r num(equivalencia$p_equivalencia, 3)`. Como este documento compara varios diseños y el proyecto analiza varios resultados, un estimador aislado con valor p bajo 0,05 debe leerse con cautela.

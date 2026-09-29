@@ -1,0 +1,172 @@
+---
+title: "Diferencia en diferencias 2x2"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento compara el cambio en el interés político entre un período previo y uno posterior a la asignatura para dos grupos de edad: jóvenes de 18 a 21 años y personas de 23 a 30 años. El período previo es la CEP 85 (agosto de 2021), en la que casi ningún joven había cursado la asignatura, y el período posterior son las olas 92, 93, 95 y 96, en las que las mismas edades corresponden a cohortes que sí la cursaron. Se estiman tres modelos:
+
+1. **2x2:** un indicador de grupo joven, efectos fijos de ola y la interacción entre grupo joven y período posterior, que es el estimador de diferencia en diferencias.
+2. **2x2 con efectos fijos de edad:** reemplaza el indicador de grupo joven por efectos fijos de cada edad.
+3. **Efectos fijos de edad y ola:** usa el tratamiento individual construido desde la fecha de nacimiento, con todas las olas y edades de 18 a 30 años.
+
+Como robustez, el modelo 2 se reestima con controles sin exposición al Plan de Formación Ciudadana, y los errores estándar se calculan también agrupados por celda de edad y ola.
+
+## Por qué se hace
+
+En las regresiones, quienes cursaron la asignatura son siempre los más jóvenes, por lo que su efecto se confunde con diferencias de edad. Este diseño aprovecha que la cohorte con la asignatura envejece entre olas: las mismas edades se observan antes y después de que existiera la asignatura. Al comparar el cambio de los jóvenes con el cambio de las personas de 23 a 30 años, se eliminan las diferencias permanentes entre grupos de edad y los cambios comunes a todos entre olas.
+
+La estimación descansa en el supuesto de tendencias paralelas: en ausencia de la asignatura, el interés político de ambos grupos habría evolucionado de la misma forma. Este diseño tiene tres limitaciones:
+
+- Tiene una sola ola en el período previo, por lo que las tendencias previas no pueden contrastarse. El documento de olas 77 a 96 agrega períodos previos para hacerlo.
+- La ola 88 no sirve como período previo: en diciembre de 2022 quienes tenían 18 años y parte de quienes tenían 19 ya habían cursado la asignatura. Las personas de 22 años se excluyen porque mezclan tratados y no tratados.
+- El Plan de Formación Ciudadana (Ley 20.911) rige desde 2016, por lo que parte de quienes tienen 23 a 30 años tuvo años de Plan durante su escolaridad, y esa exposición crece entre olas. Siguiendo a Callaway, Goodman-Bacon y Sant'Anna ("Difference-in-Differences with a Continuous Treatment"), cuando el grupo de comparación tiene una dosis positiva de tratamiento, el estimador compara dos niveles de exposición: corresponde al efecto de la asignatura junto con una mayor exposición al Plan, en comparación con un grupo que tiene exposición positiva al Plan.
+
+# Datos
+
+```{r}
+pacman::p_load(dplyr, texreg, sandwich, lmtest)
+
+data_int <- readRDS("input/data/proc/data_int.rds")
+```
+
+# Interés político
+
+En la ola 96 y en los casos sin fecha de nacimiento de las demás olas, el tratamiento se asigna desde la edad declarada (ver `preparation.qmd`).
+
+## Muestra y medias por celda
+
+```{r}
+## Muestra -------------------------------------------------------------------
+# Sin condicionar a educ
+did_int <- data_int %>%
+  dplyr::filter(edad_nac >= 18, edad_nac <= 30) %>%
+  dplyr::filter(!is.na(int_pol), !is.na(edad_nac), !is.na(educacion_ciudadana))
+
+# Conteos por edad, ola y tratamiento
+conteos_did <- dplyr::count(did_int, edad_nac, ola, educacion_ciudadana)
+conteos_did
+
+## 2x2 -----------------------------------------------------------------------
+# Solo la ola 85 como período previo: en la ola 88 (dic-2022) quienes tienen
+# 18 años y parte de quienes tienen 19 ya habían cursado la asignatura
+did_2x2 <- did_int %>%
+  dplyr::filter(edad_nac != 22, ola != "88") %>%
+  droplevels() %>%
+  dplyr::mutate(
+    joven = as.integer(edad_nac <= 21),
+    post  = as.integer(ola %in% c("92", "93", "95", "96"))
+  )
+
+# Medias de int_pol por ola y grupo de edad
+medias_did <- did_2x2 %>%
+  dplyr::group_by(ola, joven) %>%
+  dplyr::summarise(n = dplyr::n(), media = mean(int_pol), de = sd(int_pol),
+                   .groups = "drop")
+
+knitr::kable(medias_did, digits = 2,
+             caption = "Interés político (1-5) por ola y grupo de edad (joven = 18 a 21 años)")
+```
+
+## Modelos
+
+En los modelos 2x2 el estimador es la interacción `joven*post`; en el modelo de efectos fijos de edad y ola es el coeficiente de `educacion_ciudadana`.
+
+```{r}
+## Modelos -------------------------------------------------------------------
+# 2x2 con efectos fijos de ola (post queda absorbido por los EF de ola)
+m_did_2x2 <- lm(int_pol ~ joven + ola + joven*post, data = did_2x2)
+
+# 2x2 con efectos fijos de edad (joven queda absorbido por los EF de edad)
+m_did_2x2_edad <- lm(int_pol ~ factor(edad_nac) + ola + joven*post,
+                     data = did_2x2)
+
+# Efectos fijos de edad y ola, con el tratamiento individual
+m_did_twfe <- lm(int_pol ~ educacion_ciudadana + factor(edad_nac) + ola,
+                 data = did_int)
+
+## Exposición al Plan de Formación Ciudadana ---------------------------------
+# cohorte_4m: año en que, en edad normativa, cursó 4° medio (sin repitencia)
+# dosis_plan: años de Plan (Ley 20.911, desde 2016) durante la escolaridad
+did_2x2_plan <- did_2x2 %>%
+  dplyr::mutate(
+    cohorte_4m = as.integer(format(fecha_nac, "%Y")) +
+      dplyr::if_else(as.integer(format(fecha_nac, "%m")) >= 4, 18L, 17L),
+    dosis_plan = pmax(0L, cohorte_4m - 2015L)
+  )
+
+# Controles restringidos a cohortes sin Plan; los jóvenes se mantienen
+did_2x2_sinplan <- did_2x2_plan %>%
+  dplyr::filter(joven == 1 | dosis_plan == 0)
+
+dplyr::count(did_2x2_sinplan, ola, joven)
+
+# 2x2 con efectos fijos de edad y controles sin Plan
+m_did_2x2_edad_sinplan <- lm(int_pol ~ factor(edad_nac) + ola + joven*post,
+                             data = did_2x2_sinplan)
+
+args_did <- list(list(m_did_2x2, m_did_2x2_edad, m_did_twfe, m_did_2x2_edad_sinplan),
+                 custom.model.names = c("2x2", "2x2 con EF edad", "EF edad y ola",
+                                        "2x2 con EF edad, controles sin Plan"),
+                 custom.gof.rows = list("EF edad" = c("No", "Sí", "Sí", "Sí")))
+
+do.call(texreg::htmlreg, c(args_did, file = "output/tables/modelo_did_interes.html"))
+
+# Muestras, medias y modelos. El modelo con controles sin Plan se guarda
+# aparte para no alterar la lista `modelos`
+saveRDS(list(datos = did_int, datos_2x2 = did_2x2, conteos = conteos_did,
+             medias = medias_did,
+             modelos = list(m_did_2x2, m_did_2x2_edad, m_did_twfe),
+             datos_2x2_sinplan = did_2x2_sinplan,
+             modelo_2x2_edad_sinplan = m_did_2x2_edad_sinplan),
+        "output/models/modelos_did_interes.rds")
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_did)
+```
+
+## Errores estándar agrupados
+
+El tratamiento de los modelos 2x2 varía por celda de edad y ola, por lo que los errores que tratan cada observación como independiente pueden subestimar la incertidumbre. Como robustez, y sin reemplazar los errores de la tabla anterior, se reportan errores robustos HC1 y errores agrupados por celda (`celda = interaction(edad_nac, ola)`) con `sandwich::vcovCL`.
+
+```{r}
+## Errores agrupados por celda -----------------------------------------------
+modelos_2x2 <- list("2x2" = m_did_2x2, "2x2 con EF edad" = m_did_2x2_edad,
+                    "2x2 con EF edad, controles sin Plan" = m_did_2x2_edad_sinplan)
+datos_2x2 <- list(did_2x2, did_2x2, did_2x2_sinplan)
+
+errores_2x2 <- dplyr::bind_rows(lapply(seq_along(modelos_2x2), function(i) {
+  m <- modelos_2x2[[i]]
+  celda <- interaction(datos_2x2[[i]]$edad_nac, datos_2x2[[i]]$ola, drop = TRUE)
+  hc1 <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["joven:post", ]
+  cl <- lmtest::coeftest(m, vcov. = sandwich::vcovCL, cluster = celda, type = "HC1")["joven:post", ]
+  data.frame(modelo = names(modelos_2x2)[i], estimacion = hc1[1],
+             ee_hc1 = hc1[2], p_hc1 = hc1[4],
+             ee_celda = cl[2], p_celda = cl[4], n_celdas = nlevels(celda))
+}))
+rownames(errores_2x2) <- NULL
+
+knitr::kable(errores_2x2, digits = 3,
+             caption = "joven*post con errores HC1 y agrupados por celda de edad y ola")
+
+writeLines(knitr::kable(errores_2x2, format = "html", digits = 3,
+                        caption = "joven*post con errores HC1 y agrupados por celda de edad y ola"),
+           "output/tables/modelo_did_interes_errores.html")
+
+# Se agrega al .rds sin alterar sus elementos anteriores
+res_did_2x2 <- readRDS("output/models/modelos_did_interes.rds")
+res_did_2x2$errores_agrupados <- errores_2x2
+saveRDS(res_did_2x2, "output/models/modelos_did_interes.rds")
+```
+
+# Voto
+
+Este diseño no se aplica al voto. La pregunta de voto se refiere a una sola elección, la 2ª vuelta presidencial de diciembre de 2021, por lo que no existe un período previo en el que las mismas edades hayan podido votar en esa elección sin haber cursado la asignatura. Sin una medición del resultado antes y después del tratamiento, no es posible calcular el cambio que compara la diferencia en diferencias. Para el voto, el análisis se limita a las regresiones.

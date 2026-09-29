@@ -6,13 +6,21 @@ date: today
 lang: es
 ---
 
-Este documento reestima los análisis de interés político usando el ponderador de la Encuesta CEP (`pond`), como prueba de robustez. Cada especificación se estima sin ponderar y ponderada sobre la misma muestra, con errores estándar robustos HC1 en ambas versiones, por lo que los errores de la columna sin ponderar pueden diferir levemente de los reportados en los documentos principales. Carga los datos procesados en `preparation.qmd`. La tabla de comparación se guarda en `output/tables/ponderado_comparacion.html` y los resultados en `output/models/modelos_ponderados.rds`.
+# Qué se hace y por qué
 
-El ponderador de cada ola suma el número de casos de la ola, de modo que las olas agrupadas conservan su peso relativo. Los jóvenes están subrepresentados en la muestra y reciben ponderadores mayores que el promedio, lo que aumenta su peso en las estimaciones y también la varianza.
+## Qué se hace
+
+Este documento reestima los principales análisis de interés político (regresiones, diferencia en diferencias 2x2 y diferencia en diferencias escalonada) en tres versiones: sin ponderar, ponderada con el ponderador de la Encuesta CEP (`pond`) y considerando el diseño muestral. Cada especificación se estima sobre la misma muestra en las tres versiones, y la tabla final compara el estimador del tratamiento. Las versiones sin ponderar y ponderada usan errores estándar robustos HC1, por lo que los errores de la columna sin ponderar pueden diferir levemente de los reportados en los otros documentos.
+
+## Por qué se hace
+
+Los análisis principales se estiman sin ponderar, lo que da más precisión pero supone que la muestra representa bien a la población en las variables relevantes. Los jóvenes están subrepresentados en la Encuesta CEP y reciben ponderadores mayores que el promedio, por lo que ponderar aumenta su peso en las estimaciones. Si los resultados cambiaran al ponderar, la composición de la muestra estaría afectando las conclusiones. Considerar el diseño muestral permite además evaluar si los errores estándar cambian al tomar en cuenta la estratificación.
+
+El ponderador de cada ola suma el número de casos de la ola, de modo que las olas agrupadas conservan su peso relativo. Carga los datos procesados en `preparation.qmd`. La tabla de comparación se guarda en `output/tables/ponderado_comparacion.html` y los resultados en `output/models/modelos_ponderados.rds`.
 
 Además de la versión ponderada con errores HC1, cada especificación se estima considerando el diseño muestral con `survey::svydesign(ids = ~1, strata = ~interaction(ola, estrato), weights = ~pond)` y `survey::svyglm`. El estrato se combina con la ola porque cada ola es una muestra independiente y porque en la CEP 85 el estrato se define de otra forma. Las bases no traen identificadores de conglomerado, por lo que el diseño trata a cada persona como unidad primaria de muestreo; si la muestra se seleccionó por conglomerados, estos errores pueden subestimar la incertidumbre. El diseño se define sobre la muestra de cada especificación, y los estratos con una sola observación se tratan con `options(survey.lonely.psu = "adjust")`.
 
-Las muestras, especificaciones y definiciones de tratamiento son las mismas de `analysis.qmd`, `analysis_gse.qmd`, `analysis_jovenes.qmd` y `analysis_did_interes.qmd`. Las regresiones que agrupan olas incluyen efectos fijos de ola, igual que en esos documentos.
+Las muestras, especificaciones y definiciones de tratamiento son las mismas de los documentos de regresiones, diferencia en diferencias 2x2 y diferencia en diferencias escalonada. Las regresiones que agrupan olas incluyen efectos fijos de ola, igual que en esos documentos.
 
 # Librerías
 
@@ -28,7 +36,7 @@ options(survey.lonely.psu = "adjust")
 ```{r}
 data_int <- readRDS("input/data/proc/data_int.rds")
 
-# Agrupación de gse (referencia: D-E), igual que en analysis_gse.qmd
+# Agrupación de gse (referencia: D-E), igual que en analysis_regresiones.qmd
 agrupar_gse <- function(x) {
   factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
                           x == "C3" ~ "C3",
@@ -85,10 +93,12 @@ resultados <- list()
 agregar <- function(x) resultados[[length(resultados) + 1]] <<- x
 ```
 
-# Regresiones de interés político
+# Interés político
+
+## Regresiones
 
 ```{r}
-## Con nivel educacional (analysis.qmd) --------------------------------------
+## Con nivel educacional -------------------------------------------------------
 # Todas las regresiones con efectos fijos de ola
 int_df <- data_int %>%
   dplyr::select(ola, int_pol, educacion_ciudadana, educ, edad_nac, pond, estrato) %>%
@@ -101,7 +111,7 @@ agregar(comparar_lm("Regresión (educ)", "2: + educ",
 agregar(comparar_lm("Regresión (educ)", "3: + educ y edad",
                     int_pol ~ educacion_ciudadana + educ + edad_nac + factor(ola), int_df, "educacion_ciudadana"))
 
-## Con grupo socioeconómico (analysis_gse.qmd) -------------------------------
+## Con grupo socioeconómico ----------------------------------------------------
 int_gse <- data_int %>%
   dplyr::select(ola, int_pol, educacion_ciudadana, gse3, edad_nac, pond, estrato) %>%
   na.omit()
@@ -111,7 +121,7 @@ agregar(comparar_lm("Regresión (gse)", "2: + gse",
 agregar(comparar_lm("Regresión (gse)", "3: + gse y edad",
                     int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), int_gse, "educacion_ciudadana"))
 
-## Jóvenes (analysis_jovenes.qmd) --------------------------------------------
+## Jóvenes ----------------------------------------------------------------------
 for (lim in c(30, 35)) {
   dj <- data_int %>%
     dplyr::filter(edad_nac < lim) %>%
@@ -126,7 +136,7 @@ for (lim in c(30, 35)) {
 }
 ```
 
-# Diferencia en diferencias (analysis.qmd)
+## Diferencia en diferencias 2x2
 
 ```{r}
 ## Muestras ------------------------------------------------------------------
@@ -148,17 +158,17 @@ did_2x2 <- did_int %>%
 did_2x2_sinplan <- did_2x2 %>% dplyr::filter(joven == 1 | dosis_plan == 0)
 
 ## Modelos -------------------------------------------------------------------
-agregar(comparar_lm("DiD analysis.qmd", "2x2",
+agregar(comparar_lm("DiD 2x2", "2x2",
                     int_pol ~ joven + ola + joven:post, did_2x2, "joven:post"))
-agregar(comparar_lm("DiD analysis.qmd", "2x2 con EF edad",
+agregar(comparar_lm("DiD 2x2", "2x2 con EF edad",
                     int_pol ~ factor(edad_nac) + ola + joven:post, did_2x2, "joven:post"))
-agregar(comparar_lm("DiD analysis.qmd", "EF edad y ola",
+agregar(comparar_lm("DiD 2x2", "EF edad y ola",
                     int_pol ~ educacion_ciudadana + factor(edad_nac) + ola, did_int, "educacion_ciudadana"))
-agregar(comparar_lm("DiD analysis.qmd", "2x2 con EF edad, controles sin Plan",
+agregar(comparar_lm("DiD 2x2", "2x2 con EF edad, controles sin Plan",
                     int_pol ~ factor(edad_nac) + ola + joven:post, did_2x2_sinplan, "joven:post"))
 ```
 
-# Diferencia en diferencias escalonada (analysis_did_interes.qmd)
+## Diferencia en diferencias escalonada
 
 La estructura del diseño (cohortes de adopción `g`, tratamiento `W` y celdas mixtas) se define igual que en el documento principal, con proporciones de tratados sin ponderar, para que la comparación refleje solo el efecto de ponderar la estimación. El ATT agregado de M2 pondera los efectos de celda por la suma de ponderadores de cada celda en la versión ponderada y por su número de casos en la versión sin ponderar. Los efectos parciales promedio sobre los tratados de los modelos no lineales se promedian con el ponderador en las versiones ponderada y con diseño muestral. La versión con diseño muestral comparte las estimaciones puntuales de la versión ponderada y solo cambia sus errores estándar. El logit binario se estima por cuasi verosimilitud, que entrega los mismos coeficientes que el logit y admite ponderadores no enteros.
 
@@ -294,7 +304,7 @@ pruebas_adelantos <- c(sin_ponderar = prueba_adelantos(FALSE), ponderado = prueb
 pruebas_adelantos
 ```
 
-# Comparación
+## Comparación
 
 ```{r}
 comparacion <- dplyr::bind_rows(resultados)
@@ -311,3 +321,7 @@ saveRDS(list(comparacion = comparacion, pruebas_adelantos = pruebas_adelantos,
              celdas = celdas, cohortes = cohortes),
         "output/models/modelos_ponderados.rds")
 ```
+
+# Voto
+
+Esta comparación se realizó solo para interés político. Los diseños de diferencia en diferencias no pueden aplicarse al voto, porque su pregunta se refiere a una sola elección, y las regresiones de voto se estiman sin ponderar en el documento de regresiones. Reestimar esas regresiones con ponderadores y con el diseño muestral es posible y queda pendiente.

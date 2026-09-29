@@ -6,9 +6,19 @@ date: today
 lang: es
 ---
 
-Este documento estima el efecto de la asignatura de Educación Ciudadana sobre el interés político con un diseño de diferencia en diferencias escalonado para cortes transversales repetidos, siguiendo a Wooldridge ("Nonlinear Difference-in-Differences with Repeated Cross Sections") y a Deb, Norton, Wooldridge y Zabel (2025). Carga los datos procesados en `preparation.qmd`. Las tablas se guardan en `output/tables/did_interes_*.html`, y los modelos y resúmenes en `output/models/did_interes.rds`.
+# Qué se hace y por qué
 
-Las edades son los grupos y las olas los períodos. La cohorte que cursó la asignatura envejece entre olas, por lo que cada edad pasa a estar tratada en una ola distinta. Quienes tienen 23 a 30 años no están tratados en ninguna ola. El nivel educacional no se usa como control, porque puede ser afectado por el tratamiento.
+## Qué se hace
+
+Este documento estima el efecto de la asignatura de Educación Ciudadana sobre el interés político con un diseño de diferencia en diferencias escalonado para cortes transversales repetidos, siguiendo a Wooldridge ("Nonlinear Difference-in-Differences with Repeated Cross Sections") y a Deb, Norton, Wooldridge y Zabel (2025). Las edades son los grupos y las olas los períodos. La cohorte que cursó la asignatura envejece entre olas, por lo que cada edad pasa a estar tratada en una ola distinta: la cohorte de adopción `g` de cada edad es la primera ola en que al menos la mitad de sus integrantes está tratada, y el tratamiento `W` vale 1 desde esa ola. Quienes tienen 23 a 30 años no están tratados en ninguna ola.
+
+Se estiman dos modelos lineales con efectos fijos de edad y de ola: M1, con un efecto constante del tratamiento, y M2, con un efecto distinto por celda tratada, que luego se agrega en un efecto promedio sobre los tratados (ATT) y por años de exposición. Ambos se reestiman con modelos logit fraccional y binario, reportando el efecto parcial promedio de `W` sobre los tratados. El análisis incluye una prueba de adelantos, errores agrupados, una prueba de equivalencia, pruebas de robustez y una verificación con el paquete `etwfe`.
+
+## Por qué se hace
+
+El diseño 2x2 usa solo dos períodos y descarta información: excluye la ola 88 y a las personas de 22 años, y asume que el tratamiento llega a todas las edades jóvenes al mismo tiempo. El diseño escalonado usa todas las olas y edades de 18 a 30 años, reconociendo que cada edad empieza a estar tratada en una ola distinta. Los estimadores de efectos fijos tradicionales pueden estar sesgados cuando el tratamiento se adopta en distintos momentos y su efecto varía entre cohortes, porque usan a grupos ya tratados como controles. La propuesta de Wooldridge evita ese problema al estimar un efecto separado para cada combinación de cohorte y ola tratada, y compara solo con edades aún no tratadas o nunca tratadas. Los modelos no lineales permiten evaluar si las conclusiones dependen de la forma funcional, dado que el interés político es una escala acotada.
+
+El nivel educacional no se usa como control, porque puede ser afectado por el tratamiento. Carga los datos procesados en `preparation.qmd`. Las tablas se guardan en `output/tables/did_interes_*.html`, y los modelos y resúmenes en `output/models/did_interes.rds`.
 
 Ni los controles ni los períodos previos de las cohortes tratadas están libres de tratamiento. El Plan de Formación Ciudadana (Ley 20.911) rige desde 2016, de modo que parte de las personas de comparación tuvo uno o más años de Plan durante su escolaridad, y esa exposición crece entre olas a medida que cohortes más jóvenes entran al tramo de 23 a 30 años. Siguiendo a Callaway, Goodman-Bacon y Sant'Anna ("Difference-in-Differences with a Continuous Treatment"), cuando el grupo de comparación tiene una dosis positiva de tratamiento, el estimador compara dos niveles de exposición. Por eso el estimador de W corresponde al efecto de la asignatura junto con una mayor exposición al Plan, en comparación con un grupo que tiene exposición positiva al Plan. La sección de robustez reestima M1 con controles sin Plan.
 
@@ -19,7 +29,9 @@ pacman::p_load(dplyr, tidyr, texreg, sandwich, lmtest, marginaleffects, etwfe,
                fwildclusterboot)
 ```
 
-# Datos procesados
+# Interés político
+
+## Datos procesados
 
 ```{r}
 data_int <- readRDS("input/data/proc/data_int.rds")
@@ -33,7 +45,7 @@ did <- data_int %>%
 nrow(did)
 ```
 
-## Exposición al Plan de Formación Ciudadana
+### Exposición al Plan de Formación Ciudadana
 
 La dosis de Plan se aproxima desde la fecha de nacimiento. `cohorte_4m` es el año en que la persona cursó 4° medio en edad normativa: el año de nacimiento más 18 para quienes nacieron entre abril y diciembre, y más 17 para quienes nacieron entre enero y marzo. `dosis_plan` corresponde a los años de Plan hasta ese momento, `max(0, cohorte_4m - 2015)`. Es un proxy que no considera repitencia. La dosis no se usa como regresor lineal en ningún modelo.
 
@@ -59,7 +71,7 @@ knitr::kable(dosis_ola_grupo, digits = 2,
              caption = "Dosis de Plan por ola y grupo de edad")
 ```
 
-# Estructura del diseño
+## Estructura del diseño
 
 Para cada combinación de edad y ola se calcula el número de casos y la proporción con `educacion_ciudadana = 1`. La cohorte de adopción `g` de cada edad es la primera ola en que al menos la mitad de la celda está tratada; las edades que nunca alcanzan ese umbral quedan con `g = 0`. El tratamiento `W` vale 1 cuando la ola es igual o posterior a `g` y `g > 0`. Las celdas con una proporción de tratados entre 0,1 y 0,9 se marcan como mixtas.
 
@@ -113,7 +125,7 @@ writeLines(c(knitr::kable(tabla_estructura, format = "html",
            "output/tables/did_interes_estructura.html")
 ```
 
-## Muestra de estimación
+### Muestra de estimación
 
 Una edad cuya cohorte de adopción coincida con la primera ola (`g = 85`) estaría tratada en todos los períodos observados y no tendría período previo. Sus celdas tratadas quedarían perfectamente colineales con su efecto fijo de edad, por lo que no aportarían información para identificar el efecto. Siguiendo a Wooldridge, una cohorte siempre tratada se excluye de la estimación. Con la imputación de fechas de nacimiento desde la edad declarada, la celda de 18 años en la ola 85 queda con menos de la mitad de tratados, por lo que ninguna edad tiene `g = 85` y ninguna se excluye; el conteo por `g` y `W` de abajo lo verifica.
 
@@ -148,7 +160,7 @@ for (i in seq_len(nrow(celdas_tr))) {
 celdas_tr %>% dplyr::select(nombre, edad_nac, g, ola_num, n)
 ```
 
-# Fórmulas y opciones de estimación
+## Fórmulas y opciones de estimación
 
 Los errores estándar HC1 se obtienen con `lmtest::coeftest` y `sandwich::vcovHC`, las combinaciones lineales de coeficientes con `marginaleffects::hypotheses` y los efectos parciales promedio con `marginaleffects::avg_comparisons`. Las tablas de `texreg` reciben esos errores con `override.se` y `override.pvalues`.
 
@@ -164,7 +176,7 @@ rhs_m2 <- c(paste0("W:", celdas_tr$nombre), efectos_fijos)
 tratados <- subset(d_est, W == 1)
 ```
 
-# Modelos lineales
+## Modelos lineales
 
 M1 supone un efecto constante del tratamiento. M2 permite un efecto distinto para cada celda tratada, es decir, para cada combinación de cohorte `g` y ola posterior a la adopción; los períodos de cohortes aún no tratadas sirven como controles junto a las edades nunca tratadas. El efecto promedio sobre los tratados (ATT) de M2 se obtiene ponderando los efectos de celda por su número de casos.
 
@@ -240,7 +252,7 @@ do.call(texreg::htmlreg, c(args_lin, file = "output/tables/did_interes_lineal.ht
 do.call(texreg::htmlreg, args_lin)
 ```
 
-# Modelos no lineales
+## Modelos no lineales
 
 Se reestiman M1 y M2 con dos funciones de enlace logit. El logit fraccional usa el interés político reescalado al intervalo de 0 a 1, `y01 = (int_pol - 1) / 4`, estimado por cuasi verosimilitud. El logit binario modela la probabilidad de estar algo, bastante o muy interesado (`int_pol >= 3`). En estos modelos los coeficientes del índice no son directamente comparables con los lineales, por lo que se reporta el efecto parcial promedio de W sobre los tratados: la diferencia promedio entre la predicción con `W = 1` y con `W = 0`, calculada sobre las observaciones tratadas.
 
@@ -300,7 +312,7 @@ knitr::kable(efectos_w, digits = 3,
 
 En los modelos lineales el efecto parcial promedio sobre los tratados coincide con el coeficiente de W en M1 y con el ATT ponderado por n en M2. En el logit fraccional, la columna `escala_1_5` multiplica el efecto por 4 para expresarlo en la escala original del interés político.
 
-# Adelantos
+## Adelantos
 
 Para evaluar el supuesto de tendencias paralelas se agregan a M1 indicadores de los períodos previos de las cohortes que tienen más de un período previo, usando el período inmediatamente anterior a la adopción (`g - 1`) como referencia. Si las tendencias son paralelas, estos coeficientes deberían ser cercanos a cero en conjunto.
 
@@ -363,7 +375,7 @@ do.call(texreg::htmlreg, c(args_ad, file = "output/tables/did_interes_adelantos.
 do.call(texreg::htmlreg, args_ad)
 ```
 
-# Robustez: sin celdas mixtas y sin fechas imputadas
+## Robustez: sin celdas mixtas y sin fechas imputadas
 
 Las celdas mixtas combinan personas con y sin la asignatura, por lo que su clasificación en W es imprecisa. Se reestima M1 lineal excluyéndolas. También se reestima M1 excluyendo los casos cuya fecha de nacimiento se imputó desde la edad declarada, lo que deja fuera toda la CEP 96 y los casos sin fecha de las olas 85, 92 y 93. La definición de las cohortes de adopción y de W se mantiene.
 
@@ -403,7 +415,7 @@ do.call(texreg::htmlreg, c(args_rob, file = "output/tables/did_interes_robustez.
 do.call(texreg::htmlreg, args_rob)
 ```
 
-# Prueba de equivalencia
+## Prueba de equivalencia
 
 Un resultado no significativo no permite afirmar que el efecto sea nulo. La prueba de equivalencia (dos pruebas unilaterales) evalúa si el efecto de W en M1 lineal es menor que un umbral considerado sustantivamente pequeño. Se usa un umbral provisional de ±0,2 desviaciones estándar de `int_pol` en la muestra de estimación, con `marginaleffects::hypotheses` y errores HC1. Si el valor p de equivalencia es menor que 0,05, los datos permiten descartar efectos de magnitud igual o mayor al umbral. El intervalo de confianza al 90% corresponde a esta prueba: hay equivalencia al 5% cuando queda completamente dentro del umbral.
 
@@ -432,7 +444,7 @@ writeLines(knitr::kable(equivalencia_w, format = "html", digits = 3,
            "output/tables/did_interes_equivalencia.html")
 ```
 
-# Robustez: controles sin Plan
+## Robustez: controles sin Plan
 
 Se reestima M1, en su versión lineal y en el efecto parcial promedio del logit fraccional, restringiendo los controles nunca tratados (edades de 23 a 30 años) a cohortes sin Plan (`dosis_plan == 0`). Las cohortes tratadas se mantienen completas, incluidos sus períodos previos. Con esta restricción el grupo de comparación queda sin exposición al Plan, aunque los períodos previos de las cohortes tratadas siguen teniendo años de Plan. Como el Plan alcanza a cohortes cada vez mayores, las edades de control disponibles se desplazan hacia arriba en las olas más recientes.
 
@@ -487,7 +499,7 @@ writeLines(c(knitr::kable(dosis_ola_grupo, format = "html", digits = 2,
            "output/tables/did_interes_plan.html")
 ```
 
-# Errores estándar agrupados
+## Errores estándar agrupados
 
 El tratamiento W varía por celda de edad y ola, y la asignación depende de la cohorte de nacimiento, por lo que los errores HC1, que tratan cada observación como independiente, pueden subestimar la incertidumbre. Como robustez, y sin reemplazar los errores HC1 de las secciones anteriores, el estimador de W en M1 se reporta con tres tipos de error: HC1, agrupados por celda de edad y ola (`sandwich::vcovCL`) y, para M1 lineal, un *wild cluster bootstrap* agrupado por cohorte de 4° medio (`cohorte_4m`) con `fwildclusterboot::boottest` (9.999 réplicas, pesos de Webb, hipótesis nula impuesta). El bootstrap entrega un valor p y un intervalo de confianza, no un error estándar.
 
@@ -534,7 +546,7 @@ writeLines(knitr::kable(errores_w, format = "html", digits = 3,
            "output/tables/did_interes_errores.html")
 ```
 
-# Verificación con etwfe
+## Verificación con etwfe
 
 El paquete `etwfe` implementa el estimador de Wooldridge. Sin `ivar`, los efectos fijos de grupo que incluye corresponden a la cohorte de adopción `g`, no a cada edad, y los efectos de tratamiento se estiman por combinación de cohorte y ola. Cuando una cohorte agrupa más de una edad, M2 de este documento estima un efecto distinto para cada edad dentro de la cohorte. Por eso la verificación se hace con una versión manual equivalente a `etwfe`, con efectos fijos de cohorte y un efecto por combinación de cohorte y ola, que debe coincidir exactamente. La tabla muestra también el efecto de cohorte y ola implícito en M2, calculado como el promedio de sus efectos por edad ponderado por n.
 
@@ -590,6 +602,10 @@ pesos_gt[paste0("W:", celdas_gt$nombre)] <- celdas_gt$n / sum(celdas_gt$n)
 marginaleffects::hypotheses(m2_lin_cohorte, hypothesis = matrix(pesos_gt, ncol = 1), vcov = "HC1")
 att_m2
 ```
+
+# Voto
+
+Este diseño no se aplica al voto. La pregunta de voto se refiere a una sola elección, la 2ª vuelta presidencial de diciembre de 2021, y se mide en olas posteriores a ella. Todas las respuestas describen el mismo evento, por lo que no hay variación entre olas en la que una edad pase de no tratada a tratada frente al mismo resultado. Sin esa variación, no es posible definir cohortes de adopción ni comparar el cambio en el resultado antes y después del tratamiento. Para el voto, el análisis se limita a las regresiones.
 
 # Guardar modelos y resúmenes
 

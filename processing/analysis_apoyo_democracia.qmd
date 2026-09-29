@@ -1,0 +1,32 @@
+---
+title: "Apoyo a la democracia"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento repite para el apoyo a la democracia los análisis realizados para el interés político: regresiones con distintos controles y muestras, diferencia en diferencias 2x2 y diferencia en diferencias escalonada, con sus pruebas de adelantos, errores agrupados, prueba de equivalencia y pruebas de robustez. El resultado proviene de la pregunta "¿Con cuál de las siguientes frases está Ud. más de acuerdo?" (`democracia_21`). La variable `apoyo_dem` vale 1 si la persona responde que la democracia es preferible a cualquier otra forma de gobierno, y 0 si responde que en algunas circunstancias un gobierno autoritario puede ser preferible o que le da lo mismo un régimen democrático que uno autoritario. La pregunta está en las olas 85, 88 a 93, 95 y 96.
+
+No se incluye la extensión a las olas 77 a 84, que requeriría armonizar esta pregunta en las bases antiguas. La ponderación se evalúa dentro de la tabla de combinaciones de especificaciones.
+
+## Por qué se hace
+
+El apoyo a la democracia como forma de gobierno es uno de los objetivos explícitos de la formación ciudadana escolar: tanto la asignatura de Educación Ciudadana como el Plan de Formación Ciudadana buscan promover la valoración de la democracia y sus instituciones. Es, por lo tanto, un resultado más cercano a los contenidos de la asignatura que el interés político. Además, la pregunta está en nueve olas, más que el interés político, lo que aumenta los períodos disponibles para los diseños de diferencia en diferencias.
+
+```{r}
+#| label: parametros
+# Parámetros del resultado para el documento compartido
+y_var <- "apoyo_dem"
+y_nombre <- "el apoyo a la democracia"
+y_etiqueta <- "Prefiere la democracia a cualquier otra forma de gobierno"
+y_tipo <- "binaria"
+y_rango <- c(0, 1)
+prefijo <- "apoyo_democracia"
+```
+
+{{< include _analisis_actitudes.qmd >}}

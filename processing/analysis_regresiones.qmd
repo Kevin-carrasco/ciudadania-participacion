@@ -1,0 +1,476 @@
+---
+title: "Regresiones"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento estima regresiones que agrupan las olas de la Encuesta CEP y comparan, dentro de cada ola, a quienes cursaron la asignatura de Educación Ciudadana con quienes no la cursaron. Para el interés político se usan modelos lineales sobre la escala de 1 (nada interesado) a 5 (muy interesado); para el voto en la 2ª vuelta presidencial de 2021 se usan modelos logísticos. En ambos casos se estiman tres modelos que agregan controles de forma progresiva, todos con efectos fijos de ola:
+
+1. Solo efectos fijos de ola, que hacen que la comparación se realice dentro de cada ola.
+2. Con un control socioeconómico: el nivel educacional o el grupo socioeconómico del hogar.
+3. Con el control socioeconómico y la edad.
+
+A partir de estos modelos se estiman variantes: el grupo socioeconómico en lugar del nivel educacional, interacciones entre la asignatura y el grupo socioeconómico, distintas agrupaciones del grupo socioeconómico, muestras restringidas a jóvenes, la exclusión de la CEP 85 y todas las combinaciones de control, imputación de fechas de nacimiento y ponderación.
+
+## Por qué se hace
+
+Las regresiones son el primer paso del análisis: cuantifican la asociación entre haber cursado la asignatura y cada resultado, y muestran cuánto depende de los controles. Su principal limitación es que el tratamiento se asigna por la fecha de nacimiento, por lo que todas las personas que cursaron la asignatura tienen entre 18 y 23 años. La comparación con el resto de la muestra mezcla el efecto de la asignatura con diferencias de edad y de cohorte, que un control lineal de edad puede no capturar completamente. Por eso sus coeficientes se interpretan como asociaciones, y los diseños de diferencia en diferencias de las otras pestañas buscan aislar el efecto.
+
+La elección de controles también importa. Para quienes todavía estudian, el nivel educacional es la etapa en que se encuentran y puede ser afectado por el tratamiento, por lo que controlar por él puede sesgar la estimación. El grupo socioeconómico describe al hogar y difícilmente es afectado por la asignatura, por lo que se usa como alternativa. Las variantes permiten evaluar si las conclusiones dependen de estas decisiones. Al comparar muchas especificaciones es esperable que alguna tenga un valor p bajo 0,05 aunque no haya efecto, por lo que ninguna debe elegirse por su significancia.
+
+# Datos
+
+```{r}
+pacman::p_load(dplyr, tidyr, texreg, gtsummary, sandwich, lmtest)
+
+data_voto <- readRDS("input/data/proc/data_voto.rds")
+data_int <- readRDS("input/data/proc/data_int.rds")
+
+# Agrupación principal de gse (referencia: D-E). El grupo E tiene muy pocos
+# casos en todas las olas
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+
+data_voto <- data_voto %>% dplyr::mutate(gse3 = agrupar_gse(gse))
+data_int <- data_int %>% dplyr::mutate(gse3 = agrupar_gse(gse))
+```
+
+# Interés político
+
+La base de interés político reúne las olas CEP 85, 88, 92, 93, 95 y 96, que incluyen la pregunta "¿Cuán interesado está Ud. en la política?". La escala se invirtió para que 1 indique nada interesado y 5 muy interesado. Cuando no hay fecha de nacimiento, se imputa desde la edad declarada (ver `preparation.qmd`).
+
+## Descriptivos
+
+```{r}
+## Muestra -------------------------------------------------------------------
+# Casos completos en las variables de los modelos, para que todos se estimen
+# sobre la misma muestra. Se seleccionan antes del na.omit(): columnas como
+# primera_vuelta o const_1 están vacías en varias olas y eliminarían todo.
+int_df <- data_int %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, educ, edad_nac) %>%
+  na.omit()
+
+nrow(int_df)
+dplyr::count(int_df, educacion_ciudadana)
+
+int_df %>%
+  dplyr::select(int_pol, educacion_ciudadana, educ, edad_nac) %>%
+  gtsummary::tbl_summary(
+    label = list(int_pol ~ "Interés político (1-5)",
+                 educacion_ciudadana ~ "Tuvo la asignatura de Educación Ciudadana",
+                 educ ~ "Nivel educacional", edad_nac ~ "Edad"),
+    type = list(int_pol ~ "continuous", educacion_ciudadana ~ "dichotomous"),
+    statistic = list(gtsummary::all_continuous() ~ "{mean} ({sd})"),
+    missing_text = "Sin dato") %>%
+  gtsummary::modify_header(label ~ "**Variable**") %>%
+  gtsummary::modify_caption("Descriptivos, base de interés político")
+```
+
+## Modelos con nivel educacional
+
+Modelos lineales: solo efectos fijos de ola (1), con nivel educacional (2) y con nivel educacional y edad (3). El nivel educacional se agrupa en básica, media, técnica y universitaria o más, según el nivel más alto cursado, completo o no; la categoría de referencia es "Básica". La edad se calcula desde la fecha de nacimiento a la fecha de terreno de cada ola.
+
+```{r}
+## Modelos -------------------------------------------------------------------
+reg_int1 <- lm(int_pol ~ educacion_ciudadana + factor(ola), data = int_df)
+reg_int2 <- lm(int_pol ~ educacion_ciudadana + educ + factor(ola), data = int_df)
+reg_int3 <- lm(int_pol ~ educacion_ciudadana + educ + edad_nac + factor(ola), data = int_df)
+
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3),
+                file = "output/tables/modelo_interes.html")
+
+# Muestra y modelos para la presentación (index.qmd)
+saveRDS(list(datos = int_df, modelos = list(reg_int1, reg_int2, reg_int3)),
+        "output/models/modelos_interes.rds")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_int1, reg_int2, reg_int3))
+```
+
+## Modelos con grupo socioeconómico
+
+Los mismos modelos con el grupo socioeconómico en lugar del nivel educacional (referencia: D-E).
+
+```{r}
+## Muestra -------------------------------------------------------------------
+int_gse <- data_int %>%
+  dplyr::select(ola, int_pol, educacion_ciudadana, gse, gse3, edad_nac) %>%
+  na.omit()
+
+nrow(int_gse)
+dplyr::count(int_gse, gse3, educacion_ciudadana)
+
+## Modelos -------------------------------------------------------------------
+reg_gse1 <- lm(int_pol ~ educacion_ciudadana + factor(ola), data = int_gse)
+reg_gse2 <- lm(int_pol ~ educacion_ciudadana + gse3 + factor(ola), data = int_gse)
+reg_gse3 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), data = int_gse)
+
+texreg::htmlreg(list(reg_gse1, reg_gse2, reg_gse3),
+                file = "output/tables/gse_modelos_interes.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_gse1, reg_gse2, reg_gse3))
+```
+
+## Interacción con el grupo socioeconómico
+
+El efecto de la asignatura puede variar según el nivel socioeconómico del hogar. Este modelo interactúa la asignatura con el grupo socioeconómico, controlando por edad.
+
+```{r}
+reg_int_x <- lm(int_pol ~ educacion_ciudadana * gse3 + edad_nac + factor(ola), data = int_gse)
+
+texreg::htmlreg(list(reg_int_x),
+                custom.model.names = "Interés político (lineal)",
+                file = "output/tables/gse_modelos_interaccion_interes.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_int_x),
+                custom.model.names = "Interés político (lineal)")
+```
+
+## Sensibilidad a la agrupación del grupo socioeconómico
+
+Para cada agrupación del grupo socioeconómico se estima el modelo con el control (2) y con el control y la edad (3).
+
+```{r}
+## Agrupaciones --------------------------------------------------------------
+agrupaciones <- list(
+  "a) 5 categorías (ABC1, C2, C3, D, E)" = function(x) x,
+  "b) 3: ABC1-C2, C3, D-E (principal)"   = agrupar_gse,
+  "c) 2: ABC1-C2 vs resto"               = function(x) factor(x %in% c("ABC1", "C2")),
+  "d) 2: D-E vs resto"                   = function(x) factor(x %in% c("D", "E")),
+  "e) continua (1 = ABC1 a 5 = E)"       = function(x) as.integer(x)
+)
+
+# Coeficiente de educacion_ciudadana en una especificación
+coef_trat <- function(m) {
+  s <- summary(m)$coefficients["educacion_ciudadana", ]
+  data.frame(estimacion = s[1], ee = s[2], p = s[4], n = nobs(m))
+}
+
+sensibilidad_interes <- dplyr::bind_rows(lapply(names(agrupaciones), function(k) {
+  di <- int_gse %>% dplyr::mutate(g_ = agrupaciones[[k]](gse))
+  dplyr::bind_rows(
+    cbind(agrupacion = k, resultado = "Interés", modelo = "2: + gse",
+          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + factor(ola), data = di))),
+    cbind(agrupacion = k, resultado = "Interés", modelo = "3: + gse y edad",
+          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + edad_nac + factor(ola), data = di)))
+  )
+}))
+rownames(sensibilidad_interes) <- NULL
+
+knitr::kable(sensibilidad_interes, digits = 3,
+             caption = "Coeficiente de educacion_ciudadana en interés político según la agrupación de gse")
+```
+
+## Muestras de jóvenes
+
+Al restringir la edad, el grupo de comparación queda más cerca en edad de quienes cursaron la asignatura. Se estiman cinco modelos sobre la misma muestra de casos completos, con menores de 30 años y con menores de 35 años según `edad_nac`: solo efectos fijos de ola (1), con nivel educacional (2), con nivel educacional y edad (3), con grupo socioeconómico (4) y con grupo socioeconómico y edad (5).
+
+```{r}
+## Muestras y modelos --------------------------------------------------------
+muestra_edad <- function(edad_limite) {
+  data_int %>%
+    dplyr::filter(edad_nac < edad_limite) %>%
+    dplyr::select(ola, int_pol, educacion_ciudadana, educ, gse3, edad_nac) %>%
+    na.omit()
+}
+
+estimar_modelos <- function(d) {
+  list(
+    lm(int_pol ~ educacion_ciudadana + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + educ + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + educ + edad_nac + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + gse3 + factor(ola), data = d),
+    lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), data = d)
+  )
+}
+
+nombres_modelos <- c("1: solo EF ola", "2: + educ", "3: + educ y edad",
+                     "4: + gse", "5: + gse y edad")
+
+int_30 <- muestra_edad(30)
+int_35 <- muestra_edad(35)
+c(menores_30 = nrow(int_30), menores_35 = nrow(int_35))
+
+modelos_30 <- estimar_modelos(int_30)
+modelos_35 <- estimar_modelos(int_35)
+
+texreg::htmlreg(modelos_30, custom.model.names = nombres_modelos,
+                file = "output/tables/jovenes_interes_menores30.html")
+texreg::htmlreg(modelos_35, custom.model.names = nombres_modelos,
+                file = "output/tables/jovenes_interes_menores35.html")
+
+saveRDS(list(datos_30 = int_30, modelos_30 = modelos_30,
+             datos_35 = int_35, modelos_35 = modelos_35),
+        "output/models/modelos_jovenes.rds")
+```
+
+Menores de 30 años:
+
+```{r}
+#| results: asis
+texreg::htmlreg(modelos_30, custom.model.names = nombres_modelos)
+```
+
+Menores de 35 años:
+
+```{r}
+#| results: asis
+texreg::htmlreg(modelos_35, custom.model.names = nombres_modelos)
+```
+
+## Sin la ola 85
+
+La edad declarada en la CEP 85 está desplazada unos ocho meses respecto de la fecha de terreno, y esa ola tiene muy pocos tratados. Se reestiman los modelos con grupo socioeconómico excluyéndola.
+
+```{r}
+int_gse_sin85 <- int_gse %>% dplyr::filter(ola != "85") %>% droplevels()
+nrow(int_gse_sin85)
+
+reg_gse1_sin85 <- lm(int_pol ~ educacion_ciudadana + factor(ola), data = int_gse_sin85)
+reg_gse2_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3 + factor(ola), data = int_gse_sin85)
+reg_gse3_sin85 <- lm(int_pol ~ educacion_ciudadana + gse3 + edad_nac + factor(ola), data = int_gse_sin85)
+
+texreg::htmlreg(list(reg_gse1_sin85, reg_gse2_sin85, reg_gse3_sin85),
+                file = "output/tables/gse_modelos_interes_sin85.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(reg_gse1_sin85, reg_gse2_sin85, reg_gse3_sin85))
+```
+
+## Combinaciones de especificaciones
+
+Las regresiones se reestiman con todas las combinaciones de tres decisiones: el control socioeconómico (nivel educacional o grupo socioeconómico), el tratamiento de los casos sin fecha de nacimiento (imputarlos desde la edad declarada o excluirlos) y el uso del ponderador de la encuesta (`pond`). En cada combinación se estiman los mismos tres modelos sobre la misma muestra de casos completos.
+
+- **Imputación.** La versión sin imputación excluye los casos de las olas 85, 92 y 93 cuya fecha de nacimiento se imputó desde la edad declarada. La CEP 96 se mantiene en ambas versiones, porque no tiene fecha de nacimiento para ningún caso.
+- **Ponderación.** El ponderador de cada ola suma el número de casos de la ola.
+
+Todas las combinaciones usan errores estándar robustos HC1, porque los errores clásicos no son válidos con ponderadores.
+
+```{r}
+## Combinaciones -------------------------------------------------------------
+combinaciones <- expand.grid(
+  control     = c("Nivel educacional", "Grupo socioeconómico"),
+  imputacion  = c("Con imputación", "Sin imputación"),
+  ponderacion = c("Sin ponderar", "Ponderado"),
+  stringsAsFactors = FALSE
+)
+
+# Tres modelos de una combinación, sobre la misma muestra de casos completos
+estimar_combinacion <- function(control, imputacion, ponderacion) {
+  var_control <- if (control == "Nivel educacional") "educ" else "gse3"
+  d <- data_int
+  if (imputacion == "Sin imputación") {
+    d <- d %>% dplyr::filter(!fecha_nac_imputada | ola == "96")
+  }
+  d <- d %>%
+    dplyr::select(ola, int_pol, educacion_ciudadana, dplyr::all_of(var_control),
+                  edad_nac, pond) %>%
+    na.omit() %>%
+    dplyr::mutate(peso = if (ponderacion == "Ponderado") pond else 1)
+  formulas <- list(
+    int_pol ~ educacion_ciudadana + factor(ola),
+    as.formula(paste("int_pol ~ educacion_ciudadana +", var_control, "+ factor(ola)")),
+    as.formula(paste("int_pol ~ educacion_ciudadana +", var_control, "+ edad_nac + factor(ola)"))
+  )
+  lapply(formulas, function(f) lm(f, data = d, weights = peso))
+}
+
+modelos_combinaciones <- lapply(seq_len(nrow(combinaciones)), function(i) {
+  estimar_combinacion(combinaciones$control[i], combinaciones$imputacion[i],
+                      combinaciones$ponderacion[i])
+})
+
+## Resumen: coeficiente de educacion_ciudadana con errores HC1 ---------------
+tabla_combinaciones <- dplyr::bind_rows(lapply(seq_len(nrow(combinaciones)), function(i) {
+  dplyr::bind_rows(lapply(1:3, function(k) {
+    m <- modelos_combinaciones[[i]][[k]]
+    x <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["educacion_ciudadana", ]
+    data.frame(combinaciones[i, ], modelo = k, n = nobs(m),
+               estimacion = x[1], ee = x[2], p = x[4])
+  }))
+}))
+rownames(tabla_combinaciones) <- NULL
+
+# Formato ancho: una fila por combinación, una columna por modelo
+estrellas <- function(p) dplyr::case_when(p < 0.001 ~ "***", p < 0.01 ~ "**", p < 0.05 ~ "*", TRUE ~ "")
+tabla_combinaciones_ancha <- tabla_combinaciones %>%
+  dplyr::mutate(celda = sprintf("%.3f%s (%.3f)", estimacion, estrellas(p), ee)) %>%
+  dplyr::select(control, imputacion, ponderacion, modelo, n, celda) %>%
+  dplyr::group_by(control, imputacion, ponderacion) %>%
+  dplyr::mutate(n = dplyr::first(n)) %>%
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(names_from = modelo, values_from = celda, names_prefix = "Modelo ")
+
+knitr::kable(tabla_combinaciones_ancha,
+             caption = "Coeficiente de educacion_ciudadana en interés político según la especificación (errores estándar HC1)")
+
+writeLines(knitr::kable(tabla_combinaciones_ancha, format = "html",
+                        caption = "Coeficiente de educacion_ciudadana en interés político según la especificación (errores estándar HC1)"),
+           "output/tables/modelo_interes_combinaciones.html")
+
+# Modelos y resúmenes para la presentación (index.qmd)
+saveRDS(list(combinaciones = combinaciones, modelos = modelos_combinaciones,
+             tabla = tabla_combinaciones, tabla_ancha = tabla_combinaciones_ancha),
+        "output/models/modelos_interes_combinaciones.rds")
+```
+
+# Voto
+
+La base de voto reúne las olas CEP 86, 88, 89, 90, 91, 92, 93, 94 y 95, que preguntan si la persona votó en la 2ª vuelta presidencial de diciembre de 2021. Se excluye a quienes, según su fecha de nacimiento, no tenían 18 años el 19 de diciembre de 2021, y a quienes no tienen fecha de nacimiento: con la edad declarada no es posible ubicar con precisión la ventana de nacimiento que define quién tuvo la asignatura y podía votar. Entre los tratados quedan así los nacidos entre el 01-abr-2003 y el 19-dic-2003.
+
+## Descriptivos
+
+```{r}
+## Muestra -------------------------------------------------------------------
+voto_df <- data_voto %>%
+  dplyr::filter(habilitado_2v == 1) %>%
+  dplyr::filter(!is.na(voto), !is.na(educacion_ciudadana))
+
+sjmisc::frq(voto_df$voto)
+dplyr::count(voto_df, educacion_ciudadana)
+dplyr::count(voto_df, ola, educacion_ciudadana)
+
+voto_df %>%
+  dplyr::select(voto, educacion_ciudadana, educ, edad_nac) %>%
+  gtsummary::tbl_summary(
+    label = list(voto ~ "Votó en la 2ª vuelta de 2021",
+                 educacion_ciudadana ~ "Tuvo la asignatura de Educación Ciudadana",
+                 educ ~ "Nivel educacional", edad_nac ~ "Edad"),
+    type = list(voto ~ "dichotomous", educacion_ciudadana ~ "dichotomous"),
+    statistic = list(gtsummary::all_continuous() ~ "{mean} ({sd})"),
+    missing_text = "Sin dato") %>%
+  gtsummary::modify_header(label ~ "**Variable**") %>%
+  gtsummary::modify_caption("Descriptivos, base de voto")
+```
+
+## Modelos con nivel educacional
+
+Regresiones logísticas (coeficientes en log-odds): solo efectos fijos de ola (1), con nivel educacional (2) y con nivel educacional y edad (3).
+
+```{r}
+## Modelos -------------------------------------------------------------------
+voto_m1 <- glm(voto ~ educacion_ciudadana + factor(ola),
+               family = binomial(link = "logit"), data = voto_df)
+voto_m2 <- glm(voto ~ educacion_ciudadana + educ + factor(ola),
+               family = binomial(link = "logit"), data = voto_df)
+voto_m3 <- glm(voto ~ educacion_ciudadana + educ + edad_nac + factor(ola),
+               family = binomial(link = "logit"), data = voto_df)
+
+texreg::htmlreg(list(voto_m1, voto_m2, voto_m3),
+                file = "output/tables/modelos_voto.html")
+
+# Muestra y modelos para la presentación (index.qmd)
+saveRDS(list(datos = voto_df, modelos = list(voto_m1, voto_m2, voto_m3)),
+        "output/models/modelos_voto.rds")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(voto_m1, voto_m2, voto_m3))
+```
+
+## Modelos con grupo socioeconómico
+
+```{r}
+## Muestra -------------------------------------------------------------------
+voto_gse <- data_voto %>%
+  dplyr::filter(habilitado_2v == 1) %>%
+  dplyr::filter(!is.na(voto), !is.na(educacion_ciudadana), !is.na(gse3))
+
+nrow(voto_gse)
+
+## Modelos -------------------------------------------------------------------
+voto_gse_m1 <- glm(voto ~ educacion_ciudadana + factor(ola),
+                   family = binomial(link = "logit"), data = voto_gse)
+voto_gse_m2 <- glm(voto ~ educacion_ciudadana + gse3 + factor(ola),
+                   family = binomial(link = "logit"), data = voto_gse)
+voto_gse_m3 <- glm(voto ~ educacion_ciudadana + gse3 + edad_nac + factor(ola),
+                   family = binomial(link = "logit"), data = voto_gse)
+
+texreg::htmlreg(list(voto_gse_m1, voto_gse_m2, voto_gse_m3),
+                file = "output/tables/gse_modelos_voto.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(voto_gse_m1, voto_gse_m2, voto_gse_m3))
+```
+
+## Interacción con el grupo socioeconómico
+
+```{r}
+m_x <- glm(voto ~ educacion_ciudadana * gse3 + edad_nac + factor(ola),
+           family = binomial(link = "logit"), data = voto_gse)
+
+dplyr::count(voto_gse, gse3, educacion_ciudadana)
+
+texreg::htmlreg(list(m_x),
+                custom.model.names = "Voto 2021 (logit)",
+                file = "output/tables/gse_modelos_interaccion_voto.html")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(list(m_x),
+                custom.model.names = "Voto 2021 (logit)")
+```
+
+## Sensibilidad a la agrupación del grupo socioeconómico
+
+```{r}
+sensibilidad_voto <- dplyr::bind_rows(lapply(names(agrupaciones), function(k) {
+  dv <- voto_gse %>% dplyr::mutate(g_ = agrupaciones[[k]](gse))
+  dplyr::bind_rows(
+    cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "2: + gse",
+          coef_trat(glm(voto ~ educacion_ciudadana + g_ + factor(ola), family = binomial, data = dv))),
+    cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "3: + gse y edad",
+          coef_trat(glm(voto ~ educacion_ciudadana + g_ + edad_nac + factor(ola), family = binomial, data = dv)))
+  )
+}))
+rownames(sensibilidad_voto) <- NULL
+
+knitr::kable(sensibilidad_voto, digits = 3,
+             caption = "Coeficiente de educacion_ciudadana en voto según la agrupación de gse")
+
+sensibilidad_gse <- dplyr::bind_rows(sensibilidad_interes, sensibilidad_voto)
+writeLines(knitr::kable(sensibilidad_gse, format = "html", digits = 3,
+                        caption = "Coeficiente de educacion_ciudadana según la agrupación de gse"),
+           "output/tables/gse_sensibilidad_agrupacion.html")
+```
+
+## Interpretación
+
+Quienes cursaron la asignatura y podían votar tenían 18 años en diciembre de 2021, por lo que en esta elección eran los votantes más jóvenes de la muestra. La edad incluida de forma lineal puede no capturar completamente las diferencias de participación en esas edades. Como la pregunta de voto se refiere a una sola elección, no es posible aplicar los diseños de diferencia en diferencias de las otras pestañas, por lo que para el voto el análisis se limita a estas regresiones y sus coeficientes no pueden interpretarse como efectos de la asignatura.
+
+# Guardar muestras y modelos
+
+```{r}
+saveRDS(list(datos_interes = int_gse, datos_voto = voto_gse,
+             modelos_interes = list(reg_gse1, reg_gse2, reg_gse3),
+             modelos_voto = list(voto_gse_m1, voto_gse_m2, voto_gse_m3),
+             modelos_interaccion = list(interes = reg_int_x, voto = m_x),
+             modelos_interes_sin85 = list(reg_gse1_sin85, reg_gse2_sin85, reg_gse3_sin85),
+             sensibilidad = sensibilidad_gse),
+        "output/models/modelos_gse.rds")
+```
+s
