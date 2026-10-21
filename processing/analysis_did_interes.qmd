@@ -231,7 +231,6 @@ comparacion_lineal <- data.frame(
   estimacion = c(w_m1[1], att_m2$estimacion),
   ee = c(w_m1[2], att_m2$ee)
 )
-comparacion_lineal
 
 ## Tabla con errores HC1 -----------------------------------------------------
 modelos_lin <- list(m1_lin, m2_lin)
@@ -240,8 +239,6 @@ args_lin <- list(modelos_lin,
                  custom.model.names = c("M1", "M2"),
                  override.se = lapply(ct_lin, function(ct) ct[, 2]),
                  override.pvalues = lapply(ct_lin, function(ct) ct[, 4]),
-                 omit.coef = "^factor\\(",
-                 custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí")),
                  custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
 
 do.call(texreg::htmlreg, c(args_lin, file = "output/tables/did_interes_lineal.html"))
@@ -270,8 +267,6 @@ args_nl <- list(modelos_nl,
                 custom.model.names = c("M1 fraccional", "M2 fraccional", "M1 logit", "M2 logit"),
                 override.se = lapply(ct_nl, function(ct) ct[, 2]),
                 override.pvalues = lapply(ct_nl, function(ct) ct[, 4]),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = rep("Sí", 4), "EF ola" = rep("Sí", 4)),
                 custom.note = "%stars. Coeficientes del índice. Errores estándar HC1 entre paréntesis.")
 
 do.call(texreg::htmlreg, c(args_nl, file = "output/tables/did_interes_no_lineal.html"))
@@ -361,9 +356,7 @@ args_ad <- list(modelos_ad,
                 custom.model.names = c("M1 lineal con adelantos", "M1 fraccional con adelantos"),
                 override.se = lapply(ct_ad, function(ct) ct[, 2]),
                 override.pvalues = lapply(ct_ad, function(ct) ct[, 4]),
-                omit.coef = "^factor\\(",
-                custom.gof.rows = list("EF edad" = c("Sí", "Sí"), "EF ola" = c("Sí", "Sí"),
-                                       "Prueba conjunta de adelantos (p)" =
+                custom.gof.rows = list("Prueba conjunta de adelantos (p)" =
                                          formatC(pruebas_adelantos$p, format = "f", digits = 3)),
                 custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
 
@@ -403,8 +396,6 @@ args_rob <- list(modelos_rob,
                  custom.model.names = c("M1", "M1 sin celdas mixtas", "M1 sin fechas imputadas"),
                  override.se = lapply(ct_rob, function(ct) ct[, 2]),
                  override.pvalues = lapply(ct_rob, function(ct) ct[, 4]),
-                 omit.coef = "^factor\\(",
-                 custom.gof.rows = list("EF edad" = rep("Sí", 3), "EF ola" = rep("Sí", 3)),
                  custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
 
 do.call(texreg::htmlreg, c(args_rob, file = "output/tables/did_interes_robustez.html"))
@@ -488,15 +479,30 @@ comparacion_plan <- dplyr::bind_rows(
                                             estimacion * 4, NA_real_))
 
 knitr::kable(comparacion_plan, digits = 3,
-             caption = "Efecto de W sobre los tratados con y sin restricción de controles (errores estándar HC1)")
+             caption = "Efecto parcial promedio de W sobre los tratados con y sin restricción de controles (errores estándar HC1)")
+
+## Tabla completa con errores HC1 --------------------------------------------
+ct_plan <- lapply(modelos_plan, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+args_plan <- list(unname(modelos_plan),
+                  custom.model.names = c("M1 lineal", "M1 lineal, controles sin Plan",
+                                         "M1 fraccional", "M1 fraccional, controles sin Plan"),
+                  override.se = lapply(ct_plan, function(ct) ct[, 2]),
+                  override.pvalues = lapply(ct_plan, function(ct) ct[, 4]),
+                  custom.note = "%stars. Modelos fraccionales: coeficientes del índice. Errores estándar HC1 entre paréntesis.")
 
 writeLines(c(knitr::kable(dosis_ola_grupo, format = "html", digits = 2,
                           caption = "Dosis de Plan por ola y grupo de edad"),
              knitr::kable(controles_sinplan, format = "html",
                           caption = "Edades de control sin Plan por ola: edad (n)"),
              knitr::kable(comparacion_plan, format = "html", digits = 3,
-                          caption = "Efecto de W sobre los tratados con y sin restricción de controles (errores estándar HC1)")),
+                          caption = "Efecto parcial promedio de W sobre los tratados con y sin restricción de controles (errores estándar HC1)"),
+             do.call(texreg::htmlreg, args_plan)),
            "output/tables/did_interes_plan.html")
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_plan)
 ```
 
 ## Errores estándar agrupados
@@ -538,12 +544,38 @@ errores_w <- data.frame(
              boot_cohorte$conf_int[2], ape_frac_hc1$conf.high, ape_frac_celda$conf.high)
 )
 
-knitr::kable(errores_w, digits = 3,
-             caption = "Estimador de W en M1 con distintos errores estándar")
+## Tabla completa: M1 con errores HC1 y agrupados por celda --------------------
+cts_err <- list(lmtest::coeftest(m1_lin, vcov. = sandwich::vcovHC, type = "HC1"),
+                lmtest::coeftest(m1_lin, vcov. = sandwich::vcovCL(m1_lin, cluster = ~celda, type = "HC1")),
+                lmtest::coeftest(m1_frac, vcov. = sandwich::vcovHC, type = "HC1"),
+                lmtest::coeftest(m1_frac, vcov. = sandwich::vcovCL(m1_frac, cluster = ~celda, type = "HC1")))
+args_err <- list(list(m1_lin, m1_lin, m1_frac, m1_frac),
+                 custom.model.names = c("M1 lineal (HC1)", "M1 lineal (celda)",
+                                        "M1 fraccional (HC1)", "M1 fraccional (celda)"),
+                 override.se = lapply(cts_err, function(ct) ct[, 2]),
+                 override.pvalues = lapply(cts_err, function(ct) ct[, 4]),
+                 custom.gof.rows = list(
+                   "Wild cluster bootstrap de W por cohorte (p)" =
+                     c(formatC(boot_cohorte$p_val, format = "f", digits = 3), "", "", ""),
+                   "IC 95% bootstrap de W" =
+                     c(sprintf("[%.3f; %.3f]", boot_cohorte$conf_int[1], boot_cohorte$conf_int[2]), "", "", "")),
+                 custom.note = "%stars. Modelos fraccionales: coeficientes del índice. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.")
 
-writeLines(knitr::kable(errores_w, format = "html", digits = 3,
-                        caption = "Estimador de W en M1 con distintos errores estándar"),
+# Efecto parcial promedio del logit fraccional con ambos errores
+errores_ape <- errores_w %>% dplyr::filter(grepl("fraccional", modelo))
+
+knitr::kable(errores_ape, digits = 3,
+             caption = "Efecto parcial promedio de W sobre los tratados en M1 logit fraccional (escala 0-1) con distintos errores estándar")
+
+writeLines(c(do.call(texreg::htmlreg, args_err),
+             knitr::kable(errores_ape, format = "html", digits = 3,
+                          caption = "Efecto parcial promedio de W sobre los tratados en M1 logit fraccional (escala 0-1) con distintos errores estándar")),
            "output/tables/did_interes_errores.html")
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_err)
 ```
 
 ## Verificación con etwfe

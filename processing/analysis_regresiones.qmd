@@ -164,19 +164,31 @@ coef_trat <- function(m) {
   data.frame(estimacion = s[1], ee = s[2], p = s[4], n = nobs(m))
 }
 
-sensibilidad_interes <- dplyr::bind_rows(lapply(names(agrupaciones), function(k) {
+# Modelos 2 y 3 para cada agrupación; g_ es el grupo socioeconómico agrupado
+modelos_sens_interes <- unlist(lapply(names(agrupaciones), function(k) {
   di <- int_gse %>% dplyr::mutate(g_ = agrupaciones[[k]](gse))
-  dplyr::bind_rows(
-    cbind(agrupacion = k, resultado = "Interés", modelo = "2: + gse",
-          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + factor(ola), data = di))),
-    cbind(agrupacion = k, resultado = "Interés", modelo = "3: + gse y edad",
-          coef_trat(lm(int_pol ~ educacion_ciudadana + g_ + edad_nac + factor(ola), data = di)))
-  )
+  list(lm(int_pol ~ educacion_ciudadana + g_ + factor(ola), data = di),
+       lm(int_pol ~ educacion_ciudadana + g_ + edad_nac + factor(ola), data = di))
+}), recursive = FALSE)
+nombres_sens <- paste(rep(substr(names(agrupaciones), 1, 2), each = 2),
+                      rep(c("modelo 2", "modelo 3"), length(agrupaciones)))
+
+# Coeficiente de la asignatura en cada especificación (se guarda en modelos_gse.rds)
+sensibilidad_interes <- dplyr::bind_rows(lapply(seq_along(modelos_sens_interes), function(i) {
+  cbind(agrupacion = names(agrupaciones)[ceiling(i / 2)], resultado = "Interés",
+        modelo = c("2: + gse", "3: + gse y edad")[2 - i %% 2], coef_trat(modelos_sens_interes[[i]]))
 }))
 rownames(sensibilidad_interes) <- NULL
 
-knitr::kable(sensibilidad_interes, digits = 3,
-             caption = "Coeficiente de educacion_ciudadana en interés político según la agrupación de gse")
+texreg::htmlreg(modelos_sens_interes, custom.model.names = nombres_sens,
+                file = "output/tables/gse_sensibilidad_interes.html")
+```
+
+Agrupaciones: a) cinco categorías (ABC1, C2, C3, D, E); b) tres grupos ABC1-C2, C3 y D-E, la agrupación principal; c) ABC1-C2 frente al resto; d) D-E frente al resto; e) grupo socioeconómico como variable continua (1 = ABC1 a 5 = E). En cada tabla, `g_` corresponde al grupo socioeconómico según la agrupación de la columna.
+
+```{r}
+#| results: asis
+texreg::htmlreg(modelos_sens_interes, custom.model.names = nombres_sens)
 ```
 
 ## Muestras de jóvenes
@@ -321,17 +333,29 @@ tabla_combinaciones_ancha <- tabla_combinaciones %>%
   dplyr::ungroup() %>%
   tidyr::pivot_wider(names_from = modelo, values_from = celda, names_prefix = "Modelo ")
 
-knitr::kable(tabla_combinaciones_ancha,
-             caption = "Coeficiente de educacion_ciudadana en interés político según la especificación (errores estándar HC1)")
-
-writeLines(knitr::kable(tabla_combinaciones_ancha, format = "html",
-                        caption = "Coeficiente de educacion_ciudadana en interés político según la especificación (errores estándar HC1)"),
-           "output/tables/modelo_interes_combinaciones.html")
-
 # Modelos y resúmenes para la presentación (index.qmd)
 saveRDS(list(combinaciones = combinaciones, modelos = modelos_combinaciones,
              tabla = tabla_combinaciones, tabla_ancha = tabla_combinaciones_ancha),
         "output/models/modelos_interes_combinaciones.rds")
+
+## Tablas completas con errores HC1 ------------------------------------------
+tablas_combinaciones <- sapply(seq_len(nrow(combinaciones)), function(i) {
+  modelos <- modelos_combinaciones[[i]]
+  cts <- lapply(modelos, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+  texreg::htmlreg(modelos, custom.model.names = paste("Modelo", 1:3),
+                  override.se = lapply(cts, function(ct) ct[, 2]),
+                  override.pvalues = lapply(cts, function(ct) ct[, 4]),
+                  caption = paste0(combinaciones$control[i], ", ", tolower(combinaciones$imputacion[i]),
+                                   ", ", tolower(combinaciones$ponderacion[i])),
+                  caption.above = TRUE,
+                  custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+})
+writeLines(tablas_combinaciones, "output/tables/modelo_interes_combinaciones.html")
+```
+
+```{r}
+#| results: asis
+cat(tablas_combinaciones, sep = "\n")
 ```
 
 # Voto
@@ -438,24 +462,75 @@ texreg::htmlreg(list(m_x),
 ## Sensibilidad a la agrupación del grupo socioeconómico
 
 ```{r}
-sensibilidad_voto <- dplyr::bind_rows(lapply(names(agrupaciones), function(k) {
+# Modelos 2 y 3 para cada agrupación (las mismas del interés político)
+modelos_sens_voto <- unlist(lapply(names(agrupaciones), function(k) {
   dv <- voto_gse %>% dplyr::mutate(g_ = agrupaciones[[k]](gse))
-  dplyr::bind_rows(
-    cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "2: + gse",
-          coef_trat(glm(voto ~ educacion_ciudadana + g_ + factor(ola), family = binomial, data = dv))),
-    cbind(agrupacion = k, resultado = "Voto (logit)", modelo = "3: + gse y edad",
-          coef_trat(glm(voto ~ educacion_ciudadana + g_ + edad_nac + factor(ola), family = binomial, data = dv)))
-  )
+  list(glm(voto ~ educacion_ciudadana + g_ + factor(ola), family = binomial, data = dv),
+       glm(voto ~ educacion_ciudadana + g_ + edad_nac + factor(ola), family = binomial, data = dv))
+}), recursive = FALSE)
+
+# Coeficiente de la asignatura en cada especificación (se guarda en modelos_gse.rds)
+sensibilidad_voto <- dplyr::bind_rows(lapply(seq_along(modelos_sens_voto), function(i) {
+  cbind(agrupacion = names(agrupaciones)[ceiling(i / 2)], resultado = "Voto (logit)",
+        modelo = c("2: + gse", "3: + gse y edad")[2 - i %% 2], coef_trat(modelos_sens_voto[[i]]))
 }))
 rownames(sensibilidad_voto) <- NULL
-
-knitr::kable(sensibilidad_voto, digits = 3,
-             caption = "Coeficiente de educacion_ciudadana en voto según la agrupación de gse")
-
 sensibilidad_gse <- dplyr::bind_rows(sensibilidad_interes, sensibilidad_voto)
-writeLines(knitr::kable(sensibilidad_gse, format = "html", digits = 3,
-                        caption = "Coeficiente de educacion_ciudadana según la agrupación de gse"),
-           "output/tables/gse_sensibilidad_agrupacion.html")
+
+texreg::htmlreg(modelos_sens_voto, custom.model.names = nombres_sens,
+                file = "output/tables/gse_sensibilidad_voto.html")
+```
+
+Las agrupaciones son las mismas de la sección de interés político; `g_` corresponde al grupo socioeconómico según la agrupación de la columna.
+
+```{r}
+#| results: asis
+texreg::htmlreg(modelos_sens_voto, custom.model.names = nombres_sens)
+```
+
+## Menores de 30 años
+
+Al restringir la muestra a menores de 30 años según `edad_nac`, quienes cursaron la asignatura se comparan con votantes de edad más cercana. Se estiman los mismos modelos logísticos con nivel educacional y con grupo socioeconómico.
+
+```{r}
+## Muestras ------------------------------------------------------------------
+voto_df_30 <- voto_df %>% dplyr::filter(edad_nac < 30)
+voto_gse_30 <- voto_gse %>% dplyr::filter(edad_nac < 30)
+
+c(educ = nrow(voto_df_30), gse = nrow(voto_gse_30))
+dplyr::count(voto_df_30, educacion_ciudadana)
+
+## Modelos con nivel educacional -----------------------------------------------
+voto30_m1 <- glm(voto ~ educacion_ciudadana + factor(ola),
+                 family = binomial(link = "logit"), data = voto_df_30)
+voto30_m2 <- glm(voto ~ educacion_ciudadana + educ + factor(ola),
+                 family = binomial(link = "logit"), data = voto_df_30)
+voto30_m3 <- glm(voto ~ educacion_ciudadana + educ + edad_nac + factor(ola),
+                 family = binomial(link = "logit"), data = voto_df_30)
+
+## Modelos con grupo socioeconómico ---------------------------------------------
+voto30_gse_m1 <- glm(voto ~ educacion_ciudadana + factor(ola),
+                     family = binomial(link = "logit"), data = voto_gse_30)
+voto30_gse_m2 <- glm(voto ~ educacion_ciudadana + gse3 + factor(ola),
+                     family = binomial(link = "logit"), data = voto_gse_30)
+voto30_gse_m3 <- glm(voto ~ educacion_ciudadana + gse3 + edad_nac + factor(ola),
+                     family = binomial(link = "logit"), data = voto_gse_30)
+
+modelos_voto_30 <- list(voto30_m1, voto30_m2, voto30_m3,
+                        voto30_gse_m1, voto30_gse_m2, voto30_gse_m3)
+nombres_voto_30 <- c("1: solo EF ola", "2: + educ", "3: + educ y edad",
+                     "1: solo EF ola (muestra GSE)", "2: + gse", "3: + gse y edad")
+
+texreg::htmlreg(modelos_voto_30, custom.model.names = nombres_voto_30,
+                file = "output/tables/jovenes_voto_menores30.html")
+
+saveRDS(list(datos_educ = voto_df_30, datos_gse = voto_gse_30, modelos = modelos_voto_30),
+        "output/models/modelos_voto_jovenes.rds")
+```
+
+```{r}
+#| results: asis
+texreg::htmlreg(modelos_voto_30, custom.model.names = nombres_voto_30)
 ```
 
 ## Interpretación

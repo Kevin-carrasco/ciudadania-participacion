@@ -11,209 +11,249 @@ lang: es
 
 pacman::p_load(dplyr, texreg)
 
-res_int <- readRDS("output/models/modelos_interes.rds")
-res_comb <- readRDS("output/models/modelos_interes_combinaciones.rds")
-res_voto <- readRDS("output/models/modelos_voto.rds")
-res_gse <- readRDS("output/models/modelos_gse.rds")
-res_jov <- readRDS("output/models/modelos_jovenes.rds")
+res <- readRDS("output/models/modelos_principales.rds")
+esp <- res$especificaciones
 
-# Nombres legibles para los coeficientes de las tablas de regresión
-renombrar <- function(m) {
+# Nombres legibles para los coeficientes, con los errores estándar (ee) y
+# valores p (p) HC1 en lugar de los del modelo
+renombrar <- function(m, ee, p) {
   tr <- texreg::extract(m)
+  tr@se <- unname(ee[tr@coef.names])
+  tr@pvalues <- unname(p[tr@coef.names])
   nombres <- tr@coef.names
   nombres <- sub("(Intercept)", "Intercepto", nombres, fixed = TRUE)
+  nombres <- gsub("factor(ola)", "Ola ", nombres, fixed = TRUE)
   nombres <- gsub("educacion_ciudadana", "Educación ciudadana", nombres, fixed = TRUE)
   nombres <- gsub("edad_nac", "Edad", nombres, fixed = TRUE)
   nombres <- gsub("educ(?=\\p{Lu})", "", nombres, perl = TRUE)
   nombres <- gsub("gse3", "GSE ", nombres, fixed = TRUE)
-  nombres <- gsub(":", " × ", nombres, fixed = TRUE)
   tr@coef.names <- nombres
   tr
+}
+
+nota <- "%stars. Errores estándar HC1 entre paréntesis."
+
+# Tablas de un resultado en su muestra propia: una tabla por especificación,
+# con sus tres modelos
+mostrar <- function(r, letra, filas) {
+  nombre <- res$resultados$nombre[res$resultados$resultado == r]
+  for (i in filas) {
+    xs <- res$modelos[[r]][[i]]
+    cat(texreg::htmlreg(
+      lapply(xs, function(x) renombrar(x$modelo, x$ct[, 2], x$ct[, 4])),
+      custom.model.names = paste("Modelo", 1:3),
+      caption = paste0("Tabla ", letra, i, ". ", nombre, ": ", esp$titulo[i]),
+      caption.above = TRUE, custom.note = nota), "\n\n")
+  }
+}
+
+# Tablas de la muestra común: los tres modelos de cada resultado en cada
+# especificación
+mostrar_comun <- function(filas) {
+  for (i in filas) {
+    xs <- unlist(lapply(res$modelos_comun, `[[`, i), recursive = FALSE)
+    cat(texreg::htmlreg(
+      lapply(xs, function(x) renombrar(x$modelo, x$ct[, 2], x$ct[, 4])),
+      custom.model.names = paste0(rep(c("Interés", "Confianza", "Voto"), each = 3), " M", 1:3),
+      caption = paste0("Tabla D", i, ". Muestra común: ", esp$titulo[i]),
+      caption.above = TRUE, custom.note = nota), "\n\n")
+  }
 }
 
 # Formato de números en el texto: coma decimal y sin "-0,00"
 num <- function(x, d = 2) formatC(round(x, d) + 0, format = "f", digits = d, decimal.mark = ",")
 entero <- function(x) format(x, big.mark = ".", decimal.mark = ",")
-olas <- function(d) paste(levels(droplevels(d$ola)), collapse = ", ")
-rango <- function(x) paste(num(min(x)), "y", num(max(x)))
+mu <- function(m, v) res$muestras[res$muestras$muestra == m, v]
+
+# Coeficiente de la asignatura en un modelo de una especificación, con asteriscos
+coef_ec <- function(b, r, control, ponderacion, muestra, modelo = 3) {
+  x <- res$efectos[res$efectos$base == b & res$efectos$resultado == r & res$efectos$control == control &
+                     res$efectos$ponderacion == ponderacion & res$efectos$muestra == muestra &
+                     res$efectos$modelo == modelo, ]
+  # Asteriscos escapados para que Markdown no los lea como énfasis
+  paste0(num(x$estimacion, 3), dplyr::case_when(x$p < 0.001 ~ "\\*\\*\\*", x$p < 0.01 ~ "\\*\\*",
+                                                x$p < 0.05 ~ "\\*", TRUE ~ ""))
+}
+
+# Oración con el coeficiente de la asignatura en el modelo 1 y en los ocho
+# modelos 3 de un resultado
+describir <- function(b, r) {
+  e <- res$efectos[res$efectos$base == b & res$efectos$resultado == r & res$efectos$modelo == 3, ]
+  k <- function(...) coef_ec(b, r, ...)
+  paste0(
+    "Solo con efectos fijos de ola (modelo 1), el coeficiente de la asignatura es ",
+    k("educ", "Sin ponderar", "Muestra completa", modelo = 1), " en la muestra completa y ",
+    k("educ", "Sin ponderar", "Menores de 30 años", modelo = 1), " en menores de 30 años, sin ponderar. ",
+    "Con el control socioeconómico y la edad (modelo 3), en la muestra completa sin ponderar es ",
+    k("educ", "Sin ponderar", "Muestra completa"), " con nivel educacional y ",
+    k("gse3", "Sin ponderar", "Muestra completa"), " con grupo socioeconómico; con ponderadores, ",
+    k("educ", "Ponderado", "Muestra completa"), " y ", k("gse3", "Ponderado", "Muestra completa"),
+    ". En menores de 30 años es ", k("educ", "Sin ponderar", "Menores de 30 años"), " y ",
+    k("gse3", "Sin ponderar", "Menores de 30 años"), " sin ponderar, y ",
+    k("educ", "Ponderado", "Menores de 30 años"), " y ", k("gse3", "Ponderado", "Menores de 30 años"),
+    " con ponderadores. En el modelo 3, ", sum(e$p < 0.05), " de las ", nrow(e),
+    " especificaciones son significativas al 5% (\\* p < 0,05; \\*\\* p < 0,01; \\*\\*\\* p < 0,001).")
+}
 ```
 
 # El proyecto
 
-Este proyecto evalúa si la asignatura de Educación Ciudadana, que se imparte en 3° y 4° medio desde 2020, se asocia con el interés político y la participación electoral de las cohortes que la cursaron. Usa las olas 77 a 96 de la Encuesta CEP, levantadas entre 2016 y 2026.
+Este proyecto evalúa si la asignatura de Educación Ciudadana, que se imparte en 3° y 4° medio desde 2020, se asocia con el interés político, la confianza en instituciones políticas y la participación electoral de las cohortes que la cursaron. Usa las olas 77 a 96 de la Encuesta CEP, levantadas entre 2016 y 2026.
 
-**Tratamiento.** La variable `educacion_ciudadana` identifica a quienes tuvieron la asignatura según su fecha de nacimiento: nacidos desde el 01-abr-2003, que en edad normativa cursaron 3° medio en 2020 o después. Es un proxy que no considera repitencia. Cuando no hay fecha de nacimiento, en los análisis de interés político se imputa desde la edad declarada; en los análisis de voto esos casos se excluyen.
+**Tratamiento.** La variable `educacion_ciudadana` identifica a quienes tuvieron la asignatura según su fecha de nacimiento: nacidos desde el 01-abr-2003, que en edad normativa cursaron 3° medio en 2020 o después. Es un proxy que no considera repitencia. Cuando no hay fecha de nacimiento, en los análisis de interés político y confianza se imputa desde la edad declarada; en los análisis de voto esos casos se excluyen.
 
-**Variables dependientes.** El interés político se mide con la pregunta "¿Cuán interesado está Ud. en la política?", en una escala de 1 (nada interesado) a 5 (muy interesado). El voto se mide con la pregunta de si la persona votó en la 2ª vuelta presidencial de diciembre de 2021.
+**Variables dependientes.** El interés político se mide con la pregunta "¿Cuán interesado está Ud. en la política?", en una escala de 1 (nada interesado) a 5 (muy interesado). La confianza política es el promedio de la confianza en los partidos políticos, el Congreso y el Gobierno, en una escala de 1 (nada de confianza) a 4 (mucha confianza). El voto se mide con la pregunta de si la persona votó en la 2ª vuelta presidencial de diciembre de 2021.
 
-**Estrategia de análisis.** Como la asignatura se asigna por cohorte de nacimiento, quienes la cursaron son siempre los más jóvenes de cada ola, y su comparación con el resto mezcla el efecto de la asignatura con diferencias de edad. Por eso el análisis avanza en etapas. Las regresiones, cuyos resultados se presentan en esta página, cuantifican la asociación y cómo cambia con los controles. Los diseños de diferencia en diferencias, en la pestaña de análisis, aprovechan que la cohorte con la asignatura envejece entre olas para comparar a las mismas edades antes y después de la asignatura. Cada documento explica qué se hace y por qué, primero para el interés político y luego para el voto.
+**Estrategia de análisis.** Como la asignatura se asigna por cohorte de nacimiento, quienes la cursaron son siempre los más jóvenes de cada ola, y su comparación con el resto mezcla el efecto de la asignatura con diferencias de edad. Por eso el análisis avanza en etapas. Las regresiones, cuyos resultados se presentan en esta página, cuantifican la asociación y cómo cambia según el control socioeconómico, la ponderación y la muestra. Los diseños de diferencia en diferencias, en la pestaña de análisis, aprovechan que la cohorte con la asignatura envejece entre olas para comparar a las mismas edades antes y después de la asignatura.
 
 | Técnica | Qué se hace | Por qué |
 |---|---|---|
+| [Modelos principales](processing/analysis_principal.qmd) | Estima los modelos de esta página para los tres resultados, en su muestra propia y en una muestra común | Permite comparar especificaciones y resultados |
 | [Regresiones](processing/analysis_regresiones.qmd) | Compara, dentro de cada ola, a quienes cursaron la asignatura con el resto, con distintos controles y muestras | Cuantifica la asociación y su dependencia de los controles |
 | [Diferencia en diferencias 2x2](processing/analysis_did_2x2.qmd) | Compara el cambio en interés de jóvenes y de personas de 23 a 30 años entre una ola previa y las posteriores | Elimina diferencias permanentes entre edades y cambios comunes entre olas |
 | [Diferencia en diferencias escalonada](processing/analysis_did_interes.qmd) | Usa todas las olas y edades, reconociendo que cada edad pasa a estar tratada en una ola distinta | Aprovecha toda la información y evita sesgos de los modelos de efectos fijos tradicionales |
 | [Olas 77 a 96 y estudio de eventos](processing/analysis_did_interes_ext.qmd) | Agrega las olas levantadas entre 2016 y 2019 | Permite contrastar tendencias previas y mejora la precisión |
-| [Ponderación y diseño muestral](processing/analysis_ponderado.qmd) | Reestima los análisis con el ponderador y el diseño de la encuesta | Evalúa si la composición de la muestra afecta las conclusiones |
+| [Ponderación y diseño muestral](processing/analysis_ponderado.qmd) | Reestima los análisis de interés político con el ponderador y el diseño de la encuesta | Evalúa si la composición de la muestra afecta las conclusiones |
+| [Confianza en instituciones](processing/analysis_confianza_politica.qmd) | Aplica las regresiones y los diseños de diferencia en diferencias a la confianza política | Evalúa un resultado vinculado al conocimiento de las instituciones que promueve la formación ciudadana |
 
 La construcción de las bases está en el documento de [preparación](processing/preparation.qmd). La estructura del proyecto sigue el protocolo [IPO](https://lisacoes.netlify.app/protocolos/a-ipo-rep/) (Input-Processing-Output) de reproducibilidad del Laboratorio de Ciencia Social Abierta (LISA-COES).
 
-# Interés político
+## Especificaciones
 
-La base de interés político reúne las olas CEP `r olas(res_int$datos)`, con `r entero(nrow(res_int$datos))` casos con información completa y `r entero(sum(res_int$datos$educacion_ciudadana))` personas que cursaron la asignatura. Todos los modelos son lineales e incluyen efectos fijos de ola, para que la comparación se realice dentro de cada ola: solo efectos fijos de ola (1), con un control socioeconómico (2) y con el control socioeconómico y la edad (3).
+Cada tabla presenta tres modelos anidados, todos con efectos fijos de ola: solo la asignatura (1), con un control socioeconómico (2) y con el control socioeconómico y la edad (3). Las tablas muestran todos los coeficientes, incluidos los de cada ola (referencia: la primera ola de cada muestra). Cada resultado se presenta en ocho especificaciones, en este orden:
 
-## Modelos con nivel educacional
+1. Nivel educacional, sin ponderar, muestra completa.
+2. Grupo socioeconómico, sin ponderar, muestra completa.
+3. Nivel educacional, ponderado, muestra completa.
+4. Grupo socioeconómico, ponderado, muestra completa.
+5. a 8. Las mismas cuatro especificaciones con la muestra restringida a menores de 30 años.
 
-El nivel educacional se agrupa en básica, media, técnica y universitaria o más, según el nivel más alto cursado; la categoría de referencia es "Básica". Para quienes todavía estudian, el nivel educacional es la etapa en que se encuentran y puede ser afectado por la asignatura.
+El nivel educacional se agrupa en básica, media, técnica y universitaria o más (referencia: básica); para quienes todavía estudian, corresponde a la etapa en que se encuentran y puede ser afectado por la asignatura. El grupo socioeconómico del hogar se agrupa en ABC1-C2, C3 y D-E (referencia: D-E) y difícilmente es afectado por la asignatura. Las versiones ponderadas usan el ponderador de la Encuesta CEP. Al restringir la muestra a menores de 30 años, el grupo de comparación queda más cerca en edad de quienes cursaron la asignatura.
+
+Dentro de cada resultado, las especificaciones con la muestra completa usan los mismos casos: los que tienen información completa en el resultado, el tratamiento, el nivel educacional, el grupo socioeconómico, la edad y el ponderador. Lo mismo ocurre entre las especificaciones con menores de 30 años. Todos los errores estándar son HC1, para que las versiones ponderadas y sin ponderar sean comparables. Las muestras difieren entre resultados, por lo que la sección D reestima todo en una muestra común.
+
+# A) Interés político
+
+La muestra reúne las olas CEP `r mu("interes", "olas")`, con `r entero(mu("interes", "n"))` casos y `r entero(mu("interes", "tratados"))` personas que cursaron la asignatura. Entre los menores de 30 años hay `r entero(mu("interes", "n_menores_30"))` casos. Los modelos son lineales y los coeficientes se leen en la escala de 1 a 5.
+
+## Muestra completa
 
 ```{r}
-#| label: reg-interes
+#| label: tablas-interes
 #| echo: false
 #| results: asis
 
-texreg::htmlreg(
-  lapply(res_int$modelos, renombrar),
-  custom.model.names = paste("Modelo", seq_along(res_int$modelos)),
-  omit.coef = "factor[(]ola[)]",
-  custom.gof.rows = list("EF ola" = rep("Sí", length(res_int$modelos))),
-  caption = "Asignatura de Educación Ciudadana e interés político: modelos con nivel educacional",
-  caption.above = TRUE,
-  custom.note = "%stars. Errores estándar entre paréntesis."
-)
+mostrar("interes", "A", 1:4)
 ```
 
-## Modelos con grupo socioeconómico
-
-El grupo socioeconómico del hogar se agrupa en ABC1-C2, C3 y D-E (referencia: D-E). A diferencia del nivel educacional, difícilmente es afectado por la asignatura.
+## Menores de 30 años
 
 ```{r}
-#| label: reg-interes-gse
+#| label: tablas-interes-30
 #| echo: false
 #| results: asis
 
-texreg::htmlreg(
-  lapply(res_gse$modelos_interes, renombrar),
-  custom.model.names = paste("Modelo", seq_along(res_gse$modelos_interes)),
-  omit.coef = "factor[(]ola[)]",
-  custom.gof.rows = list("EF ola" = rep("Sí", length(res_gse$modelos_interes))),
-  caption = "Asignatura de Educación Ciudadana e interés político: modelos con grupo socioeconómico",
-  caption.above = TRUE,
-  custom.note = "%stars. Errores estándar entre paréntesis."
-)
-```
-
-## Distintas especificaciones
-
-La tabla siguiente muestra el coeficiente de la asignatura en los tres modelos bajo todas las combinaciones de tres decisiones de análisis: el control socioeconómico, el tratamiento de los casos sin fecha de nacimiento en las olas 85, 92 y 93 (imputarlos desde la edad declarada o excluirlos) y el uso del ponderador de la encuesta. La CEP 96 se incluye en todas las versiones, con su fecha de nacimiento imputada.
-
-```{r}
-#| label: tabla-combinaciones
-#| echo: false
-
-res_comb$tabla_ancha %>%
-  dplyr::rename(Control = control, `Casos sin fecha` = imputacion,
-                Ponderación = ponderacion) %>%
-  knitr::kable(caption = "Coeficiente de la asignatura sobre el interés político según la especificación")
-```
-
-Todos los modelos incluyen efectos fijos de ola. Modelo 1: sin otros controles. Modelo 2: con el control socioeconómico. Modelo 3: con el control socioeconómico y la edad. \* p < 0,05; \*\* p < 0,01; \*\*\* p < 0,001. Errores estándar HC1 entre paréntesis.
-
-## Muestras de jóvenes
-
-Al restringir la muestra a jóvenes, el grupo de comparación queda más cerca en edad de quienes cursaron la asignatura.
-
-```{r}
-#| label: tabla-jovenes
-#| echo: false
-
-coef_jov <- function(modelos) {
-  sapply(modelos, function(m) {
-    s <- summary(m)$coefficients["educacion_ciudadana", ]
-    estrellas <- if (s[4] < 0.001) "***" else if (s[4] < 0.01) "**" else if (s[4] < 0.05) "*" else ""
-    sprintf("%s%s (%s)", num(s[1], 3), estrellas, num(s[2], 3))
-  })
-}
-
-data.frame(
-  Muestra = c("Menores de 30 años", "Menores de 35 años"),
-  n = entero(c(nrow(res_jov$datos_30), nrow(res_jov$datos_35))),
-  rbind(coef_jov(res_jov$modelos_30), coef_jov(res_jov$modelos_35)),
-  check.names = FALSE
-) %>%
-  setNames(c("Muestra", "n", "1: solo EF ola", "2: + educ", "3: + educ y edad",
-             "4: + gse", "5: + gse y edad")) %>%
-  knitr::kable(caption = "Coeficiente de la asignatura sobre el interés político en muestras de jóvenes")
-```
-
-Todos los modelos incluyen efectos fijos de ola. \* p < 0,05; \*\* p < 0,01; \*\*\* p < 0,001. Errores estándar entre paréntesis.
-
-## Interpretación
-
-```{r}
-#| label: interp-interes
-#| echo: false
-
-tc <- res_comb$tabla
-m1c <- tc %>% dplyr::filter(modelo == 1)
-m2_gse <- tc %>% dplyr::filter(modelo == 2, control == "Grupo socioeconómico", ponderacion == "Sin ponderar")
-m2_educ <- tc %>% dplyr::filter(modelo == 2, control == "Nivel educacional")
-m3c <- tc %>% dplyr::filter(modelo == 3)
-m3_sig <- m3c %>% dplyr::filter(p < 0.05)
-jov1 <- c(coef(res_jov$modelos_30[[1]])["educacion_ciudadana"], coef(res_jov$modelos_35[[1]])["educacion_ciudadana"])
-```
-
-Solo con efectos fijos de ola (modelo 1), quienes cursaron la asignatura declaran más interés político que el resto, con coeficientes entre `r rango(m1c$estimacion)` puntos según la especificación. Al agregar el control socioeconómico (modelo 2), el coeficiente se acerca a cero con el nivel educacional (entre `r rango(m2_educ$estimacion)`) y se mantiene en torno a `r num(mean(m2_gse$estimacion))` con el grupo socioeconómico sin ponderar, porque el nivel educacional absorbe en parte la edad de quienes cursaron la asignatura y el grupo socioeconómico no lo hace. Al controlar además por la edad (modelo 3), los coeficientes quedan entre `r rango(m3c$estimacion)`. `r if (nrow(m3_sig) == 0) "Ninguno es significativo al 5%." else if (nrow(m3_sig) == 1) paste0("Solo 1 de las ", nrow(m3c), " especificaciones es significativa al 5%, con un coeficiente de ", num(m3_sig$estimacion), ".") else paste0("En ", nrow(m3_sig), " de las ", nrow(m3c), " especificaciones el coeficiente es significativo al 5%, con valores entre ", rango(m3_sig$estimacion), ".")` En las muestras de jóvenes, donde el grupo de comparación tiene una edad similar, la diferencia desaparece incluso sin controles (coeficientes de `r num(jov1[1])` y `r num(jov1[2])`).
-
-La asociación positiva sin controles se explica, por lo tanto, por la edad de quienes cursaron la asignatura, y con ninguna combinación de decisiones de análisis aparece un efecto positivo una vez considerada la edad. Estas regresiones son comparaciones transversales; los diseños de diferencia en diferencias de la pestaña de análisis evalúan el efecto de la asignatura con comparaciones más exigentes.
-
-# Voto
-
-La base de voto reúne las olas CEP `r olas(res_voto$datos)`, que preguntan si la persona votó en la 2ª vuelta presidencial de diciembre de 2021. Se excluye a quienes, según su fecha de nacimiento, no tenían 18 años el 19 de diciembre de 2021; entre los tratados quedan así los nacidos entre el 01-abr-2003 y el 19-dic-2003 (`r entero(nrow(res_voto$datos))` casos con respuesta válida y `r entero(sum(res_voto$datos$educacion_ciudadana))` personas que cursaron la asignatura). Los modelos son regresiones logísticas (coeficientes en log-odds) con efectos fijos de ola.
-
-## Modelos con nivel educacional
-
-```{r}
-#| label: reg-voto
-#| echo: false
-#| results: asis
-
-texreg::htmlreg(
-  lapply(res_voto$modelos, renombrar),
-  custom.model.names = paste("Modelo", seq_along(res_voto$modelos), "(logit)"),
-  omit.coef = "factor[(]ola[)]",
-  custom.gof.rows = list("EF ola" = rep("Sí", length(res_voto$modelos))),
-  caption = "Asignatura de Educación Ciudadana y voto en la 2ª vuelta de 2021: modelos con nivel educacional",
-  caption.above = TRUE,
-  custom.note = "%stars. Errores estándar entre paréntesis."
-)
-```
-
-## Modelos con grupo socioeconómico
-
-```{r}
-#| label: reg-voto-gse
-#| echo: false
-#| results: asis
-
-texreg::htmlreg(
-  lapply(res_gse$modelos_voto, renombrar),
-  custom.model.names = paste("Modelo", seq_along(res_gse$modelos_voto), "(logit)"),
-  omit.coef = "factor[(]ola[)]",
-  custom.gof.rows = list("EF ola" = rep("Sí", length(res_gse$modelos_voto))),
-  caption = "Asignatura de Educación Ciudadana y voto en la 2ª vuelta de 2021: modelos con grupo socioeconómico",
-  caption.above = TRUE,
-  custom.note = "%stars. Errores estándar entre paréntesis."
-)
+mostrar("interes", "A", 5:8)
 ```
 
 ## Interpretación
 
-```{r}
-#| label: interp-voto
-#| echo: false
+`r describir("propia", "interes")`
 
-v3 <- summary(res_voto$modelos[[3]])$coefficients["educacion_ciudadana", ]
-v3g <- summary(res_gse$modelos_voto[[3]])$coefficients["educacion_ciudadana", ]
+En la muestra completa sin ponderar, quienes cursaron la asignatura declaran más interés político que el resto cuando solo se comparan dentro de cada ola. Al agregar el nivel educacional (modelo 2) la diferencia desaparece, y con el grupo socioeconómico se mantiene. Esta diferencia entre controles surge porque el nivel educacional absorbe en parte la edad de quienes cursaron la asignatura y el grupo socioeconómico no lo hace. Al controlar además por la edad (modelo 3), el coeficiente queda cercano a cero con nivel educacional y es negativo con grupo socioeconómico. En menores de 30 años, donde el grupo de comparación tiene una edad similar, los coeficientes son cercanos a cero en los tres modelos.
+
+# B) Confianza política
+
+La muestra reúne las olas CEP `r mu("confianza", "olas")`, con `r entero(mu("confianza", "n"))` casos y `r entero(mu("confianza", "tratados"))` personas que cursaron la asignatura. Entre los menores de 30 años hay `r entero(mu("confianza", "n_menores_30"))` casos. Los modelos son lineales y los coeficientes se leen en la escala de 1 a 4. El detalle y los diseños de diferencia en diferencias están en la pestaña [Confianza en instituciones](processing/analysis_confianza_politica.qmd).
+
+## Muestra completa
+
+```{r}
+#| label: tablas-confianza
+#| echo: false
+#| results: asis
+
+mostrar("confianza", "B", 1:4)
 ```
 
-Quienes cursaron la asignatura votaron menos en la 2ª vuelta de 2021. Al controlar por edad, el coeficiente es `r num(v3[1])` con nivel educacional y `r num(v3g[1])` con grupo socioeconómico, ambos negativos y significativos. Sin embargo, quienes cursaron la asignatura y podían votar tenían 18 años en esa elección, por lo que eran los votantes más jóvenes de la muestra, y la edad incluida de forma lineal puede no capturar completamente las diferencias de participación en esas edades. Como la pregunta de voto se refiere a una sola elección, no es posible aplicar los diseños de diferencia en diferencias, por lo que para el voto el análisis se limita a estas regresiones y sus coeficientes no pueden interpretarse como efectos de la asignatura.
+## Menores de 30 años
+
+```{r}
+#| label: tablas-confianza-30
+#| echo: false
+#| results: asis
+
+mostrar("confianza", "B", 5:8)
+```
+
+## Interpretación
+
+`r describir("propia", "confianza")`
+
+En la muestra completa, quienes cursaron la asignatura declaran más confianza en las instituciones políticas en los tres modelos, con cualquier control socioeconómico y con o sin ponderadores. En menores de 30 años la diferencia también es positiva y significativa en los modelos 1 y 2, pero se acerca a cero al controlar por la edad (modelo 3). La asociación positiva depende, por lo tanto, de la edad: entre personas de edad similar, controlar por la edad la elimina, y en la muestra completa la edad incluida de forma lineal no basta para separarla del efecto de la asignatura. Los diseños de diferencia en diferencias del documento de confianza evalúan esta diferencia con comparaciones más exigentes.
+
+# C) Voto
+
+La muestra reúne las olas CEP `r mu("voto", "olas")`, que preguntan si la persona votó en la 2ª vuelta presidencial de diciembre de 2021. Se excluye a quienes, según su fecha de nacimiento, no tenían 18 años el 19 de diciembre de 2021, por lo que entre los tratados quedan solo los nacidos entre el 01-abr-2003 y el 19-dic-2003: `r entero(mu("voto", "tratados"))` de `r entero(mu("voto", "n"))` casos. Entre los menores de 30 años hay `r entero(mu("voto", "n_menores_30"))` casos. Los modelos son regresiones logísticas y los coeficientes están en log-odds.
+
+## Muestra completa
+
+```{r}
+#| label: tablas-voto
+#| echo: false
+#| results: asis
+
+mostrar("voto", "C", 1:4)
+```
+
+## Menores de 30 años
+
+```{r}
+#| label: tablas-voto-30
+#| echo: false
+#| results: asis
+
+mostrar("voto", "C", 5:8)
+```
+
+## Interpretación
+
+`r describir("propia", "voto")`
+
+Quienes cursaron la asignatura votaron menos en la 2ª vuelta de 2021. En la muestra completa la diferencia se reduce a cerca de la mitad al controlar por la edad, pero sigue siendo negativa, y en menores de 30 años se mantiene en los tres modelos; en la muestra completa con ponderadores el coeficiente del modelo 3 deja de ser significativo. Sin embargo, quienes cursaron la asignatura y podían votar tenían 18 años en esa elección, por lo que eran los votantes más jóvenes de la muestra, y la edad incluida de forma lineal puede no capturar completamente las diferencias de participación en esas edades. Como la pregunta de voto se refiere a una sola elección, no es posible aplicar los diseños de diferencia en diferencias, por lo que estos coeficientes no pueden interpretarse como efectos de la asignatura.
+
+# D) Muestra común
+
+Las muestras de las secciones anteriores difieren en olas, en casos y en quiénes son los tratados, por lo que sus coeficientes no son directamente comparables. La muestra común reúne a las personas con información completa en los tres resultados, el tratamiento, ambos controles socioeconómicos, la edad y el ponderador. Parte de la base de voto, la más restrictiva: solo personas habilitadas para votar en 2021 y con fecha de nacimiento real, en las olas que preguntan por los tres resultados (`r mu("comun", "olas")`).
+
+La muestra común tiene `r entero(mu("comun", "n"))` casos, de los cuales solo `r entero(mu("comun", "tratados"))` cursaron la asignatura, y `r entero(mu("comun", "n_menores_30"))` casos entre los menores de 30 años. Todos los tratados nacieron entre abril y diciembre de 2003, es decir, son la primera cohorte con la asignatura. Con tan pocos tratados, las estimaciones son poco precisas. Cada tabla presenta los tres modelos de los tres resultados en la misma especificación; los coeficientes de interés y confianza son lineales y los de voto están en log-odds.
+
+## Muestra completa
+
+```{r}
+#| label: tablas-comun
+#| echo: false
+#| results: asis
+
+mostrar_comun(1:4)
+```
+
+## Menores de 30 años
+
+```{r}
+#| label: tablas-comun-30
+#| echo: false
+#| results: asis
+
+mostrar_comun(5:8)
+```
+
+## Interpretación
+
+**Interés político.** `r describir("comun", "interes")`
+
+**Confianza política.** `r describir("comun", "confianza")`
+
+**Voto.** `r describir("comun", "voto")`
+
+En la muestra común, los signos de la confianza (positivo) y del voto (negativo) coinciden con los de sus muestras propias, aunque con errores estándar mayores. Solo con efectos fijos de ola (modelo 1), sin ponderar y con la muestra completa, los tres coeficientes son significativos; al controlar por la edad (modelo 3), la mayoría deja de serlo. El interés político se comporta distinto que en su muestra propia: el coeficiente es positivo en los tres modelos, aunque no significativo en el modelo 3, mientras que en su muestra propia el modelo 3 es cercano a cero o negativo. Este cambio refleja quiénes son los tratados en cada muestra: en la muestra común solo está la primera cohorte con la asignatura, y en la muestra propia de interés político están también las cohortes posteriores. Las diferencias entre resultados en la muestra común no dependen de la muestra, pero con `r entero(mu("comun", "tratados"))` tratados ninguna de ellas puede establecerse con precisión.

@@ -16,20 +16,26 @@ La estructura de carpetas sigue el protocolo IPO (Input-Processing-Output) de an
 │
 ├── processing
 │   ├── preparation.qmd               : carga, exploración por ola y construcción de bases agrupadas
+│   ├── analysis_principal.qmd        : modelos de la portada (interés, confianza y voto; muestra propia y común)
 │   ├── analysis_regresiones.qmd      : regresiones de interés político y voto
 │   ├── analysis_did_2x2.qmd          : diferencia en diferencias 2x2 (interés político)
 │   ├── analysis_did_interes.qmd      : diferencia en diferencias escalonada (interés político)
 │   ├── analysis_did_interes_ext.qmd  : olas 77 a 96 y estudio de eventos (interés político)
-│   └── analysis_ponderado.qmd        : ponderación y diseño muestral
+│   ├── analysis_ponderado.qmd        : ponderación y diseño muestral
+│   ├── analysis_confianza_politica.qmd : confianza en instituciones políticas
+│   └── _analisis_actitudes.qmd       : análisis compartido que incluye analysis_confianza_politica.qmd
 │
 ├── output: productos generados por el código
 │   ├── graphs : figuras
 │   ├── tables : tablas
 │   └── models : muestras y modelos que usa la portada (.rds)
 │
+├── analisis-respaldo : copia de los análisis al 10-10-2026, incluidos apoyo y satisfacción con la democracia (no se renderiza)
 ├── index.qmd     : portada del sitio
 ├── _quarto.yml   : configuración del proyecto Quarto
 └── README.md
 ```
+
+Las tablas de regresión reportan todos los coeficientes de cada modelo, incluidos los efectos fijos de ola y de edad.
 
 Para reproducir los resultados se renderiza el proyecto completo con `quarto render` desde la raíz. El orden de `_quarto.yml` respeta las dependencias: `preparation.qmd` genera las bases, `analysis_did_interes_ext.qmd` usa el modelo guardado por `analysis_did_interes.qmd` y la portada (`index.qmd`) lee los modelos guardados por los análisis.

@@ -1158,6 +1158,30 @@ data_actitudes %>%
 cor(data_actitudes[, c("conf_partidos", "conf_congreso", "conf_gobierno")], use = "complete.obs")
 ```
 
+# Base común
+
+Base para comparar los tres resultados en la misma muestra. Parte de la base de voto, que es la más restrictiva: solo personas habilitadas para votar en la 2ª vuelta de 2021 y con fecha de nacimiento real (sin imputación). A esa base se agregan el interés político de `data_int` y la confianza política de `data_actitudes`, uniendo por ola e identificador. El `int_pol` de `data_voto` no se usa porque conserva la codificación original (sin invertir y con los códigos 8 y 9). Se mantienen los casos con información completa en los tres resultados, el tratamiento, el nivel educacional, el grupo socioeconómico, la edad y el ponderador, por lo que quedan solo las olas que preguntan por los tres resultados.
+
+```{r}
+data_comun <- data_voto %>%
+  dplyr::filter(habilitado_2v == 1) %>%
+  dplyr::select(ola, id_bu, fecha_terreno, fecha_nac, edad_nac, educacion_ciudadana,
+                educ, gse, pond, estrato, voto) %>%
+  dplyr::inner_join(dplyr::select(data_int, ola, id_bu, int_pol), by = c("ola", "id_bu")) %>%
+  dplyr::inner_join(dplyr::select(data_actitudes, ola, id_bu, conf_pol), by = c("ola", "id_bu")) %>%
+  dplyr::filter(dplyr::if_all(c(voto, int_pol, conf_pol, educacion_ciudadana, educ, gse,
+                                edad_nac, pond), ~ !is.na(.x))) %>%
+  droplevels()
+
+## Chequeo -------------------------------------------------------------------------
+data_comun %>%
+  dplyr::group_by(ola) %>%
+  dplyr::summarise(n = dplyr::n(), tratados = sum(educacion_ciudadana),
+                   menores_30 = sum(edad_nac < 30),
+                   tratados_menores_30 = sum(educacion_ciudadana[edad_nac < 30]),
+                   .groups = "drop")
+```
+
 # Guardar datos procesados
 
 ```{r}
@@ -1165,4 +1189,5 @@ saveRDS(data_voto, "input/data/proc/data_voto.rds")
 saveRDS(data_int, "input/data/proc/data_int.rds")
 saveRDS(data_int_ext, "input/data/proc/data_int_ext.rds")
 saveRDS(data_actitudes, "input/data/proc/data_actitudes.rds")
+saveRDS(data_comun, "input/data/proc/data_comun.rds")
 ```

@@ -15,3 +15,5 @@ input/data/original/*
 input/data/proc/*.rds
 # Guardan las muestras de análisis (microdatos), no solo los modelos
 output/models/*.rds
+# Copia de respaldo: los modelos guardan microdatos
+analisis-respaldo/output/models/*.rds

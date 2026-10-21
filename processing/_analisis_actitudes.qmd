@@ -1,6 +1,7 @@
-<!-- Documento compartido. Lo incluyen analysis_apoyo_democracia.qmd,
-analysis_confianza_politica.qmd y analysis_satisfaccion_democracia.qmd, que
-definen antes y_var, y_nombre, y_etiqueta, y_tipo, y_rango y prefijo. -->
+<!-- Documento compartido. Lo incluye analysis_confianza_politica.qmd, que
+define antes y_var, y_nombre, y_etiqueta, y_tipo, y_rango y prefijo. Los
+documentos de apoyo y satisfacción con la democracia que también lo usaban
+están en analisis-respaldo/. -->
 
 # Datos
 
@@ -72,8 +73,7 @@ reg1 <- lm(reformulate(c("educacion_ciudadana", "factor(ola)"), y_var), data = r
 reg2 <- lm(reformulate(c("educacion_ciudadana", "educ", "factor(ola)"), y_var), data = reg_df)
 reg3 <- lm(reformulate(c("educacion_ciudadana", "educ", "edad_nac", "factor(ola)"), y_var), data = reg_df)
 
-args_reg <- list(list(reg1, reg2, reg3), omit.coef = "factor[(]ola[)]",
-                 custom.gof.rows = list("EF ola" = rep("Sí", 3)))
+args_reg <- list(list(reg1, reg2, reg3))
 do.call(texreg::htmlreg, c(args_reg, file = paste0("output/tables/", prefijo, "_regresiones_educ.html")))
 ```
 
@@ -94,9 +94,8 @@ reg_gse2 <- lm(reformulate(c("educacion_ciudadana", "gse3", "factor(ola)"), y_va
 reg_gse3 <- lm(reformulate(c("educacion_ciudadana", "gse3", "edad_nac", "factor(ola)"), y_var), data = reg_gse_df)
 reg_gse_x <- lm(reformulate(c("educacion_ciudadana * gse3", "edad_nac", "factor(ola)"), y_var), data = reg_gse_df)
 
-args_gse <- list(list(reg_gse1, reg_gse2, reg_gse3, reg_gse_x), omit.coef = "factor[(]ola[)]",
-                 custom.model.names = c("Modelo 1", "Modelo 2", "Modelo 3", "Interacción con GSE"),
-                 custom.gof.rows = list("EF ola" = rep("Sí", 4)))
+args_gse <- list(list(reg_gse1, reg_gse2, reg_gse3, reg_gse_x),
+                 custom.model.names = c("Modelo 1", "Modelo 2", "Modelo 3", "Interacción con GSE"))
 do.call(texreg::htmlreg, c(args_gse, file = paste0("output/tables/", prefijo, "_regresiones_gse.html")))
 ```
 
@@ -107,7 +106,7 @@ do.call(texreg::htmlreg, args_gse)
 
 ## Muestras de jóvenes
 
-Coeficiente de la asignatura en cinco modelos con efectos fijos de ola, restringiendo la muestra a menores de 30 y de 35 años: sin otros controles (1), con nivel educacional (2), con nivel educacional y edad (3), con grupo socioeconómico (4) y con grupo socioeconómico y edad (5).
+Cinco modelos con efectos fijos de ola, restringiendo la muestra a menores de 30 y de 35 años: sin otros controles (1), con nivel educacional (2), con nivel educacional y edad (3), con grupo socioeconómico (4) y con grupo socioeconómico y edad (5).
 
 ```{r}
 rhs_jovenes <- list(c("educacion_ciudadana", "factor(ola)"),
@@ -116,25 +115,40 @@ rhs_jovenes <- list(c("educacion_ciudadana", "factor(ola)"),
                     c("educacion_ciudadana", "gse3", "factor(ola)"),
                     c("educacion_ciudadana", "gse3", "edad_nac", "factor(ola)"))
 
-jovenes <- dplyr::bind_rows(lapply(c(30, 35), function(lim) {
+modelos_jovenes <- lapply(c("30" = 30, "35" = 35), function(lim) {
   dj <- dat %>%
     dplyr::filter(edad_nac < lim) %>%
     dplyr::select(dplyr::all_of(c("ola", y_var, "educacion_ciudadana", "educ", "gse3", "edad_nac"))) %>%
     na.omit()
+  lapply(rhs_jovenes, function(rhs) lm(reformulate(rhs, y_var), data = dj))
+})
+
+# Coeficiente de la asignatura, para el .rds
+jovenes <- dplyr::bind_rows(lapply(names(modelos_jovenes), function(lim) {
   dplyr::bind_rows(lapply(seq_along(rhs_jovenes), function(k) {
-    s <- summary(lm(reformulate(rhs_jovenes[[k]], y_var), data = dj))$coefficients["educacion_ciudadana", ]
-    data.frame(muestra = paste("Menores de", lim), n = nrow(dj), modelo = k,
+    m <- modelos_jovenes[[lim]][[k]]
+    s <- summary(m)$coefficients["educacion_ciudadana", ]
+    data.frame(muestra = paste("Menores de", lim), n = nobs(m), modelo = k,
                estimacion = s[1], ee = s[2], p = s[4])
   }))
 }))
 rownames(jovenes) <- NULL
 
-knitr::kable(jovenes, digits = 3, caption = "Coeficiente de la asignatura en muestras de jóvenes")
+tablas_jovenes <- sapply(names(modelos_jovenes), function(lim) {
+  texreg::htmlreg(modelos_jovenes[[lim]], custom.model.names = paste("Modelo", 1:5),
+                  caption = paste("Menores de", lim, "años"), caption.above = TRUE)
+})
+writeLines(tablas_jovenes, paste0("output/tables/", prefijo, "_jovenes.html"))
+```
+
+```{r}
+#| results: asis
+cat(tablas_jovenes, sep = "\n\n")
 ```
 
 ## Combinaciones de especificaciones
 
-El coeficiente de la asignatura en los tres modelos, con todas las combinaciones de control socioeconómico, tratamiento de los casos sin fecha de nacimiento (imputarlos o excluirlos; la CEP 96 se mantiene siempre) y ponderación. Errores estándar HC1.
+Los tres modelos con todas las combinaciones de control socioeconómico, tratamiento de los casos sin fecha de nacimiento (imputarlos o excluirlos; la CEP 96 se mantiene siempre) y ponderación. Errores estándar HC1.
 
 ```{r}
 combinaciones <- expand.grid(control = c("Nivel educacional", "Grupo socioeconómico"),
@@ -142,7 +156,7 @@ combinaciones <- expand.grid(control = c("Nivel educacional", "Grupo socioeconó
                              ponderacion = c("Sin ponderar", "Ponderado"),
                              stringsAsFactors = FALSE)
 
-tabla_comb <- dplyr::bind_rows(lapply(seq_len(nrow(combinaciones)), function(i) {
+modelos_comb <- lapply(seq_len(nrow(combinaciones)), function(i) {
   cc <- combinaciones[i, ]
   control <- if (cc$control == "Nivel educacional") "educ" else "gse3"
   d <- dat
@@ -154,20 +168,33 @@ tabla_comb <- dplyr::bind_rows(lapply(seq_len(nrow(combinaciones)), function(i) 
   rhs <- list(c("educacion_ciudadana", "factor(ola)"),
               c("educacion_ciudadana", control, "factor(ola)"),
               c("educacion_ciudadana", control, "edad_nac", "factor(ola)"))
+  lapply(rhs, function(r) lm(reformulate(r, y_var), data = d, weights = peso))
+})
+cts_comb <- lapply(modelos_comb, lapply, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+
+# Coeficiente de la asignatura, para el .rds
+tabla_comb <- dplyr::bind_rows(lapply(seq_len(nrow(combinaciones)), function(i) {
   dplyr::bind_rows(lapply(1:3, function(k) {
-    m <- lm(reformulate(rhs[[k]], y_var), data = d, weights = peso)
-    x <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["educacion_ciudadana", ]
-    data.frame(cc, modelo = k, n = nobs(m), estimacion = x[1], ee = x[2], p = x[4])
+    x <- cts_comb[[i]][[k]]["educacion_ciudadana", ]
+    data.frame(combinaciones[i, ], modelo = k, n = nobs(modelos_comb[[i]][[k]]),
+               estimacion = x[1], ee = x[2], p = x[4])
   }))
 }))
 rownames(tabla_comb) <- NULL
 
-tabla_comb %>%
-  dplyr::mutate(celda = sprintf("%.3f (%.3f)%s", estimacion, ee,
-                                dplyr::case_when(p < 0.001 ~ "***", p < 0.01 ~ "**", p < 0.05 ~ "*", TRUE ~ ""))) %>%
-  dplyr::select(control, imputacion, ponderacion, modelo, celda) %>%
-  tidyr::pivot_wider(names_from = modelo, values_from = celda, names_prefix = "Modelo ") %>%
-  knitr::kable(caption = "Coeficiente de la asignatura según la especificación (errores estándar HC1)")
+tablas_comb <- sapply(seq_len(nrow(combinaciones)), function(i) {
+  texreg::htmlreg(modelos_comb[[i]], custom.model.names = paste("Modelo", 1:3),
+                  override.se = lapply(cts_comb[[i]], function(ct) ct[, 2]),
+                  override.pvalues = lapply(cts_comb[[i]], function(ct) ct[, 4]),
+                  caption = paste(unlist(combinaciones[i, ]), collapse = ", "), caption.above = TRUE,
+                  custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+})
+writeLines(tablas_comb, paste0("output/tables/", prefijo, "_combinaciones.html"))
+```
+
+```{r}
+#| results: asis
+cat(tablas_comb, sep = "\n\n")
 ```
 
 # Diferencia en diferencias 2x2
@@ -198,26 +225,44 @@ m_2x2_sinplan <- lm(reformulate(c("factor(edad_nac)", "ola", "joven:post"), y_va
 
 args_did <- list(list(m_2x2, m_2x2_edad, m_twfe, m_2x2_sinplan),
                  custom.model.names = c("2x2", "2x2 con EF edad", "EF edad y ola",
-                                        "2x2 con EF edad, controles sin Plan"),
-                 omit.coef = "^ola|^factor\\(",
-                 custom.gof.rows = list("EF ola" = rep("Sí", 4), "EF edad" = c("No", "Sí", "Sí", "Sí")))
+                                        "2x2 con EF edad, controles sin Plan"))
 do.call(texreg::htmlreg, c(args_did, file = paste0("output/tables/", prefijo, "_did_2x2.html")))
 
 ## Errores HC1 y agrupados por celda ----------------------------------------------
-errores_2x2 <- dplyr::bind_rows(lapply(
-  list("2x2" = m_2x2, "2x2 con EF edad" = m_2x2_edad, "2x2 con EF edad, controles sin Plan" = m_2x2_sinplan),
-  function(m) {
-    hc1 <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["joven:post", ]
-    cl <- lmtest::coeftest(m, vcov. = sandwich::vcovCL, cluster = ~celda, type = "HC1")["joven:post", ]
-    data.frame(estimacion = hc1[1], ee_hc1 = hc1[2], p_hc1 = hc1[4], ee_celda = cl[2], p_celda = cl[4])
-  }), .id = "modelo")
+modelos_2x2 <- list("2x2" = m_2x2, "2x2 con EF edad" = m_2x2_edad,
+                    "2x2 con EF edad, controles sin Plan" = m_2x2_sinplan)
+cts_2x2 <- lapply(modelos_2x2, function(m) {
+  list(hc1 = lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1"),
+       celda = lmtest::coeftest(m, vcov. = sandwich::vcovCL, cluster = ~celda, type = "HC1"))
+})
+
+# Coeficiente de joven:post, para el .rds
+errores_2x2 <- dplyr::bind_rows(lapply(cts_2x2, function(ct) {
+  data.frame(estimacion = ct$hc1["joven:post", 1],
+             ee_hc1 = ct$hc1["joven:post", 2], p_hc1 = ct$hc1["joven:post", 4],
+             ee_celda = ct$celda["joven:post", 2], p_celda = ct$celda["joven:post", 4])
+}), .id = "modelo")
 rownames(errores_2x2) <- NULL
-knitr::kable(errores_2x2, digits = 3, caption = "joven:post con errores HC1 y agrupados por celda de edad y ola")
+
+cts_2x2 <- unlist(cts_2x2, recursive = FALSE)
+args_errores_2x2 <- list(rep(unname(modelos_2x2), each = 2),
+                         custom.model.names = paste(rep(names(modelos_2x2), each = 2), c("(HC1)", "(celda)")),
+                         override.se = lapply(cts_2x2, function(ct) ct[, 2]),
+                         override.pvalues = lapply(cts_2x2, function(ct) ct[, 4]),
+                         custom.note = "%stars. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.")
+do.call(texreg::htmlreg, c(args_errores_2x2, file = paste0("output/tables/", prefijo, "_did_2x2_errores.html")))
 ```
 
 ```{r}
 #| results: asis
 do.call(texreg::htmlreg, args_did)
+```
+
+Los mismos modelos 2x2 con errores HC1 y agrupados por celda de edad y ola:
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_errores_2x2)
 ```
 
 # Diferencia en diferencias escalonada
@@ -310,6 +355,21 @@ efectos_w <- dplyr::bind_rows(
 knitr::kable(efectos_w, digits = 3,
              caption = paste0("Efecto de W sobre los tratados (errores HC1). En los modelos no lineales el efecto está en la escala ",
                               if (y_tipo == "binaria") "de probabilidad" else "de 0 a 1 del resultado reescalado"))
+
+## Tabla completa con errores HC1 ---------------------------------------------
+modelos_esc <- list(m1, m2, m1_nl, m2_nl)
+ct_esc <- lapply(modelos_esc, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+args_esc <- list(modelos_esc,
+                 custom.model.names = c("M1 lineal", "M2 lineal", "M1 no lineal", "M2 no lineal"),
+                 override.se = lapply(ct_esc, function(ct) ct[, 2]),
+                 override.pvalues = lapply(ct_esc, function(ct) ct[, 4]),
+                 custom.note = "%stars. Modelos no lineales: coeficientes del índice. Errores estándar HC1 entre paréntesis.")
+do.call(texreg::htmlreg, c(args_esc, file = paste0("output/tables/", prefijo, "_escalonado.html")))
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_esc)
 ```
 
 ## Adelantos
@@ -337,6 +397,18 @@ prueba_adelantos <- if (nrow(adelantos) > 0) {
 prueba_adelantos
 ```
 
+```{r}
+#| results: asis
+if (nrow(adelantos) > 0) {
+  ct_ad <- lmtest::coeftest(m1_ad, vcov. = sandwich::vcovHC, type = "HC1")
+  texreg::htmlreg(m1_ad, custom.model.names = "M1 con adelantos",
+                  override.se = ct_ad[, 2], override.pvalues = ct_ad[, 4],
+                  custom.gof.rows = list("Prueba conjunta de adelantos (p)" =
+                                           formatC(prueba_adelantos$p, format = "f", digits = 3)),
+                  custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+}
+```
+
 ## Errores agrupados, equivalencia y robustez
 
 El estimador de M1 se reporta con errores HC1, agrupados por celda de edad y ola, y con un *wild cluster bootstrap* por cohorte de 4° medio. La prueba de equivalencia usa un umbral de ±0,2 desviaciones estándar del resultado en la muestra de estimación. Las pruebas de robustez excluyen las celdas mixtas, los casos con fecha de nacimiento imputada y los controles con exposición al Plan.
@@ -356,7 +428,18 @@ errores_w <- data.frame(
   ic_inf = c(ct_hc1[1] - 1.96 * ct_hc1[2], ct_celda[1] - 1.96 * ct_celda[2], boot$conf_int[1]),
   ic_sup = c(ct_hc1[1] + 1.96 * ct_hc1[2], ct_celda[1] + 1.96 * ct_celda[2], boot$conf_int[2]))
 rownames(errores_w) <- NULL
-knitr::kable(errores_w, digits = 3, caption = "W en M1 con distintos errores estándar")
+
+cts_err <- list(lmtest::coeftest(m1, vcov. = sandwich::vcovHC, type = "HC1"),
+                lmtest::coeftest(m1, vcov. = sandwich::vcovCL, cluster = ~celda, type = "HC1"))
+args_err <- list(list(m1, m1), custom.model.names = c("M1 (HC1)", "M1 (celda)"),
+                 override.se = lapply(cts_err, function(ct) ct[, 2]),
+                 override.pvalues = lapply(cts_err, function(ct) ct[, 4]),
+                 custom.gof.rows = list(
+                   "Wild cluster bootstrap de W por cohorte (p)" =
+                     c(formatC(boot$p_val, format = "f", digits = 3), ""),
+                   "IC 95% bootstrap de W" =
+                     c(sprintf("[%.3f; %.3f]", boot$conf_int[1], boot$conf_int[2]), "")),
+                 custom.note = "%stars. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.")
 
 ## Equivalencia --------------------------------------------------------------------
 umbral <- 0.2 * sd(d_est[[y_var]])
@@ -369,21 +452,46 @@ knitr::kable(equivalencia, digits = 3, caption = "Prueba de equivalencia para W 
 
 ## Robustez --------------------------------------------------------------------------
 mixtas <- celdas %>% dplyr::filter(mixta) %>% dplyr::select(edad_nac, ola_num)
-robustez <- dplyr::bind_rows(lapply(
+modelos_rob <- lapply(
   list("M1" = d_est,
        "Sin celdas mixtas" = dplyr::anti_join(d_est, mixtas, by = c("edad_nac", "ola_num")),
        "Sin fechas imputadas" = dplyr::filter(d_est, !fecha_nac_imputada),
        "Controles sin Plan" = dplyr::filter(d_est, g > 0 | dosis_plan == 0)),
-  function(d) {
-    m <- lm(reformulate(rhs_m1, y_var), data = d)
-    x <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
-    data.frame(n = nobs(m), estimacion = x[1], ee = x[2], p = x[4])
-  }), .id = "modelo")
+  function(d) lm(reformulate(rhs_m1, y_var), data = d))
+ct_rob <- lapply(modelos_rob, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+
+# Coeficiente de W, para el .rds
+robustez <- dplyr::bind_rows(Map(function(m, ct) {
+  data.frame(n = nobs(m), estimacion = ct["W", 1], ee = ct["W", 2], p = ct["W", 4])
+}, modelos_rob, ct_rob), .id = "modelo")
 rownames(robustez) <- NULL
-knitr::kable(robustez, digits = 3, caption = "W en M1: pruebas de robustez (errores estándar HC1)")
+
+args_rob <- list(unname(modelos_rob), custom.model.names = names(modelos_rob),
+                 override.se = lapply(ct_rob, function(ct) ct[, 2]),
+                 override.pvalues = lapply(ct_rob, function(ct) ct[, 4]),
+                 custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
+
+writeLines(c(do.call(texreg::htmlreg, args_err), do.call(texreg::htmlreg, args_rob)),
+           paste0("output/tables/", prefijo, "_errores_robustez.html"))
 ```
 
-# Resumen
+M1 con errores HC1, agrupados por celda y *wild cluster bootstrap*:
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_err)
+```
+
+M1 en las muestras de robustez:
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_rob)
+```
+
+# Síntesis
+
+La síntesis usa el estimador del tratamiento de las tablas anteriores en cada diseño. Ese resumen se guarda junto con los modelos y también lo usa `index.qmd`.
 
 ```{r}
 coef_hc1 <- function(m, v) {
@@ -404,9 +512,6 @@ resumen <- dplyr::bind_rows(
              n = nobs(m1_nl))
 )
 rownames(resumen) <- NULL
-
-knitr::kable(resumen, digits = 3,
-             caption = paste("Efecto de la asignatura sobre", y_nombre, "según el diseño (errores estándar HC1)"))
 
 writeLines(knitr::kable(resumen, format = "html", digits = 3,
                         caption = paste("Efecto de la asignatura sobre", y_nombre, "según el diseño")),

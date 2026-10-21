@@ -108,7 +108,6 @@ args_m1 <- list(modelos_m1,
                                        "int_z (HC1)", "int_z (celda)"),
                 override.se = lapply(cts_m1, function(ct) ct[, 2]),
                 override.pvalues = lapply(cts_m1, function(ct) ct[, 4]),
-                custom.gof.rows = list("EF edad" = rep("Sí", 6)),
                 custom.note = "%stars. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.")
 
 do.call(texreg::htmlreg, c(args_m1, file = "output/tables/did_ext_m1.html"))
@@ -130,14 +129,13 @@ d_es <- d_ext %>%
   dplyr::mutate(joven = as.integer(edad_nac <= 21))
 
 ## Modelos -------------------------------------------------------------------
-es_pol <- fixest::feols(int_pol ~ i(ola, joven, ref = "88") | edad_nac + ola,
+# Efectos fijos como regresores (no absorbidos) para reportarlos en la tabla
+es_pol <- fixest::feols(int_pol ~ i(ola, joven, ref = "88") + factor(edad_nac) + factor(ola),
                         data = d_es, vcov = "hetero")
-es_alto <- fixest::feols(int_alto ~ i(ola, joven, ref = "88") | edad_nac + ola,
+es_alto <- fixest::feols(int_alto ~ i(ola, joven, ref = "88") + factor(edad_nac) + factor(ola),
                          data = d_es, vcov = "hetero")
-es_z <- fixest::feols(int_z ~ i(ola, joven, ref = "88") | edad_nac + ola,
+es_z <- fixest::feols(int_z ~ i(ola, joven, ref = "88") + factor(edad_nac) + factor(ola),
                       data = d_es, vcov = "hetero")
-
-fixest::etable(es_pol, es_alto, es_z)
 
 ## Prueba conjunta de los coeficientes previos a 2020 -------------------------
 prueba_previa_pol <- fixest::wald(es_pol, keep = "ola::(77|82|83|84):joven")
@@ -162,6 +160,7 @@ coefs_es <- dplyr::bind_rows(
   as.data.frame(fixest::coeftable(es_alto)) %>% dplyr::mutate(resultado = "int_alto", termino = rownames(.)),
   as.data.frame(fixest::coeftable(es_z)) %>% dplyr::mutate(resultado = "int_z", termino = rownames(.))
 ) %>%
+  dplyr::filter(grepl("^ola::", termino)) %>%
   dplyr::transmute(resultado, ola = sub("ola::(\\d+):joven", "\\1", termino),
                    estimacion = Estimate, ee = `Std. Error`) %>%
   # La ola de referencia se agrega con coeficiente 0
@@ -193,9 +192,15 @@ grafico_es <- ggplot(coefs_es, aes(x = fecha_terreno, y = estimacion)) +
 grafico_es
 ggsave("output/graphs/did_ext_estudio_eventos.png", grafico_es, width = 8, height = 9.5, dpi = 300)
 
-texreg::htmlreg(list(es_pol, es_alto, es_z), custom.model.names = c("int_pol", "int_alto", "int_z"),
-                custom.note = "%stars. Errores estándar HC1 entre paréntesis. Referencia: ola 88.",
-                file = "output/tables/did_ext_estudio_eventos.html")
+args_es <- list(list(es_pol, es_alto, es_z), custom.model.names = c("int_pol", "int_alto", "int_z"),
+                custom.note = "%stars. Errores estándar HC1 entre paréntesis. Referencia: ola 88.")
+
+do.call(texreg::htmlreg, c(args_es, file = "output/tables/did_ext_estudio_eventos.html"))
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_es)
 ```
 
 ## Robustez
@@ -215,8 +220,6 @@ args_rob <- list(modelos_rob,
                  custom.model.names = c("M1 extendido", "Sin fechas imputadas", "Controles sin Plan"),
                  override.se = lapply(cts_rob, function(ct) ct[, 2]),
                  override.pvalues = lapply(cts_rob, function(ct) ct[, 4]),
-                 omit.coef = "factor[(]",
-                 custom.gof.rows = list("EF edad" = rep("Sí", 3), "EF ola" = rep("Sí", 3)),
                  custom.note = "%stars. Errores estándar HC1 entre paréntesis.")
 
 do.call(texreg::htmlreg, c(args_rob, file = "output/tables/did_ext_robustez.html"))
@@ -237,20 +240,22 @@ m1_original <- readRDS("output/models/did_interes.rds")$modelos$m1_lin
 m1_85_alto <- lm(int_alto ~ W + factor(edad_nac) + factor(ola),
                  data = dplyr::filter(d_ext, ola_num >= 85))
 
-## Tabla ---------------------------------------------------------------------
-comparacion <- dplyr::bind_rows(lapply(
-  list("M1 original (int_pol, olas 85 a 96)" = m1_original,
-       "M1 extendido (int_pol, olas 77 a 96)" = m1_ext_pol,
-       "M1 con int_alto, olas 85 a 96" = m1_85_alto,
-       "M1 extendido con int_alto, olas 77 a 96" = m1_ext_alto),
-  function(m) {
-    hc1 <- lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1")["W", ]
-    cl <- lmtest::coeftest(m, vcov. = sandwich::vcovCL,
-                           cluster = interaction(m$model$`factor(edad_nac)`, m$model[[ncol(m$model)]], drop = TRUE),
-                           type = "HC1")["W", ]
-    data.frame(n = nobs(m), estimacion = hc1[1], ee_hc1 = hc1[2], p_hc1 = hc1[4],
-               ee_celda = cl[2], p_celda = cl[4])
-  }), .id = "modelo")
+## Errores HC1 y agrupados por celda -----------------------------------------
+modelos_comp <- list("M1 original (int_pol, olas 85 a 96)" = m1_original,
+                     "M1 extendido (int_pol, olas 77 a 96)" = m1_ext_pol,
+                     "M1 con int_alto, olas 85 a 96" = m1_85_alto,
+                     "M1 extendido con int_alto, olas 77 a 96" = m1_ext_alto)
+cts_comp <- lapply(modelos_comp, function(m) {
+  celda <- interaction(m$model$`factor(edad_nac)`, m$model[[ncol(m$model)]], drop = TRUE)
+  list(hc1 = lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1"),
+       celda = lmtest::coeftest(m, vcov. = sandwich::vcovCL, cluster = celda, type = "HC1"))
+})
+
+comparacion <- dplyr::bind_rows(Map(function(m, ct) {
+  data.frame(n = nobs(m), estimacion = ct$hc1["W", 1],
+             ee_hc1 = ct$hc1["W", 2], p_hc1 = ct$hc1["W", 4],
+             ee_celda = ct$celda["W", 2], p_celda = ct$celda["W", 4])
+}, modelos_comp, cts_comp), .id = "modelo")
 rownames(comparacion) <- NULL
 
 # Cambio en el error estándar de W al agregar las olas 77 a 84, comparando
@@ -266,12 +271,27 @@ comparacion <- comparacion %>%
   dplyr::select(-resultado) %>%
   as.data.frame()
 
-knitr::kable(comparacion, digits = 3,
-             caption = "W en M1 con olas 85 a 96 y con olas 77 a 96. El cambio en el error estándar compara cada modelo extendido con el modelo de olas 85 a 96 con el mismo resultado")
+## Tabla completa ------------------------------------------------------------
+# M1 original usa factor(ola_num); se renombra para alinear los efectos de ola
+trs_comp <- Map(function(m, ct) {
+  tr <- texreg::extract(m)
+  tr@se <- unname(ct[tr@coef.names, 2])
+  tr@pvalues <- unname(ct[tr@coef.names, 4])
+  tr@coef.names <- sub("factor(ola_num)", "factor(ola)", tr@coef.names, fixed = TRUE)
+  tr
+}, rep(modelos_comp, each = 2), unlist(cts_comp, recursive = FALSE))
+args_comp <- list(trs_comp,
+                  custom.model.names = paste(rep(c("int_pol 85-96", "int_pol 77-96",
+                                                   "int_alto 85-96", "int_alto 77-96"), each = 2),
+                                             c("(HC1)", "(celda)")),
+                  custom.note = "%stars. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.")
 
-writeLines(knitr::kable(comparacion, format = "html", digits = 3,
-                        caption = "W en M1 original y extendido"),
-           "output/tables/did_ext_comparacion.html")
+do.call(texreg::htmlreg, c(args_comp, file = "output/tables/did_ext_comparacion.html"))
+```
+
+```{r}
+#| results: asis
+do.call(texreg::htmlreg, args_comp)
 ```
 
 # Voto

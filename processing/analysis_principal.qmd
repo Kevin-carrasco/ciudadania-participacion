@@ -1,0 +1,185 @@
+---
+title: "Modelos principales"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento estima los modelos que presenta la portada para los tres resultados: interés político, confianza política y voto en la 2ª vuelta presidencial de 2021. Cada especificación tiene tres modelos anidados con efectos fijos de ola: solo el tratamiento (`educacion_ciudadana`) (1), con un control socioeconómico (2) y con el control y la edad (3). Para cada resultado se estiman ocho especificaciones, que combinan tres decisiones:
+
+- **Control socioeconómico:** nivel educacional o grupo socioeconómico.
+- **Ponderación:** sin ponderar o con el ponderador de la Encuesta CEP.
+- **Muestra:** muestra completa o menores de 30 años.
+
+Las ocho especificaciones se estiman dos veces: primero en la muestra propia de cada resultado y luego en una base común a los tres resultados.
+
+## Por qué se hace
+
+Cada resultado está disponible en olas distintas y con criterios de muestra distintos: el voto exige estar habilitado para votar en 2021 y tener fecha de nacimiento real, mientras que el interés político y la confianza imputan la fecha de nacimiento desde la edad declarada cuando falta. Por eso, las diferencias entre los efectos estimados para cada resultado pueden deberse a las muestras y no a los resultados. La base común (`data_comun`, construida en `preparation.qmd`) usa los mismos casos para los tres resultados, de modo que las diferencias entre ellos no dependen de la muestra.
+
+Dentro de cada resultado, todas las especificaciones usan los casos con información completa en el resultado, el tratamiento, el nivel educacional, el grupo socioeconómico, la edad y el ponderador. Así, las especificaciones con nivel educacional y con grupo socioeconómico, y las versiones ponderadas y sin ponderar, se estiman sobre los mismos casos. Los modelos de interés político y confianza son lineales; los de voto son logísticos (logit binario sin ponderar y logit por cuasi verosimilitud con ponderadores, que entrega los mismos coeficientes y admite ponderadores no enteros). Todos los errores estándar son HC1, porque los errores clásicos no son válidos con ponderadores y así todas las especificaciones son comparables.
+
+Las tablas se presentan en la portada (`index.qmd`) y se guardan en `output/tables/principal_*.html`; los modelos se guardan en `output/models/modelos_principales.rds`.
+
+# Librerías y datos
+
+```{r}
+pacman::p_load(dplyr, texreg, sandwich, lmtest)
+
+# Agrupación de gse (referencia: D-E), igual que en analysis_regresiones.qmd
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+
+## Resultados ------------------------------------------------------------------
+resultados <- data.frame(
+  resultado = c("interes", "confianza", "voto"),
+  y = c("int_pol", "conf_pol", "voto"),
+  nombre = c("Interés político", "Confianza política", "Voto en la 2ª vuelta de 2021"),
+  logit = c(FALSE, FALSE, TRUE)
+)
+
+## Muestra propia de cada resultado ----------------------------------------------
+# El voto exige estar habilitado para votar en la 2ª vuelta de 2021
+bases <- list(
+  interes = readRDS("input/data/proc/data_int.rds"),
+  confianza = readRDS("input/data/proc/data_actitudes.rds"),
+  voto = readRDS("input/data/proc/data_voto.rds") %>% dplyr::filter(habilitado_2v == 1)
+)
+
+preparar <- function(d, y) {
+  d %>%
+    dplyr::mutate(gse3 = agrupar_gse(gse)) %>%
+    dplyr::select(dplyr::all_of(c("ola", y, "educacion_ciudadana", "educ", "gse3", "edad_nac", "pond"))) %>%
+    na.omit() %>%
+    droplevels()
+}
+
+datos <- Map(preparar, bases, resultados$y)
+
+## Base común --------------------------------------------------------------------
+data_comun <- readRDS("input/data/proc/data_comun.rds") %>%
+  dplyr::mutate(gse3 = agrupar_gse(gse))
+
+## Tamaño de las muestras ---------------------------------------------------------
+muestras <- dplyr::bind_rows(
+  lapply(c(datos, comun = list(data_comun)), function(d) {
+    data.frame(olas = paste(levels(droplevels(d$ola)), collapse = ", "),
+               n = nrow(d), tratados = sum(d$educacion_ciudadana),
+               n_menores_30 = sum(d$edad_nac < 30),
+               tratados_menores_30 = sum(d$educacion_ciudadana[d$edad_nac < 30]))
+  }), .id = "muestra")
+
+knitr::kable(muestras, caption = "Olas y casos de cada muestra")
+```
+
+# Especificaciones
+
+```{r}
+## Especificaciones -----------------------------------------------------------------
+# Orden: nivel educacional y GSE sin ponderar, luego ponderados, primero con
+# la muestra completa y luego con menores de 30 años
+especificaciones <- expand.grid(control = c("educ", "gse3"),
+                                ponderacion = c("Sin ponderar", "Ponderado"),
+                                muestra = c("Muestra completa", "Menores de 30 años"),
+                                stringsAsFactors = FALSE)
+especificaciones$titulo <- paste0(
+  c(educ = "Nivel educacional", gse3 = "Grupo socioeconómico")[especificaciones$control], ", ",
+  tolower(especificaciones$ponderacion), ", ", tolower(especificaciones$muestra))
+especificaciones
+
+## Estimación de una especificación -------------------------------------------------
+# Tres modelos anidados: solo el tratamiento (1), con el control
+# socioeconómico (2) y con el control y la edad (3), todos con EF de ola
+estimar <- function(d, y, logit, esp) {
+  if (esp$muestra == "Menores de 30 años") d <- droplevels(dplyr::filter(d, edad_nac < 30))
+  d$peso <- if (esp$ponderacion == "Ponderado") d$pond else 1
+  rhs <- list(c("educacion_ciudadana", "factor(ola)"),
+              c("educacion_ciudadana", esp$control, "factor(ola)"),
+              c("educacion_ciudadana", esp$control, "edad_nac", "factor(ola)"))
+  familia <- if (esp$ponderacion == "Ponderado") quasibinomial(link = "logit") else binomial(link = "logit")
+  lapply(rhs, function(r) {
+    f <- reformulate(r, y)
+    m <- if (logit) glm(f, family = familia, data = d, weights = peso) else lm(f, data = d, weights = peso)
+    list(modelo = m, ct = lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1"))
+  })
+}
+
+# Las ocho especificaciones de un resultado, cada una con sus tres modelos
+estimar_todas <- function(d, y, logit) {
+  lapply(seq_len(nrow(especificaciones)), function(i) estimar(d, y, logit, especificaciones[i, ]))
+}
+```
+
+# Estimación
+
+```{r}
+## Muestra propia de cada resultado ------------------------------------------------
+modelos <- setNames(lapply(seq_len(nrow(resultados)), function(r) {
+  estimar_todas(datos[[r]], resultados$y[r], resultados$logit[r])
+}), resultados$resultado)
+
+## Base común ------------------------------------------------------------------------
+modelos_comun <- setNames(lapply(seq_len(nrow(resultados)), function(r) {
+  estimar_todas(data_comun, resultados$y[r], resultados$logit[r])
+}), resultados$resultado)
+
+## Coeficiente de la asignatura en cada especificación --------------------------------
+efectos <- dplyr::bind_rows(lapply(c("propia", "comun"), function(base) {
+  lista <- if (base == "propia") modelos else modelos_comun
+  dplyr::bind_rows(lapply(names(lista), function(r) {
+    dplyr::bind_rows(lapply(seq_along(lista[[r]]), function(i) {
+      dplyr::bind_rows(lapply(1:3, function(k) {
+        x <- lista[[r]][[i]][[k]]
+        data.frame(base, resultado = r, especificaciones[i, ], modelo = k, n = nobs(x$modelo),
+                   estimacion = x$ct["educacion_ciudadana", 1], ee = x$ct["educacion_ciudadana", 2],
+                   p = x$ct["educacion_ciudadana", 4])
+      }))
+    }))
+  }))
+}))
+rownames(efectos) <- NULL
+```
+
+# Tablas
+
+```{r}
+## Tablas completas -----------------------------------------------------------------
+nota <- "%stars. Errores estándar HC1 entre paréntesis."
+
+tabla <- function(lista, nombres, caption) {
+  texreg::htmlreg(lapply(lista, `[[`, "modelo"),
+                  custom.model.names = nombres,
+                  override.se = lapply(lista, function(x) x$ct[, 2]),
+                  override.pvalues = lapply(lista, function(x) x$ct[, 4]),
+                  caption = caption, caption.above = TRUE, custom.note = nota)
+}
+
+for (r in seq_len(nrow(resultados))) {
+  writeLines(sapply(seq_len(nrow(especificaciones)), function(i) {
+    tabla(modelos[[r]][[i]], paste("Modelo", 1:3),
+          paste0(resultados$nombre[r], ": ", especificaciones$titulo[i]))
+  }), paste0("output/tables/principal_", resultados$resultado[r], ".html"))
+}
+
+# Muestra común: los tres modelos de cada resultado en la misma tabla
+nombres_cortos <- c("Interés", "Confianza", "Voto")
+writeLines(sapply(seq_len(nrow(especificaciones)), function(i) {
+  tabla(unlist(lapply(modelos_comun, `[[`, i), recursive = FALSE),
+        paste(rep(nombres_cortos, each = 3), "M", 1:3, sep = ""),
+        paste0("Muestra común: ", especificaciones$titulo[i]))
+}), "output/tables/principal_muestra_comun.html")
+
+saveRDS(list(resultados = resultados, especificaciones = especificaciones,
+             datos = datos, datos_comun = data_comun, muestras = muestras,
+             modelos = modelos, modelos_comun = modelos_comun, efectos = efectos),
+        "output/models/modelos_principales.rds")
+```

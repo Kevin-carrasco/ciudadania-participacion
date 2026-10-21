@@ -141,6 +141,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-análisis">    
         <li>
+    <a class="dropdown-item" href="../processing/analysis_principal.html">
+ <span class="dropdown-text">Modelos principales</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../processing/analysis_regresiones.html">
  <span class="dropdown-text">Regresiones</span></a>
   </li>  
@@ -162,25 +166,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>  
     </ul>
   </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-otros-resultados" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Otros resultados</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-otros-resultados">    
-        <li>
-    <a class="dropdown-item" href="../processing/analysis_apoyo_democracia.html">
- <span class="dropdown-text">Apoyo a la democracia</span></a>
+  <li class="nav-item">
+    <a class="nav-link" href="../processing/analysis_confianza_politica.html"> 
+<span class="menu-text">Confianza en instituciones</span></a>
   </li>  
-        <li>
-    <a class="dropdown-item" href="../processing/analysis_confianza_politica.html">
- <span class="dropdown-text">Confianza política</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../processing/analysis_satisfaccion_democracia.html">
- <span class="dropdown-text">Satisfacción con la democracia</span></a>
-  </li>  
-    </ul>
-  </li>
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -236,7 +225,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Fecha de publicación</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">29 de septiembre de 2026</p>
+      <p class="date">21 de octubre de 2026</p>
     </div>
   </div>
   
@@ -1340,75 +1329,968 @@ Num. obs.
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>}))</span>
 <span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(errores_2x2) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
 <span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(errores_2x2, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>             <span class="at">caption =</span> <span class="st">"joven*post con errores HC1 y agrupados por celda de edad y ola"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Se agrega al .rds sin alterar sus elementos anteriores</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>res_did_2x2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"output/models/modelos_did_interes.rds"</span>)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>res_did_2x2<span class="sc">$</span>errores_agrupados <span class="ot">&lt;-</span> errores_2x2</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(res_did_2x2, <span class="st">"output/models/modelos_did_interes.rds"</span>)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="do">## Tabla completa: cada modelo con errores HC1 y agrupados por celda ------------</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>cts_errores <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(<span class="fu">seq_along</span>(modelos_2x2), <span class="cf">function</span>(i) {</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>  m <span class="ot">&lt;-</span> modelos_2x2[[i]]</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>  celda <span class="ot">&lt;-</span> <span class="fu">interaction</span>(datos_2x2[[i]]<span class="sc">$</span>edad_nac, datos_2x2[[i]]<span class="sc">$</span>ola, <span class="at">drop =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovHC, <span class="at">type =</span> <span class="st">"HC1"</span>),</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>       lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovCL, <span class="at">cluster =</span> celda, <span class="at">type =</span> <span class="st">"HC1"</span>))</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>}), <span class="at">recursive =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>args_errores <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fu">rep</span>(modelos_2x2, <span class="at">each =</span> <span class="dv">2</span>),</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>                     <span class="at">custom.model.names =</span> <span class="fu">paste</span>(<span class="fu">rep</span>(<span class="fu">names</span>(modelos_2x2), <span class="at">each =</span> <span class="dv">2</span>), <span class="fu">c</span>(<span class="st">"(HC1)"</span>, <span class="st">"(celda)"</span>)),</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>                     <span class="at">override.se =</span> <span class="fu">lapply</span>(cts_errores, <span class="cf">function</span>(ct) ct[, <span class="dv">2</span>]),</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>                     <span class="at">override.pvalues =</span> <span class="fu">lapply</span>(cts_errores, <span class="cf">function</span>(ct) ct[, <span class="dv">4</span>]),</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>                     <span class="at">custom.note =</span> <span class="st">"%stars. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis."</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a><span class="fu">do.call</span>(texreg<span class="sc">::</span>htmlreg, <span class="fu">c</span>(args_errores, <span class="at">file =</span> <span class="st">"output/tables/modelo_did_interes_errores.html"</span>))</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>joven*post con errores HC1 y agrupados por celda de edad y ola</caption>
-<colgroup>
-<col style="width: 41%">
-<col style="width: 12%">
-<col style="width: 8%">
-<col style="width: 6%">
-<col style="width: 10%">
-<col style="width: 9%">
-<col style="width: 10%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">modelo</th>
-<th style="text-align: right;">estimacion</th>
-<th style="text-align: right;">ee_hc1</th>
-<th style="text-align: right;">p_hc1</th>
-<th style="text-align: right;">ee_celda</th>
-<th style="text-align: right;">p_celda</th>
-<th style="text-align: right;">n_celdas</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">2x2</td>
-<td style="text-align: right;">0.029</td>
-<td style="text-align: right;">0.192</td>
-<td style="text-align: right;">0.881</td>
-<td style="text-align: right;">0.194</td>
-<td style="text-align: right;">0.883</td>
-<td style="text-align: right;">60</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">2x2 con EF edad</td>
-<td style="text-align: right;">0.012</td>
-<td style="text-align: right;">0.197</td>
-<td style="text-align: right;">0.952</td>
-<td style="text-align: right;">0.152</td>
-<td style="text-align: right;">0.938</td>
-<td style="text-align: right;">60</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">2x2 con EF edad, controles sin Plan</td>
-<td style="text-align: right;">0.031</td>
-<td style="text-align: right;">0.218</td>
-<td style="text-align: right;">0.886</td>
-<td style="text-align: right;">0.160</td>
-<td style="text-align: right;">0.844</td>
-<td style="text-align: right;">44</td>
-</tr>
-</tbody>
-</table>
 </div>
 <details class="code-fold">
 <summary>Código</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">writeLines</span>(knitr<span class="sc">::</span><span class="fu">kable</span>(errores_2x2, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>                        <span class="at">caption =</span> <span class="st">"joven*post con errores HC1 y agrupados por celda de edad y ola"</span>),</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>           <span class="st">"output/tables/modelo_did_interes_errores.html"</span>)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Se agrega al .rds sin alterar sus elementos anteriores</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>res_did_2x2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"output/models/modelos_did_interes.rds"</span>)</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>res_did_2x2<span class="sc">$</span>errores_agrupados <span class="ot">&lt;-</span> errores_2x2</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(res_did_2x2, <span class="st">"output/models/modelos_did_interes.rds"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">do.call</span>(texreg<span class="sc">::</span>htmlreg, args_errores)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-</div>
+<table class="texreg" style="margin: 10px auto;border-collapse: collapse;border-spacing: 0px;caption-side: bottom;color: #000000;border-top: 2px solid #000000;">
+<caption>
+Statistical models
+</caption>
+<thead>
+<tr>
+<th style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</th>
+<th style="padding-left: 5px;padding-right: 5px;">
+2x2 (HC1)
+</th>
+<th style="padding-left: 5px;padding-right: 5px;">
+2x2 (celda)
+</th>
+<th style="padding-left: 5px;padding-right: 5px;">
+2x2 con EF edad (HC1)
+</th>
+<th style="padding-left: 5px;padding-right: 5px;">
+2x2 con EF edad (celda)
+</th>
+<th style="padding-left: 5px;padding-right: 5px;">
+2x2 con EF edad, controles sin Plan (HC1)
+</th>
+<th style="padding-left: 5px;padding-right: 5px;">
+2x2 con EF edad, controles sin Plan (celda)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-top: 1px solid #000000;">
+<td style="padding-left: 5px;padding-right: 5px;">
+(Intercept)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+2.47<sup>***</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+2.47<sup>***</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+2.36<sup>***</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+2.36<sup>***</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+2.36<sup>***</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+2.36<sup>***</sup>
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.10)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.09)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.20)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.21)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+joven
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.05
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.05
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+ola92
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.32<sup>*</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.32<sup>**</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.31<sup>*</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.31<sup>***</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.29
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.29<sup>**</sup>
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.10)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.07)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.16)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.09)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+ola93
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.31<sup>*</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.31<sup>**</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.30<sup>*</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.30<sup>***</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.20
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.20
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.09)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.16)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.11)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+ola95
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.17
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.17
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.17
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.17<sup>*</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.10
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.10
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.13)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.13)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.09)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.16)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.11)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+ola96
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.22
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.22
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.21
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.21<sup>*</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.29
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.29<sup>*</sup>
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.13)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.13)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.09)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.12)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+joven:post
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.01
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.01
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.20)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.15)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.22)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.16)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)19
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.04
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.04
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.20)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)20
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.10
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.10
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.09
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.09
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.18)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.18)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.18)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.16)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)21
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.33
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.33<sup>**</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.34
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.34<sup>*</sup>
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.18)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.13)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.14)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)23
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.08
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.08
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.19
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.19
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.26)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.20)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.43)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)24
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.23
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.23
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.32
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.32
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.25)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.32)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)25
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.21
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.21
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.35
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.35<sup>*</sup>
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.25)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.33)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.17)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)26
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.21
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.21
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.04
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.04
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.26)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.32)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.20)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)27
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.18
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.18
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.19
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.19
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.25)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.21)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.26)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.23)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)28
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.18
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.18
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.18
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.18
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.25)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.20)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.26)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)29
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+-0.03
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.25)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.26)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.20)
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+factor(edad_nac)30
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.07
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.07
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.08
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.08
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+&nbsp;
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.25)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.26)
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+(0.19)
+</td>
+</tr>
+<tr style="border-top: 1px solid #000000;">
+<td style="padding-left: 5px;padding-right: 5px;">
+R<sup>2</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.04
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.04
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.04
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.04
+</td>
+</tr>
+<tr>
+<td style="padding-left: 5px;padding-right: 5px;">
+Adj. R<sup>2</sup>
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.02
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.02
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.03
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.02
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+0.02
+</td>
+</tr>
+<tr style="border-bottom: 2px solid #000000;">
+<td style="padding-left: 5px;padding-right: 5px;">
+Num. obs.
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+1196
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+1196
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+1196
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+1196
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+867
+</td>
+<td style="padding-left: 5px;padding-right: 5px;">
+867
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="font-size: 0.8em;" colspan="7">
+<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.
+</td>
+</tr>
+</tfoot>
+</table>
 </section>
 </section>
 <section id="voto" class="level1">
@@ -2028,22 +2910,36 @@ Num. obs.
 <span id="cb11-164"><a href="#cb11-164" aria-hidden="true" tabindex="-1"></a>}))</span>
 <span id="cb11-165"><a href="#cb11-165" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(errores_2x2) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
 <span id="cb11-166"><a href="#cb11-166" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-167"><a href="#cb11-167" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(errores_2x2, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb11-168"><a href="#cb11-168" aria-hidden="true" tabindex="-1"></a>             <span class="at">caption =</span> <span class="st">"joven*post con errores HC1 y agrupados por celda de edad y ola"</span>)</span>
-<span id="cb11-169"><a href="#cb11-169" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-170"><a href="#cb11-170" aria-hidden="true" tabindex="-1"></a><span class="fu">writeLines</span>(knitr<span class="sc">::</span><span class="fu">kable</span>(errores_2x2, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb11-171"><a href="#cb11-171" aria-hidden="true" tabindex="-1"></a>                        <span class="at">caption =</span> <span class="st">"joven*post con errores HC1 y agrupados por celda de edad y ola"</span>),</span>
-<span id="cb11-172"><a href="#cb11-172" aria-hidden="true" tabindex="-1"></a>           <span class="st">"output/tables/modelo_did_interes_errores.html"</span>)</span>
-<span id="cb11-173"><a href="#cb11-173" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-174"><a href="#cb11-174" aria-hidden="true" tabindex="-1"></a><span class="co"># Se agrega al .rds sin alterar sus elementos anteriores</span></span>
-<span id="cb11-175"><a href="#cb11-175" aria-hidden="true" tabindex="-1"></a>res_did_2x2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"output/models/modelos_did_interes.rds"</span>)</span>
-<span id="cb11-176"><a href="#cb11-176" aria-hidden="true" tabindex="-1"></a>res_did_2x2<span class="sc">$</span>errores_agrupados <span class="ot">&lt;-</span> errores_2x2</span>
-<span id="cb11-177"><a href="#cb11-177" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(res_did_2x2, <span class="st">"output/models/modelos_did_interes.rds"</span>)</span>
-<span id="cb11-178"><a href="#cb11-178" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb11-167"><a href="#cb11-167" aria-hidden="true" tabindex="-1"></a><span class="co"># Se agrega al .rds sin alterar sus elementos anteriores</span></span>
+<span id="cb11-168"><a href="#cb11-168" aria-hidden="true" tabindex="-1"></a>res_did_2x2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"output/models/modelos_did_interes.rds"</span>)</span>
+<span id="cb11-169"><a href="#cb11-169" aria-hidden="true" tabindex="-1"></a>res_did_2x2<span class="sc">$</span>errores_agrupados <span class="ot">&lt;-</span> errores_2x2</span>
+<span id="cb11-170"><a href="#cb11-170" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(res_did_2x2, <span class="st">"output/models/modelos_did_interes.rds"</span>)</span>
+<span id="cb11-171"><a href="#cb11-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-172"><a href="#cb11-172" aria-hidden="true" tabindex="-1"></a><span class="do">## Tabla completa: cada modelo con errores HC1 y agrupados por celda ------------</span></span>
+<span id="cb11-173"><a href="#cb11-173" aria-hidden="true" tabindex="-1"></a>cts_errores <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(<span class="fu">seq_along</span>(modelos_2x2), <span class="cf">function</span>(i) {</span>
+<span id="cb11-174"><a href="#cb11-174" aria-hidden="true" tabindex="-1"></a>  m <span class="ot">&lt;-</span> modelos_2x2[[i]]</span>
+<span id="cb11-175"><a href="#cb11-175" aria-hidden="true" tabindex="-1"></a>  celda <span class="ot">&lt;-</span> <span class="fu">interaction</span>(datos_2x2[[i]]<span class="sc">$</span>edad_nac, datos_2x2[[i]]<span class="sc">$</span>ola, <span class="at">drop =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-176"><a href="#cb11-176" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovHC, <span class="at">type =</span> <span class="st">"HC1"</span>),</span>
+<span id="cb11-177"><a href="#cb11-177" aria-hidden="true" tabindex="-1"></a>       lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovCL, <span class="at">cluster =</span> celda, <span class="at">type =</span> <span class="st">"HC1"</span>))</span>
+<span id="cb11-178"><a href="#cb11-178" aria-hidden="true" tabindex="-1"></a>}), <span class="at">recursive =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb11-179"><a href="#cb11-179" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-180"><a href="#cb11-180" aria-hidden="true" tabindex="-1"></a><span class="fu"># Voto</span></span>
-<span id="cb11-181"><a href="#cb11-181" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-182"><a href="#cb11-182" aria-hidden="true" tabindex="-1"></a>Este diseño no se aplica al voto. La pregunta de voto se refiere a una sola elección, la 2ª vuelta presidencial de diciembre de 2021, por lo que no existe un período previo en el que las mismas edades hayan podido votar en esa elección sin haber cursado la asignatura. Sin una medición del resultado antes y después del tratamiento, no es posible calcular el cambio que compara la diferencia en diferencias. Para el voto, el análisis se limita a las regresiones.</span>
+<span id="cb11-180"><a href="#cb11-180" aria-hidden="true" tabindex="-1"></a>args_errores <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fu">rep</span>(modelos_2x2, <span class="at">each =</span> <span class="dv">2</span>),</span>
+<span id="cb11-181"><a href="#cb11-181" aria-hidden="true" tabindex="-1"></a>                     <span class="at">custom.model.names =</span> <span class="fu">paste</span>(<span class="fu">rep</span>(<span class="fu">names</span>(modelos_2x2), <span class="at">each =</span> <span class="dv">2</span>), <span class="fu">c</span>(<span class="st">"(HC1)"</span>, <span class="st">"(celda)"</span>)),</span>
+<span id="cb11-182"><a href="#cb11-182" aria-hidden="true" tabindex="-1"></a>                     <span class="at">override.se =</span> <span class="fu">lapply</span>(cts_errores, <span class="cf">function</span>(ct) ct[, <span class="dv">2</span>]),</span>
+<span id="cb11-183"><a href="#cb11-183" aria-hidden="true" tabindex="-1"></a>                     <span class="at">override.pvalues =</span> <span class="fu">lapply</span>(cts_errores, <span class="cf">function</span>(ct) ct[, <span class="dv">4</span>]),</span>
+<span id="cb11-184"><a href="#cb11-184" aria-hidden="true" tabindex="-1"></a>                     <span class="at">custom.note =</span> <span class="st">"%stars. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis."</span>)</span>
+<span id="cb11-185"><a href="#cb11-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-186"><a href="#cb11-186" aria-hidden="true" tabindex="-1"></a><span class="fu">do.call</span>(texreg<span class="sc">::</span>htmlreg, <span class="fu">c</span>(args_errores, <span class="at">file =</span> <span class="st">"output/tables/modelo_did_interes_errores.html"</span>))</span>
+<span id="cb11-187"><a href="#cb11-187" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb11-188"><a href="#cb11-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-191"><a href="#cb11-191" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb11-192"><a href="#cb11-192" aria-hidden="true" tabindex="-1"></a><span class="co">#| results: asis</span></span>
+<span id="cb11-193"><a href="#cb11-193" aria-hidden="true" tabindex="-1"></a><span class="fu">do.call</span>(texreg<span class="sc">::</span>htmlreg, args_errores)</span>
+<span id="cb11-194"><a href="#cb11-194" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb11-195"><a href="#cb11-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-196"><a href="#cb11-196" aria-hidden="true" tabindex="-1"></a><span class="fu"># Voto</span></span>
+<span id="cb11-197"><a href="#cb11-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-198"><a href="#cb11-198" aria-hidden="true" tabindex="-1"></a>Este diseño no se aplica al voto. La pregunta de voto se refiere a una sola elección, la 2ª vuelta presidencial de diciembre de 2021, por lo que no existe un período previo en el que las mismas edades hayan podido votar en esa elección sin haber cursado la asignatura. Sin una medición del resultado antes y después del tratamiento, no es posible calcular el cambio que compara la diferencia en diferencias. Para el voto, el análisis se limita a las regresiones.</span>
 </code></pre></div><button title="Copiar al portapapeles" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
