@@ -1,0 +1,362 @@
+---
+title: "Diferencia en diferencias: interés, confianza y voto"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento replica la estructura de la portada con diseños de diferencia en diferencias para los tres resultados: interés político, confianza política y voto en la 2ª vuelta presidencial de 2021. Cada resultado se estima en ocho especificaciones, que combinan el control socioeconómico (nivel educacional o grupo socioeconómico), la ponderación (sin ponderar o con el ponderador de la Encuesta CEP) y la muestra (completa o menores de 30 años). Cada especificación tiene tres modelos anidados, todos con efectos fijos de ola:
+
+1. El estimador de diferencia en diferencias (la interacción entre grupo y período).
+2. Agrega el control socioeconómico.
+3. Agrega efectos fijos de edad, que absorben el indicador de grupo.
+
+Al final, las ocho especificaciones se estiman en la muestra común a los tres resultados.
+
+## Por qué se hace
+
+Las regresiones de la portada comparan a quienes cursaron la asignatura con personas de todas las edades, por lo que mezclan su efecto con diferencias de edad. Los diseños de diferencia en diferencias comparan el cambio en el resultado de un grupo expuesto a la asignatura con el cambio de un grupo no expuesto, lo que elimina las diferencias permanentes entre grupos y los cambios comunes a ambos. Descansan en el supuesto de tendencias paralelas: en ausencia de la asignatura, ambos grupos habrían cambiado de la misma forma.
+
+**Interés político y confianza política: diseño 2x2 por ola.** Se compara a jóvenes de 18 a 21 años con personas de 23 años o más, entre la CEP 85 (agosto de 2021), en la que casi ningún joven había cursado la asignatura, y las olas 92 en adelante, en las que las mismas edades corresponden a cohortes que sí la cursaron. Las personas de 22 años se excluyen porque mezclan tratados y no tratados, y las olas 88 a 91 porque en ellas parte de los jóvenes ya había cursado la asignatura. La muestra completa compara a los jóvenes con todas las personas de 23 años o más; la muestra de menores de 30 años, con las de 23 a 29 años. El estimador es la interacción `joven × post`. Como en el resto del proyecto, cuando falta la fecha de nacimiento se imputa desde la edad declarada.
+
+**Voto: diseño por cohorte de nacimiento en la misma elección.** La pregunta de voto se refiere a una sola elección, por lo que no hay un período previo. El diseño compara, dentro de la 2ª vuelta de 2021, a personas de distintas edades, aprovechando el corte de ingreso escolar del 1 de abril. Quienes nacieron entre abril y diciembre (`tardio = 1`) quedan en un curso posterior que quienes nacieron entre enero y marzo del mismo año. Entre los nacidos en 2003 (`cohorte_2003 = 1`), los nacidos desde abril cursaron la asignatura y los nacidos entre enero y marzo no. En los años de nacimiento anteriores ninguno la cursó, por lo que la diferencia entre nacidos en abril-diciembre y en enero-marzo de esos años mide cuánto difieren ambos grupos sin la asignatura, por ejemplo por la edad relativa dentro del curso. El estimador es la interacción `tardio × cohorte_2003`, que identifica exactamente a quienes cursaron la asignatura y podían votar. En el modelo 3 los efectos fijos de edad corresponden al año de nacimiento, equivalente a la edad en la elección, y absorben `cohorte_2003`. Solo se usan fechas de nacimiento reales y personas habilitadas para votar en la 2ª vuelta de 2021.
+
+**Muestra común.** La muestra común (`data_comun`, construida en `preparation.qmd`) solo incluye olas que preguntan por los tres resultados (88, 92, 93 y 95), por lo que no tiene la CEP 85 que necesita el diseño 2x2. Como el diseño por cohorte de nacimiento no necesita un período previo, se aplica a los tres resultados en la muestra común, de modo que las diferencias entre resultados no dependen ni de la muestra ni del diseño.
+
+Todos los errores estándar son HC1. Los modelos de interés y confianza son lineales; los de voto son logísticos (logit binario sin ponderar y logit por cuasi verosimilitud con ponderadores). Las tablas se guardan en `output/tables/did_principal_*.html` y los modelos en `output/models/modelos_did_principal.rds`.
+
+# Datos y funciones
+
+```{r}
+pacman::p_load(dplyr, texreg, sandwich, lmtest)
+
+# Agrupación de gse (referencia: D-E), igual que en analysis_regresiones.qmd
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+
+controles <- c("educacion_ciudadana", "educ", "gse3", "edad_nac", "pond")
+
+## Diseño 2x2 por ola: interés político y confianza política ----------------------
+preparar_2x2 <- function(d, y) {
+  d %>%
+    dplyr::mutate(gse3 = agrupar_gse(gse), ola_num = as.numeric(as.character(ola))) %>%
+    dplyr::filter(edad_nac >= 18, edad_nac != 22, ola_num == 85 | ola_num >= 92) %>%
+    dplyr::select(dplyr::all_of(c("ola", "ola_num", y, controles))) %>%
+    na.omit() %>%
+    droplevels() %>%
+    dplyr::mutate(joven = as.integer(edad_nac <= 21), post = as.integer(ola_num >= 92))
+}
+
+## Diseño por cohorte de nacimiento: voto y muestra común ---------------------------
+agregar_cohorte <- function(d) {
+  d %>%
+    dplyr::mutate(gse3 = agrupar_gse(gse),
+                  anio_nac = as.integer(format(fecha_nac, "%Y")),
+                  tardio = as.integer(as.integer(format(fecha_nac, "%m")) >= 4),
+                  cohorte_2003 = as.integer(anio_nac == 2003))
+}
+
+datos <- list(
+  interes = preparar_2x2(readRDS("input/data/proc/data_int.rds"), "int_pol"),
+  confianza = preparar_2x2(readRDS("input/data/proc/data_actitudes.rds"), "conf_pol"),
+  voto = readRDS("input/data/proc/data_voto.rds") %>%
+    dplyr::filter(habilitado_2v == 1) %>%
+    agregar_cohorte() %>%
+    dplyr::select(dplyr::all_of(c("ola", "voto", controles, "anio_nac", "tardio", "cohorte_2003"))) %>%
+    na.omit() %>%
+    droplevels()
+)
+
+data_comun <- agregar_cohorte(readRDS("input/data/proc/data_comun.rds"))
+
+## Chequeo: el estimador identifica a los tratados ----------------------------------
+with(datos$voto, table(educacion_ciudadana, tardio_2003 = tardio * cohorte_2003))
+with(data_comun, table(educacion_ciudadana, tardio_2003 = tardio * cohorte_2003))
+
+## Resultados y especificaciones -------------------------------------------------------
+resultados <- data.frame(
+  resultado = c("interes", "confianza", "voto"),
+  y = c("int_pol", "conf_pol", "voto"),
+  nombre = c("Interés político", "Confianza política", "Voto en la 2ª vuelta de 2021"),
+  logit = c(FALSE, FALSE, TRUE),
+  diseno = c("ola", "ola", "cohorte")
+)
+
+especificaciones <- expand.grid(control = c("educ", "gse3"),
+                                ponderacion = c("Sin ponderar", "Ponderado"),
+                                muestra = c("Muestra completa", "Menores de 30 años"),
+                                stringsAsFactors = FALSE)
+especificaciones$titulo <- paste0(
+  c(educ = "Nivel educacional", gse3 = "Grupo socioeconómico")[especificaciones$control], ", ",
+  tolower(especificaciones$ponderacion), ", ", tolower(especificaciones$muestra))
+
+## Estimación ---------------------------------------------------------------------------
+# Tres modelos anidados. Los efectos fijos van antes de la interacción para
+# que los términos colineales que se eliminan sean post (con los EF de ola),
+# joven (con los EF de edad) y cohorte_2003 (con los EF de año de nacimiento)
+estimar <- function(d, y, logit, diseno, esp) {
+  if (esp$muestra == "Menores de 30 años") d <- droplevels(dplyr::filter(d, edad_nac < 30))
+  d$peso <- if (esp$ponderacion == "Ponderado") d$pond else 1
+  did <- if (diseno == "ola") "joven * post" else "tardio * cohorte_2003"
+  ef_edad <- if (diseno == "ola") "factor(edad_nac)" else "factor(anio_nac)"
+  rhs <- list(c("factor(ola)", did),
+              c("factor(ola)", did, esp$control),
+              c(ef_edad, "factor(ola)", did, esp$control))
+  familia <- if (esp$ponderacion == "Ponderado") quasibinomial(link = "logit") else binomial(link = "logit")
+  lapply(rhs, function(r) {
+    f <- reformulate(r, y)
+    m <- if (logit) glm(f, family = familia, data = d, weights = peso) else lm(f, data = d, weights = peso)
+    list(modelo = m, ct = lmtest::coeftest(m, vcov. = sandwich::vcovHC, type = "HC1"))
+  })
+}
+
+estimar_todas <- function(d, y, logit, diseno) {
+  lapply(seq_len(nrow(especificaciones)), function(i) estimar(d, y, logit, diseno, especificaciones[i, ]))
+}
+
+## Tablas ----------------------------------------------------------------------------------
+renombrar <- function(m, ee, p) {
+  tr <- texreg::extract(m)
+  tr@se <- unname(ee[tr@coef.names])
+  tr@pvalues <- unname(p[tr@coef.names])
+  nombres <- tr@coef.names
+  nombres <- sub("(Intercept)", "Intercepto", nombres, fixed = TRUE)
+  nombres <- gsub("factor(ola)", "Ola ", nombres, fixed = TRUE)
+  nombres <- gsub("factor(edad_nac)", "Edad ", nombres, fixed = TRUE)
+  nombres <- gsub("factor(anio_nac)", "Año de nacimiento ", nombres, fixed = TRUE)
+  nombres <- gsub("educ(?=\\p{Lu})", "", nombres, perl = TRUE)
+  nombres <- gsub("gse3", "GSE ", nombres, fixed = TRUE)
+  nombres <- gsub("joven", "Joven (18-21)", nombres, fixed = TRUE)
+  nombres <- gsub("post", "Post (olas 92+)", nombres, fixed = TRUE)
+  nombres <- gsub("tardio", "Nacido abr-dic", nombres, fixed = TRUE)
+  nombres <- gsub("cohorte_2003", "Nacido en 2003", nombres, fixed = TRUE)
+  nombres <- gsub(":", " × ", nombres, fixed = TRUE)
+  tr@coef.names <- nombres
+  tr
+}
+
+nota <- "%stars. Errores estándar HC1 entre paréntesis."
+
+tabla <- function(xs, nombres, caption) {
+  texreg::htmlreg(lapply(xs, function(x) renombrar(x$modelo, x$ct[, 2], x$ct[, 4])),
+                  custom.model.names = nombres, caption = caption,
+                  caption.above = TRUE, custom.note = nota)
+}
+
+# Tablas de un resultado en su muestra propia
+tablas_resultado <- function(r, letra) {
+  nombre <- resultados$nombre[resultados$resultado == r]
+  sapply(seq_len(nrow(especificaciones)), function(i) {
+    tabla(modelos[[r]][[i]], paste("Modelo", 1:3),
+          paste0("Tabla ", letra, i, ". ", nombre, ": ", especificaciones$titulo[i]))
+  })
+}
+
+# Formato de números en el texto
+num <- function(x, d = 2) formatC(round(x, d) + 0, format = "f", digits = d, decimal.mark = ",")
+entero <- function(x) format(x, big.mark = ".", decimal.mark = ",")
+```
+
+```{r}
+## Estimación ----------------------------------------------------------------------------
+modelos <- setNames(lapply(seq_len(nrow(resultados)), function(r) {
+  estimar_todas(datos[[r]], resultados$y[r], resultados$logit[r], resultados$diseno[r])
+}), resultados$resultado)
+
+# Muestra común: diseño por cohorte de nacimiento para los tres resultados
+modelos_comun <- setNames(lapply(seq_len(nrow(resultados)), function(r) {
+  estimar_todas(data_comun, resultados$y[r], resultados$logit[r], "cohorte")
+}), resultados$resultado)
+
+## Estimador de diferencia en diferencias en cada modelo ---------------------------------
+termino <- c(ola = "joven:post", cohorte = "tardio:cohorte_2003")
+efectos <- dplyr::bind_rows(lapply(c("propia", "comun"), function(base) {
+  lista <- if (base == "propia") modelos else modelos_comun
+  dplyr::bind_rows(lapply(names(lista), function(r) {
+    v <- if (base == "propia") termino[resultados$diseno[resultados$resultado == r]] else termino["cohorte"]
+    dplyr::bind_rows(lapply(seq_along(lista[[r]]), function(i) {
+      dplyr::bind_rows(lapply(1:3, function(k) {
+        x <- lista[[r]][[i]][[k]]
+        data.frame(base, resultado = r, especificaciones[i, ], modelo = k, n = nobs(x$modelo),
+                   estimacion = x$ct[v, 1], ee = x$ct[v, 2], p = x$ct[v, 4])
+      }))
+    }))
+  }))
+}))
+rownames(efectos) <- NULL
+
+## Tablas ----------------------------------------------------------------------------------
+tablas <- list(interes = tablas_resultado("interes", "A"),
+               confianza = tablas_resultado("confianza", "B"),
+               voto = tablas_resultado("voto", "C"))
+tablas$comun <- sapply(seq_len(nrow(especificaciones)), function(i) {
+  tabla(unlist(lapply(modelos_comun, `[[`, i), recursive = FALSE),
+        paste0(rep(c("Interés", "Confianza", "Voto"), each = 3), " M", 1:3),
+        paste0("Tabla D", i, ". Muestra común: ", especificaciones$titulo[i]))
+})
+for (t in names(tablas)) writeLines(tablas[[t]], paste0("output/tables/did_principal_", t, ".html"))
+
+saveRDS(list(resultados = resultados, especificaciones = especificaciones,
+             datos = datos, datos_comun = data_comun,
+             modelos = modelos, modelos_comun = modelos_comun, efectos = efectos),
+        "output/models/modelos_did_principal.rds")
+
+# Oración con el estimador en el modelo 1 y en los ocho modelos 3 de un resultado
+coef_did <- function(b, r, control, ponderacion, muestra, modelo = 3) {
+  x <- efectos[efectos$base == b & efectos$resultado == r & efectos$control == control &
+                 efectos$ponderacion == ponderacion & efectos$muestra == muestra & efectos$modelo == modelo, ]
+  paste0(num(x$estimacion, 3), dplyr::case_when(x$p < 0.001 ~ "\\*\\*\\*", x$p < 0.01 ~ "\\*\\*",
+                                                x$p < 0.05 ~ "\\*", TRUE ~ ""))
+}
+describir <- function(b, r) {
+  e <- efectos[efectos$base == b & efectos$resultado == r & efectos$modelo == 3, ]
+  k <- function(...) coef_did(b, r, ...)
+  paste0(
+    "Sin controles (modelo 1), el estimador es ",
+    k("educ", "Sin ponderar", "Muestra completa", modelo = 1), " en la muestra completa y ",
+    k("educ", "Sin ponderar", "Menores de 30 años", modelo = 1), " en menores de 30 años, sin ponderar. ",
+    "Con el control socioeconómico y los efectos fijos de edad (modelo 3), en la muestra completa sin ponderar es ",
+    k("educ", "Sin ponderar", "Muestra completa"), " con nivel educacional y ",
+    k("gse3", "Sin ponderar", "Muestra completa"), " con grupo socioeconómico; con ponderadores, ",
+    k("educ", "Ponderado", "Muestra completa"), " y ", k("gse3", "Ponderado", "Muestra completa"),
+    ". En menores de 30 años es ", k("educ", "Sin ponderar", "Menores de 30 años"), " y ",
+    k("gse3", "Sin ponderar", "Menores de 30 años"), " sin ponderar, y ",
+    k("educ", "Ponderado", "Menores de 30 años"), " y ", k("gse3", "Ponderado", "Menores de 30 años"),
+    " con ponderadores. En el modelo 3, ", sum(e$p < 0.05), " de las ", nrow(e),
+    " especificaciones son significativas al 5% (\\* p < 0,05; \\*\\* p < 0,01; \\*\\*\\* p < 0,001).")
+}
+```
+
+# A) Interés político
+
+```{r}
+datos$interes %>%
+  dplyr::group_by(post, joven) %>%
+  dplyr::summarise(n = dplyr::n(), tratados = sum(educacion_ciudadana),
+                   media = mean(int_pol), .groups = "drop") %>%
+  knitr::kable(digits = 2, caption = "Interés político por período y grupo (muestra completa)")
+```
+
+La muestra reúne las olas `r paste(levels(datos$interes$ola), collapse = ", ")`, con `r entero(nrow(datos$interes))` casos, de los cuales `r entero(sum(datos$interes$joven))` son jóvenes de 18 a 21 años. Los coeficientes se leen en la escala de 1 a 5.
+
+## Muestra completa
+
+```{r}
+#| results: asis
+cat(tablas$interes[1:4], sep = "\n\n")
+```
+
+## Menores de 30 años
+
+```{r}
+#| results: asis
+cat(tablas$interes[5:8], sep = "\n\n")
+```
+
+## Interpretación
+
+`r describir("propia", "interes")`
+
+Ningún estimador de diferencia en diferencias es significativo para el interés político, en ninguna especificación ni modelo. Los coeficientes son cercanos a cero en la muestra completa y en menores de 30 años sin ponderar; con ponderadores en menores de 30 años son positivos, pero con errores estándar amplios. El diseño 2x2 no encuentra, por lo tanto, un cambio en el interés político de los jóvenes tras la llegada de la asignatura que se distinga del cambio de las personas de mayor edad.
+
+# B) Confianza política
+
+```{r}
+datos$confianza %>%
+  dplyr::group_by(post, joven) %>%
+  dplyr::summarise(n = dplyr::n(), tratados = sum(educacion_ciudadana),
+                   media = mean(conf_pol), .groups = "drop") %>%
+  knitr::kable(digits = 2, caption = "Confianza política por período y grupo (muestra completa)")
+```
+
+La muestra reúne las olas `r paste(levels(datos$confianza$ola), collapse = ", ")`, con `r entero(nrow(datos$confianza))` casos, de los cuales `r entero(sum(datos$confianza$joven))` son jóvenes de 18 a 21 años. Los coeficientes se leen en la escala de 1 a 4.
+
+## Muestra completa
+
+```{r}
+#| results: asis
+cat(tablas$confianza[1:4], sep = "\n\n")
+```
+
+## Menores de 30 años
+
+```{r}
+#| results: asis
+cat(tablas$confianza[5:8], sep = "\n\n")
+```
+
+## Interpretación
+
+`r describir("propia", "confianza")`
+
+En la muestra completa, la confianza política de los jóvenes aumentó entre la CEP 85 y las olas posteriores más que la de las personas de 23 años o más, con un estimador positivo y significativo en los tres modelos, con cualquier control socioeconómico y con o sin ponderadores. En menores de 30 años el estimador es de magnitud similar o algo menor y solo es significativo en algunas especificaciones ponderadas. Este resultado debe leerse con cautela: con una sola ola previa no es posible contrastar el supuesto de tendencias paralelas, y la confianza de los jóvenes puede haber evolucionado distinto a la de las personas mayores por razones ajenas a la asignatura, como el ciclo político posterior al estallido social y al proceso constituyente.
+
+# C) Voto
+
+```{r}
+datos$voto %>%
+  dplyr::filter(anio_nac >= 1998) %>%
+  dplyr::group_by(anio_nac, tardio) %>%
+  dplyr::summarise(n = dplyr::n(), tratados = sum(educacion_ciudadana),
+                   voto = mean(voto), .groups = "drop") %>%
+  knitr::kable(digits = 2, caption = "Voto en la 2ª vuelta de 2021 por año de nacimiento y mes de nacimiento (nacidos desde 1998)")
+```
+
+La muestra reúne las olas `r paste(levels(datos$voto$ola), collapse = ", ")`, con `r entero(nrow(datos$voto))` personas habilitadas para votar, de las cuales `r entero(sum(datos$voto$educacion_ciudadana))` nacieron entre abril y diciembre de 2003 y cursaron la asignatura, y `r entero(sum(datos$voto$cohorte_2003 == 1 & datos$voto$tardio == 0))` nacieron entre enero y marzo de 2003. Los coeficientes están en log-odds.
+
+## Muestra completa
+
+```{r}
+#| results: asis
+cat(tablas$voto[1:4], sep = "\n\n")
+```
+
+## Menores de 30 años
+
+```{r}
+#| results: asis
+cat(tablas$voto[5:8], sep = "\n\n")
+```
+
+## Interpretación
+
+`r describir("propia", "voto")`
+
+El estimador es negativo en todas las especificaciones: quienes nacieron entre abril y diciembre de 2003 votaron menos que lo esperado según la diferencia entre nacidos en abril-diciembre y en enero-marzo de los años anteriores. Solo es significativo en la muestra completa sin ponderar; con ponderadores se reduce a menos de la mitad y en menores de 30 años deja de ser significativo. El grupo de comparación dentro de 2003 es pequeño (los nacidos entre enero y marzo), por lo que las estimaciones son poco precisas. Además, los nacidos desde abril de 2003 eran los votantes más jóvenes en la elección, con 18 años recién cumplidos, y el diseño supone que la diferencia de participación entre nacidos a inicio y a fin de año es la misma a los 18 años que a edades mayores, lo que no puede verificarse.
+
+# D) Muestra común
+
+La muestra común tiene `r entero(nrow(data_comun))` casos de las olas `r paste(levels(data_comun$ola), collapse = ", ")`, de los cuales `r entero(sum(data_comun$educacion_ciudadana))` cursaron la asignatura y `r entero(sum(data_comun$cohorte_2003 == 1 & data_comun$tardio == 0))` nacieron entre enero y marzo de 2003. Los tres resultados se estiman con el diseño por cohorte de nacimiento, cuyo estimador es `tardio × cohorte_2003`. Cada tabla presenta los tres modelos de los tres resultados en la misma especificación; los coeficientes de interés y confianza son lineales y los de voto están en log-odds.
+
+## Muestra completa
+
+```{r}
+#| results: asis
+cat(tablas$comun[1:4], sep = "\n\n")
+```
+
+## Menores de 30 años
+
+```{r}
+#| results: asis
+cat(tablas$comun[5:8], sep = "\n\n")
+```
+
+## Interpretación
+
+**Interés político.** `r describir("comun", "interes")`
+
+**Confianza política.** `r describir("comun", "confianza")`
+
+**Voto.** `r describir("comun", "voto")`
+
+En la muestra común, con el mismo diseño y los mismos casos para los tres resultados, el estimador del interés político es positivo, el de la confianza negativo y el del voto negativo, y casi ninguno es significativo: solo la confianza en las especificaciones ponderadas. El signo de la confianza es opuesto al del diseño 2x2, lo que muestra que el resultado positivo de la sección B depende del diseño y de la muestra. Con `r entero(sum(data_comun$educacion_ciudadana))` tratados y `r entero(sum(data_comun$cohorte_2003 == 1 & data_comun$tardio == 0))` controles nacidos en 2003, la muestra común no permite estimar con precisión el efecto de la asignatura, y como se comparan muchas especificaciones, un estimador aislado con valor p bajo 0,05 no basta para concluir que hay un efecto.

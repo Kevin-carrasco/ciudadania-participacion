@@ -132,6 +132,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Presentación</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../processing/analysis_did_principal.html"> 
+<span class="menu-text">Diferencia en diferencias</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processing/analysis_psm.html"> 
+<span class="menu-text">Propensity Score Matching</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../processing/preparation.html"> 
 <span class="menu-text">Preparación</span></a>
   </li>  
@@ -240,7 +248,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Fecha de publicación</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">21 de octubre de 2026</p>
+      <p class="date">28 de octubre de 2026</p>
     </div>
   </div>
   
@@ -1127,10 +1135,10 @@ M2
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.27<sup>***</sup>
+2.27<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.88<sup>***</sup>
+2.88<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1215,7 +1223,7 @@ factor(edad_nac)20
 factor(edad_nac)21
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.38<sup>*</sup>
+0.38<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.24
@@ -1457,10 +1465,10 @@ factor(ola_num)88
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.28<sup>*</sup>
+-0.28<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.25<sup>*</sup>
+-0.25<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -1479,10 +1487,10 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.27<sup>*</sup>
+-0.27<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.29<sup>*</sup>
+-0.29<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -1504,7 +1512,7 @@ factor(ola_num)95
 0.19
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.27<sup>*</sup>
+0.27<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -1812,7 +1820,7 @@ W:edad20_ola95
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.75<sup>*</sup>
+-0.75<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -1995,7 +2003,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="3">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -2045,19 +2053,19 @@ Num. obs.
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>                            modelo  estimacion         ee         p      ic_inf
-1           M1 lineal (escala 1-5)  0.07229764 0.13888582 0.6026771 -0.19991356
-2           M2 lineal (escala 1-5) -0.06922932 0.19439277 0.7217424 -0.45023214
+1           M1 lineal (escala 1-5)  0.07229764 0.13888577 0.6026770 -0.19991347
+2           M2 lineal (escala 1-5) -0.06922932 0.19439277 0.7217424 -0.45023215
 3 M1 logit fraccional (escala 0-1)  0.01649400 0.03322184 0.6195552 -0.04861960
-4 M2 logit fraccional (escala 0-1) -0.01724986 0.04725193 0.7150655 -0.10986193
-5  M1 logit binario (probabilidad)  0.01974350 0.05743752 0.7310427 -0.09283197
-6  M2 logit binario (probabilidad) -0.04597889 0.07100916 0.5173042 -0.18515428
+4 M2 logit fraccional (escala 0-1) -0.01724986 0.04725192 0.7150655 -0.10986193
+5  M1 logit binario (probabilidad)  0.01974350 0.05743752 0.7310428 -0.09283197
+6  M2 logit binario (probabilidad) -0.04597889 0.07100916 0.5173042 -0.18515429
       ic_sup  escala_1_5
-1 0.34450884          NA
-2 0.31177351          NA
+1 0.34450875          NA
+2 0.31177352          NA
 3 0.08160761  0.06597602
 4 0.07536221 -0.06899944
 5 0.13231897          NA
-6 0.09319649          NA</code></pre>
+6 0.09319650          NA</code></pre>
 </div>
 <details class="code-fold">
 <summary>Código</summary>
@@ -2099,7 +2107,7 @@ M2 logit
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.77<sup>***</sup>
+-0.77<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.13
@@ -2235,7 +2243,7 @@ factor(edad_nac)20
 factor(edad_nac)21
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.42<sup>*</sup>
+0.42<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.23
@@ -2609,10 +2617,10 @@ factor(ola_num)88
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.32<sup>*</sup>
+-0.32<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.29<sup>*</sup>
+-0.29<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.27
@@ -2643,10 +2651,10 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>*</sup>
+-0.31<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.34<sup>*</sup>
+-0.34<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.12
@@ -2680,13 +2688,13 @@ factor(ola_num)95
 0.20
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.29<sup>*</sup>
+0.29<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.65<sup>***</sup>
+0.65<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.74<sup>***</sup>
+0.74<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3475,7 +3483,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="5">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Coeficientes del índice. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Coeficientes del índice. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -3701,10 +3709,10 @@ M1 fraccional con adelantos
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.31<sup>***</sup>
+2.31<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.72<sup>**</sup>
+-0.72<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -4163,10 +4171,10 @@ factor(ola_num)88
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.30<sup>*</sup>
+-0.30<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.35<sup>*</sup>
+-0.35<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -4185,10 +4193,10 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.30<sup>*</sup>
+-0.30<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.34<sup>*</sup>
+-0.34<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -4338,7 +4346,7 @@ Deviance
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="3">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -4440,13 +4448,13 @@ M1 sin fechas imputadas
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.27<sup>***</sup>
+2.27<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.17<sup>***</sup>
+2.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.22<sup>***</sup>
+2.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4552,10 +4560,10 @@ factor(edad_nac)20
 factor(edad_nac)21
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.38<sup>*</sup>
+0.38<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.49<sup>**</sup>
+0.49<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.33
@@ -4860,13 +4868,13 @@ factor(ola_num)88
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.28<sup>*</sup>
+-0.28<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.24<sup>*</sup>
+-0.24<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.27<sup>*</sup>
+-0.27<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -4888,10 +4896,10 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.27<sup>*</sup>
+-0.27<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.25<sup>*</sup>
+-0.25<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.18
@@ -4922,7 +4930,7 @@ factor(ola_num)95
 0.20
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>*</sup>
+0.25<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5013,7 +5021,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -5326,16 +5334,16 @@ M1 fraccional, controles sin Plan
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.27<sup>***</sup>
+2.27<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.23<sup>***</sup>
+2.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.77<sup>***</sup>
+-0.77<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.81<sup>***</sup>
+-0.81<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5462,16 +5470,16 @@ factor(edad_nac)20
 factor(edad_nac)21
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.38<sup>*</sup>
+0.38<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.42<sup>*</sup>
+0.42<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.42<sup>*</sup>
+0.42<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.46<sup>*</sup>
+0.46<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5836,16 +5844,16 @@ factor(ola_num)88
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.28<sup>*</sup>
+-0.28<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>*</sup>
+-0.31<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.32<sup>*</sup>
+-0.32<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.35<sup>*</sup>
+-0.35<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5870,13 +5878,13 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.27<sup>*</sup>
+-0.27<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.24
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>*</sup>
+-0.31<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.28
@@ -5941,13 +5949,13 @@ factor(ola_num)96
 -0.18
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>*</sup>
+-0.31<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.20
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.35<sup>*</sup>
+-0.35<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6090,7 +6098,7 @@ Deviance
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="5">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Modelos fraccionales: coeficientes del índice. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Modelos fraccionales: coeficientes del índice. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -6273,16 +6281,16 @@ M1 fraccional (celda)
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.27<sup>***</sup>
+2.27<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-2.27<sup>***</sup>
+2.27<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.77<sup>***</sup>
+-0.77<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.77<sup>***</sup>
+-0.77<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6409,16 +6417,16 @@ factor(edad_nac)20
 factor(edad_nac)21
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.38<sup>*</sup>
+0.38<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.38<sup>**</sup>
+0.38<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.42<sup>*</sup>
+0.42<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.42<sup>**</sup>
+0.42<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -6783,16 +6791,16 @@ factor(ola_num)88
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.28<sup>*</sup>
+-0.28<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.28<sup>***</sup>
+-0.28<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.32<sup>*</sup>
+-0.32<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.32<sup>***</sup>
+-0.32<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6817,16 +6825,16 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.27<sup>*</sup>
+-0.27<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.27<sup>**</sup>
+-0.27<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>*</sup>
+-0.31<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>**</sup>
+-0.31<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -7071,7 +7079,7 @@ Deviance
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="5">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Modelos fraccionales: coeficientes del índice. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Modelos fraccionales: coeficientes del índice. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -7323,7 +7331,7 @@ Deviance
     TRUE   0.0421      0.165 0.255    0.799 0.3 -0.282  0.366
 
 Term: .Dtreat
-Type:  response 
+Type: response
 Comparison: TRUE - FALSE</code></pre>
 </div>
 <details class="code-fold">

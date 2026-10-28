@@ -6,6 +6,8 @@ project:
   render:
     - processing/preparation.qmd
     - processing/analysis_principal.qmd
+    - processing/analysis_did_principal.qmd
+    - processing/analysis_psm.qmd
     - processing/analysis_regresiones.qmd
     - processing/analysis_did_2x2.qmd
     - processing/analysis_did_interes.qmd
@@ -20,6 +22,10 @@ website:
     left:
       - href: index.qmd
         text: Presentación
+      - href: processing/analysis_did_principal.qmd
+        text: Diferencia en diferencias
+      - href: processing/analysis_psm.qmd
+        text: Propensity Score Matching
       - href: processing/preparation.qmd
         text: Preparación
       - text: Análisis

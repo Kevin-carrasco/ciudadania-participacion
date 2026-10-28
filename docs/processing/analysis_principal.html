@@ -132,6 +132,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Presentación</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../processing/analysis_did_principal.html"> 
+<span class="menu-text">Diferencia en diferencias</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processing/analysis_psm.html"> 
+<span class="menu-text">Propensity Score Matching</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../processing/preparation.html"> 
 <span class="menu-text">Preparación</span></a>
   </li>  
@@ -221,7 +229,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Fecha de publicación</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">21 de octubre de 2026</p>
+      <p class="date">28 de octubre de 2026</p>
     </div>
   </div>
   
@@ -237,7 +245,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1>Qué se hace y por qué</h1>
 <section id="qué-se-hace" class="level2">
 <h2 class="anchored" data-anchor-id="qué-se-hace">Qué se hace</h2>
-<p>Este documento estima los modelos que presenta la portada para los tres resultados: interés político, confianza política y voto en la 2ª vuelta presidencial de 2021. Cada especificación tiene tres modelos anidados con efectos fijos de ola: solo el tratamiento (<code>educacion_ciudadana</code>) (1), con un control socioeconómico (2) y con el control y la edad (3). Para cada resultado se estiman ocho especificaciones, que combinan tres decisiones:</p>
+<p>Este documento estima los modelos que presenta la portada para los tres resultados: interés político, confianza política y voto en la 2ª vuelta presidencial de 2021. Cada especificación tiene cuatro modelos anidados con efectos fijos de ola: solo el tratamiento (<code>educacion_ciudadana</code>) (1), con la edad (2), con la edad y un control socioeconómico (3) y con la interacción entre el tratamiento y la edad (4). Para cada resultado se estiman ocho especificaciones, que combinan tres decisiones:</p>
 <ul>
 <li><strong>Control socioeconómico:</strong> nivel educacional o grupo socioeconómico.</li>
 <li><strong>Ponderación:</strong> sin ponderar o con el ponderador de la Encuesta CEP.</li>
@@ -407,26 +415,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <details class="code-fold">
 <summary>Código</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Estimación de una especificación -------------------------------------------------</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Tres modelos anidados: solo el tratamiento (1), con el control</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># socioeconómico (2) y con el control y la edad (3), todos con EF de ola</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>estimar <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit, esp) {</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (esp<span class="sc">$</span>muestra <span class="sc">==</span> <span class="st">"Menores de 30 años"</span>) d <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(dplyr<span class="sc">::</span><span class="fu">filter</span>(d, edad_nac <span class="sc">&lt;</span> <span class="dv">30</span>))</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  d<span class="sc">$</span>peso <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) d<span class="sc">$</span>pond <span class="cf">else</span> <span class="dv">1</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  rhs <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"factor(ola)"</span>),</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, esp<span class="sc">$</span>control, <span class="st">"factor(ola)"</span>),</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, esp<span class="sc">$</span>control, <span class="st">"edad_nac"</span>, <span class="st">"factor(ola)"</span>))</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  familia <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) <span class="fu">quasibinomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>) <span class="cf">else</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>)</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(rhs, <span class="cf">function</span>(r) {</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    f <span class="ot">&lt;-</span> <span class="fu">reformulate</span>(r, y)</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    m <span class="ot">&lt;-</span> <span class="cf">if</span> (logit) <span class="fu">glm</span>(f, <span class="at">family =</span> familia, <span class="at">data =</span> d, <span class="at">weights =</span> peso) <span class="cf">else</span> <span class="fu">lm</span>(f, <span class="at">data =</span> d, <span class="at">weights =</span> peso)</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">modelo =</span> m, <span class="at">ct =</span> lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovHC, <span class="at">type =</span> <span class="st">"HC1"</span>))</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Las ocho especificaciones de un resultado, cada una con sus tres modelos</span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>estimar_todas <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit) {</span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) <span class="fu">estimar</span>(d, y, logit, especificaciones[i, ]))</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Cuatro modelos anidados, todos con EF de ola: solo el tratamiento (1), con</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># la edad (2), con la edad y el control socioeconómico (3) y con la</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># interacción entre tratamiento y edad (4)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>estimar <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit, esp) {</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (esp<span class="sc">$</span>muestra <span class="sc">==</span> <span class="st">"Menores de 30 años"</span>) d <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(dplyr<span class="sc">::</span><span class="fu">filter</span>(d, edad_nac <span class="sc">&lt;</span> <span class="dv">30</span>))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  d<span class="sc">$</span>peso <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) d<span class="sc">$</span>pond <span class="cf">else</span> <span class="dv">1</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  rhs <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"factor(ola)"</span>),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"edad_nac"</span>, <span class="st">"factor(ola)"</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"edad_nac"</span>, esp<span class="sc">$</span>control, <span class="st">"factor(ola)"</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana * edad_nac"</span>, esp<span class="sc">$</span>control, <span class="st">"factor(ola)"</span>))</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  familia <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) <span class="fu">quasibinomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>) <span class="cf">else</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(rhs, <span class="cf">function</span>(r) {</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    f <span class="ot">&lt;-</span> <span class="fu">reformulate</span>(r, y)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    m <span class="ot">&lt;-</span> <span class="cf">if</span> (logit) <span class="fu">glm</span>(f, <span class="at">family =</span> familia, <span class="at">data =</span> d, <span class="at">weights =</span> peso) <span class="cf">else</span> <span class="fu">lm</span>(f, <span class="at">data =</span> d, <span class="at">weights =</span> peso)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">modelo =</span> m, <span class="at">ct =</span> lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovHC, <span class="at">type =</span> <span class="st">"HC1"</span>))</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Las ocho especificaciones de un resultado, cada una con sus cuatro modelos</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>estimar_todas <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit) {</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) <span class="fu">estimar</span>(d, y, logit, especificaciones[i, ]))</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 </section>
@@ -450,16 +460,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  lista <span class="ot">&lt;-</span> <span class="cf">if</span> (base <span class="sc">==</span> <span class="st">"propia"</span>) modelos <span class="cf">else</span> modelos_comun</span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">names</span>(lista), <span class="cf">function</span>(r) {</span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">seq_along</span>(lista[[r]]), <span class="cf">function</span>(i) {</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="cf">function</span>(k) {</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) {</span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        x <span class="ot">&lt;-</span> lista[[r]][[i]][[k]]</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="fu">data.frame</span>(base, <span class="at">resultado =</span> r, especificaciones[i, ], <span class="at">modelo =</span> k, <span class="at">n =</span> <span class="fu">nobs</span>(x<span class="sc">$</span>modelo),</span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>                   <span class="at">estimacion =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">1</span>], <span class="at">ee =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">2</span>],</span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>                   <span class="at">p =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">4</span>])</span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>      }))</span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    }))</span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  }))</span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>}))</span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(efectos) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Interacción con la edad, solo en el modelo 4</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        int <span class="ot">&lt;-</span> <span class="cf">if</span> (k <span class="sc">==</span> <span class="dv">4</span>) x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana:edad_nac"</span>, ] <span class="cf">else</span> <span class="fu">rep</span>(<span class="cn">NA_real_</span>, <span class="dv">4</span>)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">data.frame</span>(base, <span class="at">resultado =</span> r, especificaciones[i, ], <span class="at">modelo =</span> k, <span class="at">n =</span> <span class="fu">nobs</span>(x<span class="sc">$</span>modelo),</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>                   <span class="at">estimacion =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">1</span>], <span class="at">ee =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">2</span>],</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>                   <span class="at">p =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">4</span>],</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>                   <span class="at">interaccion =</span> int[<span class="dv">1</span>], <span class="at">ee_interaccion =</span> int[<span class="dv">2</span>], <span class="at">p_interaccion =</span> int[<span class="dv">4</span>])</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>      }))</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    }))</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  }))</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(efectos) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 </section>
@@ -481,16 +494,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (r <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">nrow</span>(resultados))) {</span>
 <span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">writeLines</span>(<span class="fu">sapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) {</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tabla</span>(modelos[[r]][[i]], <span class="fu">paste</span>(<span class="st">"Modelo"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>),</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tabla</span>(modelos[[r]][[i]], <span class="fu">paste</span>(<span class="st">"Modelo"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>),</span>
 <span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>          <span class="fu">paste0</span>(resultados<span class="sc">$</span>nombre[r], <span class="st">": "</span>, especificaciones<span class="sc">$</span>titulo[i]))</span>
 <span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  }), <span class="fu">paste0</span>(<span class="st">"output/tables/principal_"</span>, resultados<span class="sc">$</span>resultado[r], <span class="st">".html"</span>))</span>
 <span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Muestra común: los tres modelos de cada resultado en la misma tabla</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Muestra común: los cuatro modelos de cada resultado en la misma tabla</span></span>
 <span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>nombres_cortos <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Interés"</span>, <span class="st">"Confianza"</span>, <span class="st">"Voto"</span>)</span>
 <span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="fu">writeLines</span>(<span class="fu">sapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) {</span>
 <span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tabla</span>(<span class="fu">unlist</span>(<span class="fu">lapply</span>(modelos_comun, <span class="st">`</span><span class="at">[[</span><span class="st">`</span>, i), <span class="at">recursive =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(<span class="fu">rep</span>(nombres_cortos, <span class="at">each =</span> <span class="dv">3</span>), <span class="st">"M"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">sep =</span> <span class="st">""</span>),</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(<span class="fu">rep</span>(nombres_cortos, <span class="at">each =</span> <span class="dv">4</span>), <span class="st">"M"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="at">sep =</span> <span class="st">""</span>),</span>
 <span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste0</span>(<span class="st">"Muestra común: "</span>, especificaciones<span class="sc">$</span>titulo[i]))</span>
 <span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>}), <span class="st">"output/tables/principal_muestra_comun.html"</span>)</span>
 <span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a></span>
@@ -970,7 +983,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="fu">## Qué se hace</span></span>
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>Este documento estima los modelos que presenta la portada para los tres resultados: interés político, confianza política y voto en la 2ª vuelta presidencial de 2021. Cada especificación tiene tres modelos anidados con efectos fijos de ola: solo el tratamiento (<span class="in">`educacion_ciudadana`</span>) (1), con un control socioeconómico (2) y con el control y la edad (3). Para cada resultado se estiman ocho especificaciones, que combinan tres decisiones:</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>Este documento estima los modelos que presenta la portada para los tres resultados: interés político, confianza política y voto en la 2ª vuelta presidencial de 2021. Cada especificación tiene cuatro modelos anidados con efectos fijos de ola: solo el tratamiento (<span class="in">`educacion_ciudadana`</span>) (1), con la edad (2), con la edad y un control socioeconómico (3) y con la interacción entre el tratamiento y la edad (4). Para cada resultado se estiman ocho especificaciones, que combinan tres decisiones:</span>
 <span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Control socioeconómico:** nivel educacional o grupo socioeconómico.</span>
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Ponderación:** sin ponderar o con el ponderador de la Encuesta CEP.</span>
@@ -1057,92 +1070,97 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-101"><a href="#cb7-101" aria-hidden="true" tabindex="-1"></a>especificaciones</span>
 <span id="cb7-102"><a href="#cb7-102" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-103"><a href="#cb7-103" aria-hidden="true" tabindex="-1"></a><span class="do">## Estimación de una especificación -------------------------------------------------</span></span>
-<span id="cb7-104"><a href="#cb7-104" aria-hidden="true" tabindex="-1"></a><span class="co"># Tres modelos anidados: solo el tratamiento (1), con el control</span></span>
-<span id="cb7-105"><a href="#cb7-105" aria-hidden="true" tabindex="-1"></a><span class="co"># socioeconómico (2) y con el control y la edad (3), todos con EF de ola</span></span>
-<span id="cb7-106"><a href="#cb7-106" aria-hidden="true" tabindex="-1"></a>estimar <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit, esp) {</span>
-<span id="cb7-107"><a href="#cb7-107" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (esp<span class="sc">$</span>muestra <span class="sc">==</span> <span class="st">"Menores de 30 años"</span>) d <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(dplyr<span class="sc">::</span><span class="fu">filter</span>(d, edad_nac <span class="sc">&lt;</span> <span class="dv">30</span>))</span>
-<span id="cb7-108"><a href="#cb7-108" aria-hidden="true" tabindex="-1"></a>  d<span class="sc">$</span>peso <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) d<span class="sc">$</span>pond <span class="cf">else</span> <span class="dv">1</span></span>
-<span id="cb7-109"><a href="#cb7-109" aria-hidden="true" tabindex="-1"></a>  rhs <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"factor(ola)"</span>),</span>
-<span id="cb7-110"><a href="#cb7-110" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, esp<span class="sc">$</span>control, <span class="st">"factor(ola)"</span>),</span>
-<span id="cb7-111"><a href="#cb7-111" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, esp<span class="sc">$</span>control, <span class="st">"edad_nac"</span>, <span class="st">"factor(ola)"</span>))</span>
-<span id="cb7-112"><a href="#cb7-112" aria-hidden="true" tabindex="-1"></a>  familia <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) <span class="fu">quasibinomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>) <span class="cf">else</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>)</span>
-<span id="cb7-113"><a href="#cb7-113" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(rhs, <span class="cf">function</span>(r) {</span>
-<span id="cb7-114"><a href="#cb7-114" aria-hidden="true" tabindex="-1"></a>    f <span class="ot">&lt;-</span> <span class="fu">reformulate</span>(r, y)</span>
-<span id="cb7-115"><a href="#cb7-115" aria-hidden="true" tabindex="-1"></a>    m <span class="ot">&lt;-</span> <span class="cf">if</span> (logit) <span class="fu">glm</span>(f, <span class="at">family =</span> familia, <span class="at">data =</span> d, <span class="at">weights =</span> peso) <span class="cf">else</span> <span class="fu">lm</span>(f, <span class="at">data =</span> d, <span class="at">weights =</span> peso)</span>
-<span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">modelo =</span> m, <span class="at">ct =</span> lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovHC, <span class="at">type =</span> <span class="st">"HC1"</span>))</span>
-<span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a><span class="co"># Las ocho especificaciones de un resultado, cada una con sus tres modelos</span></span>
-<span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a>estimar_todas <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit) {</span>
-<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) <span class="fu">estimar</span>(d, y, logit, especificaciones[i, ]))</span>
-<span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-124"><a href="#cb7-124" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-126"><a href="#cb7-126" aria-hidden="true" tabindex="-1"></a><span class="fu"># Estimación</span></span>
+<span id="cb7-104"><a href="#cb7-104" aria-hidden="true" tabindex="-1"></a><span class="co"># Cuatro modelos anidados, todos con EF de ola: solo el tratamiento (1), con</span></span>
+<span id="cb7-105"><a href="#cb7-105" aria-hidden="true" tabindex="-1"></a><span class="co"># la edad (2), con la edad y el control socioeconómico (3) y con la</span></span>
+<span id="cb7-106"><a href="#cb7-106" aria-hidden="true" tabindex="-1"></a><span class="co"># interacción entre tratamiento y edad (4)</span></span>
+<span id="cb7-107"><a href="#cb7-107" aria-hidden="true" tabindex="-1"></a>estimar <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit, esp) {</span>
+<span id="cb7-108"><a href="#cb7-108" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (esp<span class="sc">$</span>muestra <span class="sc">==</span> <span class="st">"Menores de 30 años"</span>) d <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(dplyr<span class="sc">::</span><span class="fu">filter</span>(d, edad_nac <span class="sc">&lt;</span> <span class="dv">30</span>))</span>
+<span id="cb7-109"><a href="#cb7-109" aria-hidden="true" tabindex="-1"></a>  d<span class="sc">$</span>peso <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) d<span class="sc">$</span>pond <span class="cf">else</span> <span class="dv">1</span></span>
+<span id="cb7-110"><a href="#cb7-110" aria-hidden="true" tabindex="-1"></a>  rhs <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"factor(ola)"</span>),</span>
+<span id="cb7-111"><a href="#cb7-111" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"edad_nac"</span>, <span class="st">"factor(ola)"</span>),</span>
+<span id="cb7-112"><a href="#cb7-112" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana"</span>, <span class="st">"edad_nac"</span>, esp<span class="sc">$</span>control, <span class="st">"factor(ola)"</span>),</span>
+<span id="cb7-113"><a href="#cb7-113" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">"educacion_ciudadana * edad_nac"</span>, esp<span class="sc">$</span>control, <span class="st">"factor(ola)"</span>))</span>
+<span id="cb7-114"><a href="#cb7-114" aria-hidden="true" tabindex="-1"></a>  familia <span class="ot">&lt;-</span> <span class="cf">if</span> (esp<span class="sc">$</span>ponderacion <span class="sc">==</span> <span class="st">"Ponderado"</span>) <span class="fu">quasibinomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>) <span class="cf">else</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">"logit"</span>)</span>
+<span id="cb7-115"><a href="#cb7-115" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(rhs, <span class="cf">function</span>(r) {</span>
+<span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a>    f <span class="ot">&lt;-</span> <span class="fu">reformulate</span>(r, y)</span>
+<span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a>    m <span class="ot">&lt;-</span> <span class="cf">if</span> (logit) <span class="fu">glm</span>(f, <span class="at">family =</span> familia, <span class="at">data =</span> d, <span class="at">weights =</span> peso) <span class="cf">else</span> <span class="fu">lm</span>(f, <span class="at">data =</span> d, <span class="at">weights =</span> peso)</span>
+<span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">modelo =</span> m, <span class="at">ct =</span> lmtest<span class="sc">::</span><span class="fu">coeftest</span>(m, <span class="at">vcov. =</span> sandwich<span class="sc">::</span>vcovHC, <span class="at">type =</span> <span class="st">"HC1"</span>))</span>
+<span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a><span class="co"># Las ocho especificaciones de un resultado, cada una con sus cuatro modelos</span></span>
+<span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>estimar_todas <span class="ot">&lt;-</span> <span class="cf">function</span>(d, y, logit) {</span>
+<span id="cb7-124"><a href="#cb7-124" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) <span class="fu">estimar</span>(d, y, logit, especificaciones[i, ]))</span>
+<span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-126"><a href="#cb7-126" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb7-127"><a href="#cb7-127" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-130"><a href="#cb7-130" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-131"><a href="#cb7-131" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra propia de cada resultado ------------------------------------------------</span></span>
-<span id="cb7-132"><a href="#cb7-132" aria-hidden="true" tabindex="-1"></a>modelos <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(resultados)), <span class="cf">function</span>(r) {</span>
-<span id="cb7-133"><a href="#cb7-133" aria-hidden="true" tabindex="-1"></a>  <span class="fu">estimar_todas</span>(datos[[r]], resultados<span class="sc">$</span>y[r], resultados<span class="sc">$</span>logit[r])</span>
-<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a>}), resultados<span class="sc">$</span>resultado)</span>
-<span id="cb7-135"><a href="#cb7-135" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a><span class="do">## Base común ------------------------------------------------------------------------</span></span>
-<span id="cb7-137"><a href="#cb7-137" aria-hidden="true" tabindex="-1"></a>modelos_comun <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(resultados)), <span class="cf">function</span>(r) {</span>
-<span id="cb7-138"><a href="#cb7-138" aria-hidden="true" tabindex="-1"></a>  <span class="fu">estimar_todas</span>(data_comun, resultados<span class="sc">$</span>y[r], resultados<span class="sc">$</span>logit[r])</span>
-<span id="cb7-139"><a href="#cb7-139" aria-hidden="true" tabindex="-1"></a>}), resultados<span class="sc">$</span>resultado)</span>
-<span id="cb7-140"><a href="#cb7-140" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-141"><a href="#cb7-141" aria-hidden="true" tabindex="-1"></a><span class="do">## Coeficiente de la asignatura en cada especificación --------------------------------</span></span>
-<span id="cb7-142"><a href="#cb7-142" aria-hidden="true" tabindex="-1"></a>efectos <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">c</span>(<span class="st">"propia"</span>, <span class="st">"comun"</span>), <span class="cf">function</span>(base) {</span>
-<span id="cb7-143"><a href="#cb7-143" aria-hidden="true" tabindex="-1"></a>  lista <span class="ot">&lt;-</span> <span class="cf">if</span> (base <span class="sc">==</span> <span class="st">"propia"</span>) modelos <span class="cf">else</span> modelos_comun</span>
-<span id="cb7-144"><a href="#cb7-144" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">names</span>(lista), <span class="cf">function</span>(r) {</span>
-<span id="cb7-145"><a href="#cb7-145" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">seq_along</span>(lista[[r]]), <span class="cf">function</span>(i) {</span>
-<span id="cb7-146"><a href="#cb7-146" aria-hidden="true" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="cf">function</span>(k) {</span>
-<span id="cb7-147"><a href="#cb7-147" aria-hidden="true" tabindex="-1"></a>        x <span class="ot">&lt;-</span> lista[[r]][[i]][[k]]</span>
-<span id="cb7-148"><a href="#cb7-148" aria-hidden="true" tabindex="-1"></a>        <span class="fu">data.frame</span>(base, <span class="at">resultado =</span> r, especificaciones[i, ], <span class="at">modelo =</span> k, <span class="at">n =</span> <span class="fu">nobs</span>(x<span class="sc">$</span>modelo),</span>
-<span id="cb7-149"><a href="#cb7-149" aria-hidden="true" tabindex="-1"></a>                   <span class="at">estimacion =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">1</span>], <span class="at">ee =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">2</span>],</span>
-<span id="cb7-150"><a href="#cb7-150" aria-hidden="true" tabindex="-1"></a>                   <span class="at">p =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">4</span>])</span>
-<span id="cb7-151"><a href="#cb7-151" aria-hidden="true" tabindex="-1"></a>      }))</span>
-<span id="cb7-152"><a href="#cb7-152" aria-hidden="true" tabindex="-1"></a>    }))</span>
-<span id="cb7-153"><a href="#cb7-153" aria-hidden="true" tabindex="-1"></a>  }))</span>
-<span id="cb7-154"><a href="#cb7-154" aria-hidden="true" tabindex="-1"></a>}))</span>
-<span id="cb7-155"><a href="#cb7-155" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(efectos) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb7-156"><a href="#cb7-156" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-157"><a href="#cb7-157" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-158"><a href="#cb7-158" aria-hidden="true" tabindex="-1"></a><span class="fu"># Tablas</span></span>
-<span id="cb7-159"><a href="#cb7-159" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-162"><a href="#cb7-162" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb7-163"><a href="#cb7-163" aria-hidden="true" tabindex="-1"></a><span class="do">## Tablas completas -----------------------------------------------------------------</span></span>
-<span id="cb7-164"><a href="#cb7-164" aria-hidden="true" tabindex="-1"></a>nota <span class="ot">&lt;-</span> <span class="st">"%stars. Errores estándar HC1 entre paréntesis."</span></span>
-<span id="cb7-165"><a href="#cb7-165" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-166"><a href="#cb7-166" aria-hidden="true" tabindex="-1"></a>tabla <span class="ot">&lt;-</span> <span class="cf">function</span>(lista, nombres, caption) {</span>
-<span id="cb7-167"><a href="#cb7-167" aria-hidden="true" tabindex="-1"></a>  texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">lapply</span>(lista, <span class="st">`</span><span class="at">[[</span><span class="st">`</span>, <span class="st">"modelo"</span>),</span>
-<span id="cb7-168"><a href="#cb7-168" aria-hidden="true" tabindex="-1"></a>                  <span class="at">custom.model.names =</span> nombres,</span>
-<span id="cb7-169"><a href="#cb7-169" aria-hidden="true" tabindex="-1"></a>                  <span class="at">override.se =</span> <span class="fu">lapply</span>(lista, <span class="cf">function</span>(x) x<span class="sc">$</span>ct[, <span class="dv">2</span>]),</span>
-<span id="cb7-170"><a href="#cb7-170" aria-hidden="true" tabindex="-1"></a>                  <span class="at">override.pvalues =</span> <span class="fu">lapply</span>(lista, <span class="cf">function</span>(x) x<span class="sc">$</span>ct[, <span class="dv">4</span>]),</span>
-<span id="cb7-171"><a href="#cb7-171" aria-hidden="true" tabindex="-1"></a>                  <span class="at">caption =</span> caption, <span class="at">caption.above =</span> <span class="cn">TRUE</span>, <span class="at">custom.note =</span> nota)</span>
-<span id="cb7-172"><a href="#cb7-172" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-173"><a href="#cb7-173" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-174"><a href="#cb7-174" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (r <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">nrow</span>(resultados))) {</span>
-<span id="cb7-175"><a href="#cb7-175" aria-hidden="true" tabindex="-1"></a>  <span class="fu">writeLines</span>(<span class="fu">sapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) {</span>
-<span id="cb7-176"><a href="#cb7-176" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tabla</span>(modelos[[r]][[i]], <span class="fu">paste</span>(<span class="st">"Modelo"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>),</span>
-<span id="cb7-177"><a href="#cb7-177" aria-hidden="true" tabindex="-1"></a>          <span class="fu">paste0</span>(resultados<span class="sc">$</span>nombre[r], <span class="st">": "</span>, especificaciones<span class="sc">$</span>titulo[i]))</span>
-<span id="cb7-178"><a href="#cb7-178" aria-hidden="true" tabindex="-1"></a>  }), <span class="fu">paste0</span>(<span class="st">"output/tables/principal_"</span>, resultados<span class="sc">$</span>resultado[r], <span class="st">".html"</span>))</span>
-<span id="cb7-179"><a href="#cb7-179" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-180"><a href="#cb7-180" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-181"><a href="#cb7-181" aria-hidden="true" tabindex="-1"></a><span class="co"># Muestra común: los tres modelos de cada resultado en la misma tabla</span></span>
-<span id="cb7-182"><a href="#cb7-182" aria-hidden="true" tabindex="-1"></a>nombres_cortos <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Interés"</span>, <span class="st">"Confianza"</span>, <span class="st">"Voto"</span>)</span>
-<span id="cb7-183"><a href="#cb7-183" aria-hidden="true" tabindex="-1"></a><span class="fu">writeLines</span>(<span class="fu">sapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) {</span>
-<span id="cb7-184"><a href="#cb7-184" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tabla</span>(<span class="fu">unlist</span>(<span class="fu">lapply</span>(modelos_comun, <span class="st">`</span><span class="at">[[</span><span class="st">`</span>, i), <span class="at">recursive =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb7-185"><a href="#cb7-185" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(<span class="fu">rep</span>(nombres_cortos, <span class="at">each =</span> <span class="dv">3</span>), <span class="st">"M"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">sep =</span> <span class="st">""</span>),</span>
-<span id="cb7-186"><a href="#cb7-186" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste0</span>(<span class="st">"Muestra común: "</span>, especificaciones<span class="sc">$</span>titulo[i]))</span>
-<span id="cb7-187"><a href="#cb7-187" aria-hidden="true" tabindex="-1"></a>}), <span class="st">"output/tables/principal_muestra_comun.html"</span>)</span>
-<span id="cb7-188"><a href="#cb7-188" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-189"><a href="#cb7-189" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">list</span>(<span class="at">resultados =</span> resultados, <span class="at">especificaciones =</span> especificaciones,</span>
-<span id="cb7-190"><a href="#cb7-190" aria-hidden="true" tabindex="-1"></a>             <span class="at">datos =</span> datos, <span class="at">datos_comun =</span> data_comun, <span class="at">muestras =</span> muestras,</span>
-<span id="cb7-191"><a href="#cb7-191" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos =</span> modelos, <span class="at">modelos_comun =</span> modelos_comun, <span class="at">efectos =</span> efectos),</span>
-<span id="cb7-192"><a href="#cb7-192" aria-hidden="true" tabindex="-1"></a>        <span class="st">"output/models/modelos_principales.rds"</span>)</span>
-<span id="cb7-193"><a href="#cb7-193" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-128"><a href="#cb7-128" aria-hidden="true" tabindex="-1"></a><span class="fu"># Estimación</span></span>
+<span id="cb7-129"><a href="#cb7-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-132"><a href="#cb7-132" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb7-133"><a href="#cb7-133" aria-hidden="true" tabindex="-1"></a><span class="do">## Muestra propia de cada resultado ------------------------------------------------</span></span>
+<span id="cb7-134"><a href="#cb7-134" aria-hidden="true" tabindex="-1"></a>modelos <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(resultados)), <span class="cf">function</span>(r) {</span>
+<span id="cb7-135"><a href="#cb7-135" aria-hidden="true" tabindex="-1"></a>  <span class="fu">estimar_todas</span>(datos[[r]], resultados<span class="sc">$</span>y[r], resultados<span class="sc">$</span>logit[r])</span>
+<span id="cb7-136"><a href="#cb7-136" aria-hidden="true" tabindex="-1"></a>}), resultados<span class="sc">$</span>resultado)</span>
+<span id="cb7-137"><a href="#cb7-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-138"><a href="#cb7-138" aria-hidden="true" tabindex="-1"></a><span class="do">## Base común ------------------------------------------------------------------------</span></span>
+<span id="cb7-139"><a href="#cb7-139" aria-hidden="true" tabindex="-1"></a>modelos_comun <span class="ot">&lt;-</span> <span class="fu">setNames</span>(<span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(resultados)), <span class="cf">function</span>(r) {</span>
+<span id="cb7-140"><a href="#cb7-140" aria-hidden="true" tabindex="-1"></a>  <span class="fu">estimar_todas</span>(data_comun, resultados<span class="sc">$</span>y[r], resultados<span class="sc">$</span>logit[r])</span>
+<span id="cb7-141"><a href="#cb7-141" aria-hidden="true" tabindex="-1"></a>}), resultados<span class="sc">$</span>resultado)</span>
+<span id="cb7-142"><a href="#cb7-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-143"><a href="#cb7-143" aria-hidden="true" tabindex="-1"></a><span class="do">## Coeficiente de la asignatura en cada especificación --------------------------------</span></span>
+<span id="cb7-144"><a href="#cb7-144" aria-hidden="true" tabindex="-1"></a>efectos <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">c</span>(<span class="st">"propia"</span>, <span class="st">"comun"</span>), <span class="cf">function</span>(base) {</span>
+<span id="cb7-145"><a href="#cb7-145" aria-hidden="true" tabindex="-1"></a>  lista <span class="ot">&lt;-</span> <span class="cf">if</span> (base <span class="sc">==</span> <span class="st">"propia"</span>) modelos <span class="cf">else</span> modelos_comun</span>
+<span id="cb7-146"><a href="#cb7-146" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">names</span>(lista), <span class="cf">function</span>(r) {</span>
+<span id="cb7-147"><a href="#cb7-147" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="fu">seq_along</span>(lista[[r]]), <span class="cf">function</span>(i) {</span>
+<span id="cb7-148"><a href="#cb7-148" aria-hidden="true" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) {</span>
+<span id="cb7-149"><a href="#cb7-149" aria-hidden="true" tabindex="-1"></a>        x <span class="ot">&lt;-</span> lista[[r]][[i]][[k]]</span>
+<span id="cb7-150"><a href="#cb7-150" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Interacción con la edad, solo en el modelo 4</span></span>
+<span id="cb7-151"><a href="#cb7-151" aria-hidden="true" tabindex="-1"></a>        int <span class="ot">&lt;-</span> <span class="cf">if</span> (k <span class="sc">==</span> <span class="dv">4</span>) x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana:edad_nac"</span>, ] <span class="cf">else</span> <span class="fu">rep</span>(<span class="cn">NA_real_</span>, <span class="dv">4</span>)</span>
+<span id="cb7-152"><a href="#cb7-152" aria-hidden="true" tabindex="-1"></a>        <span class="fu">data.frame</span>(base, <span class="at">resultado =</span> r, especificaciones[i, ], <span class="at">modelo =</span> k, <span class="at">n =</span> <span class="fu">nobs</span>(x<span class="sc">$</span>modelo),</span>
+<span id="cb7-153"><a href="#cb7-153" aria-hidden="true" tabindex="-1"></a>                   <span class="at">estimacion =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">1</span>], <span class="at">ee =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">2</span>],</span>
+<span id="cb7-154"><a href="#cb7-154" aria-hidden="true" tabindex="-1"></a>                   <span class="at">p =</span> x<span class="sc">$</span>ct[<span class="st">"educacion_ciudadana"</span>, <span class="dv">4</span>],</span>
+<span id="cb7-155"><a href="#cb7-155" aria-hidden="true" tabindex="-1"></a>                   <span class="at">interaccion =</span> int[<span class="dv">1</span>], <span class="at">ee_interaccion =</span> int[<span class="dv">2</span>], <span class="at">p_interaccion =</span> int[<span class="dv">4</span>])</span>
+<span id="cb7-156"><a href="#cb7-156" aria-hidden="true" tabindex="-1"></a>      }))</span>
+<span id="cb7-157"><a href="#cb7-157" aria-hidden="true" tabindex="-1"></a>    }))</span>
+<span id="cb7-158"><a href="#cb7-158" aria-hidden="true" tabindex="-1"></a>  }))</span>
+<span id="cb7-159"><a href="#cb7-159" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb7-160"><a href="#cb7-160" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(efectos) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb7-161"><a href="#cb7-161" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-162"><a href="#cb7-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-163"><a href="#cb7-163" aria-hidden="true" tabindex="-1"></a><span class="fu"># Tablas</span></span>
+<span id="cb7-164"><a href="#cb7-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-167"><a href="#cb7-167" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb7-168"><a href="#cb7-168" aria-hidden="true" tabindex="-1"></a><span class="do">## Tablas completas -----------------------------------------------------------------</span></span>
+<span id="cb7-169"><a href="#cb7-169" aria-hidden="true" tabindex="-1"></a>nota <span class="ot">&lt;-</span> <span class="st">"%stars. Errores estándar HC1 entre paréntesis."</span></span>
+<span id="cb7-170"><a href="#cb7-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-171"><a href="#cb7-171" aria-hidden="true" tabindex="-1"></a>tabla <span class="ot">&lt;-</span> <span class="cf">function</span>(lista, nombres, caption) {</span>
+<span id="cb7-172"><a href="#cb7-172" aria-hidden="true" tabindex="-1"></a>  texreg<span class="sc">::</span><span class="fu">htmlreg</span>(<span class="fu">lapply</span>(lista, <span class="st">`</span><span class="at">[[</span><span class="st">`</span>, <span class="st">"modelo"</span>),</span>
+<span id="cb7-173"><a href="#cb7-173" aria-hidden="true" tabindex="-1"></a>                  <span class="at">custom.model.names =</span> nombres,</span>
+<span id="cb7-174"><a href="#cb7-174" aria-hidden="true" tabindex="-1"></a>                  <span class="at">override.se =</span> <span class="fu">lapply</span>(lista, <span class="cf">function</span>(x) x<span class="sc">$</span>ct[, <span class="dv">2</span>]),</span>
+<span id="cb7-175"><a href="#cb7-175" aria-hidden="true" tabindex="-1"></a>                  <span class="at">override.pvalues =</span> <span class="fu">lapply</span>(lista, <span class="cf">function</span>(x) x<span class="sc">$</span>ct[, <span class="dv">4</span>]),</span>
+<span id="cb7-176"><a href="#cb7-176" aria-hidden="true" tabindex="-1"></a>                  <span class="at">caption =</span> caption, <span class="at">caption.above =</span> <span class="cn">TRUE</span>, <span class="at">custom.note =</span> nota)</span>
+<span id="cb7-177"><a href="#cb7-177" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-178"><a href="#cb7-178" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-179"><a href="#cb7-179" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (r <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">nrow</span>(resultados))) {</span>
+<span id="cb7-180"><a href="#cb7-180" aria-hidden="true" tabindex="-1"></a>  <span class="fu">writeLines</span>(<span class="fu">sapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) {</span>
+<span id="cb7-181"><a href="#cb7-181" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tabla</span>(modelos[[r]][[i]], <span class="fu">paste</span>(<span class="st">"Modelo"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>),</span>
+<span id="cb7-182"><a href="#cb7-182" aria-hidden="true" tabindex="-1"></a>          <span class="fu">paste0</span>(resultados<span class="sc">$</span>nombre[r], <span class="st">": "</span>, especificaciones<span class="sc">$</span>titulo[i]))</span>
+<span id="cb7-183"><a href="#cb7-183" aria-hidden="true" tabindex="-1"></a>  }), <span class="fu">paste0</span>(<span class="st">"output/tables/principal_"</span>, resultados<span class="sc">$</span>resultado[r], <span class="st">".html"</span>))</span>
+<span id="cb7-184"><a href="#cb7-184" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-185"><a href="#cb7-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-186"><a href="#cb7-186" aria-hidden="true" tabindex="-1"></a><span class="co"># Muestra común: los cuatro modelos de cada resultado en la misma tabla</span></span>
+<span id="cb7-187"><a href="#cb7-187" aria-hidden="true" tabindex="-1"></a>nombres_cortos <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Interés"</span>, <span class="st">"Confianza"</span>, <span class="st">"Voto"</span>)</span>
+<span id="cb7-188"><a href="#cb7-188" aria-hidden="true" tabindex="-1"></a><span class="fu">writeLines</span>(<span class="fu">sapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(especificaciones)), <span class="cf">function</span>(i) {</span>
+<span id="cb7-189"><a href="#cb7-189" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tabla</span>(<span class="fu">unlist</span>(<span class="fu">lapply</span>(modelos_comun, <span class="st">`</span><span class="at">[[</span><span class="st">`</span>, i), <span class="at">recursive =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb7-190"><a href="#cb7-190" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(<span class="fu">rep</span>(nombres_cortos, <span class="at">each =</span> <span class="dv">4</span>), <span class="st">"M"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="at">sep =</span> <span class="st">""</span>),</span>
+<span id="cb7-191"><a href="#cb7-191" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste0</span>(<span class="st">"Muestra común: "</span>, especificaciones<span class="sc">$</span>titulo[i]))</span>
+<span id="cb7-192"><a href="#cb7-192" aria-hidden="true" tabindex="-1"></a>}), <span class="st">"output/tables/principal_muestra_comun.html"</span>)</span>
+<span id="cb7-193"><a href="#cb7-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-194"><a href="#cb7-194" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">list</span>(<span class="at">resultados =</span> resultados, <span class="at">especificaciones =</span> especificaciones,</span>
+<span id="cb7-195"><a href="#cb7-195" aria-hidden="true" tabindex="-1"></a>             <span class="at">datos =</span> datos, <span class="at">datos_comun =</span> data_comun, <span class="at">muestras =</span> muestras,</span>
+<span id="cb7-196"><a href="#cb7-196" aria-hidden="true" tabindex="-1"></a>             <span class="at">modelos =</span> modelos, <span class="at">modelos_comun =</span> modelos_comun, <span class="at">efectos =</span> efectos),</span>
+<span id="cb7-197"><a href="#cb7-197" aria-hidden="true" tabindex="-1"></a>        <span class="st">"output/models/modelos_principales.rds"</span>)</span>
+<span id="cb7-198"><a href="#cb7-198" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code></pre></div><button title="Copiar al portapapeles" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

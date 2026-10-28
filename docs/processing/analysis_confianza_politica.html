@@ -132,6 +132,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Presentación</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../processing/analysis_did_principal.html"> 
+<span class="menu-text">Diferencia en diferencias</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../processing/analysis_psm.html"> 
+<span class="menu-text">Propensity Score Matching</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../processing/preparation.html"> 
 <span class="menu-text">Preparación</span></a>
   </li>  
@@ -234,7 +242,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Fecha de publicación</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">21 de octubre de 2026</p>
+      <p class="date">28 de octubre de 2026</p>
     </div>
   </div>
   
@@ -351,23 +359,23 @@ están en analisis-respaldo/. -->
 <span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  gtsummary<span class="sc">::</span><span class="fu">modify_caption</span>(<span class="st">"Descriptivos"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
-<div id="ftvimfxidn" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#ftvimfxidn table {
+<div id="sylxhspkgu" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#sylxhspkgu table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#ftvimfxidn thead, #ftvimfxidn tbody, #ftvimfxidn tfoot, #ftvimfxidn tr, #ftvimfxidn td, #ftvimfxidn th {
+#sylxhspkgu thead, #sylxhspkgu tbody, #sylxhspkgu tfoot, #sylxhspkgu tr, #sylxhspkgu td, #sylxhspkgu th {
   border-style: none;
 }
 
-#ftvimfxidn p {
+#sylxhspkgu p {
   margin: 0;
   padding: 0;
 }
 
-#ftvimfxidn .gt_table {
+#sylxhspkgu .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -393,12 +401,12 @@ están en analisis-respaldo/. -->
   border-left-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_caption {
+#sylxhspkgu .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#ftvimfxidn .gt_title {
+#sylxhspkgu .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -410,7 +418,7 @@ están en analisis-respaldo/. -->
   border-bottom-width: 0;
 }
 
-#ftvimfxidn .gt_subtitle {
+#sylxhspkgu .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -422,7 +430,7 @@ están en analisis-respaldo/. -->
   border-top-width: 0;
 }
 
-#ftvimfxidn .gt_heading {
+#sylxhspkgu .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -434,13 +442,13 @@ están en analisis-respaldo/. -->
   border-right-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_bottom_border {
+#sylxhspkgu .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_col_headings {
+#sylxhspkgu .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -455,7 +463,7 @@ están en analisis-respaldo/. -->
   border-right-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_col_heading {
+#sylxhspkgu .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -475,7 +483,7 @@ están en analisis-respaldo/. -->
   overflow-x: hidden;
 }
 
-#ftvimfxidn .gt_column_spanner_outer {
+#sylxhspkgu .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -487,15 +495,15 @@ están en analisis-respaldo/. -->
   padding-right: 4px;
 }
 
-#ftvimfxidn .gt_column_spanner_outer:first-child {
+#sylxhspkgu .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#ftvimfxidn .gt_column_spanner_outer:last-child {
+#sylxhspkgu .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#ftvimfxidn .gt_column_spanner {
+#sylxhspkgu .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -507,11 +515,11 @@ están en analisis-respaldo/. -->
   width: 100%;
 }
 
-#ftvimfxidn .gt_spanner_row {
+#sylxhspkgu .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#ftvimfxidn .gt_group_heading {
+#sylxhspkgu .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -537,7 +545,7 @@ están en analisis-respaldo/. -->
   text-align: left;
 }
 
-#ftvimfxidn .gt_empty_group_heading {
+#sylxhspkgu .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -552,15 +560,15 @@ están en analisis-respaldo/. -->
   vertical-align: middle;
 }
 
-#ftvimfxidn .gt_from_md > :first-child {
+#sylxhspkgu .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#ftvimfxidn .gt_from_md > :last-child {
+#sylxhspkgu .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#ftvimfxidn .gt_row {
+#sylxhspkgu .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -579,7 +587,7 @@ están en analisis-respaldo/. -->
   overflow-x: hidden;
 }
 
-#ftvimfxidn .gt_stub {
+#sylxhspkgu .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -592,7 +600,7 @@ están en analisis-respaldo/. -->
   padding-right: 5px;
 }
 
-#ftvimfxidn .gt_stub_row_group {
+#sylxhspkgu .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -606,15 +614,15 @@ están en analisis-respaldo/. -->
   vertical-align: top;
 }
 
-#ftvimfxidn .gt_row_group_first td {
+#sylxhspkgu .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#ftvimfxidn .gt_row_group_first th {
+#sylxhspkgu .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#ftvimfxidn .gt_summary_row {
+#sylxhspkgu .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -624,16 +632,16 @@ están en analisis-respaldo/. -->
   padding-right: 5px;
 }
 
-#ftvimfxidn .gt_first_summary_row {
+#sylxhspkgu .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_first_summary_row.thick {
+#sylxhspkgu .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#ftvimfxidn .gt_last_summary_row {
+#sylxhspkgu .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -643,7 +651,7 @@ están en analisis-respaldo/. -->
   border-bottom-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_grand_summary_row {
+#sylxhspkgu .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -653,7 +661,7 @@ están en analisis-respaldo/. -->
   padding-right: 5px;
 }
 
-#ftvimfxidn .gt_first_grand_summary_row {
+#sylxhspkgu .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -663,7 +671,7 @@ están en analisis-respaldo/. -->
   border-top-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_last_grand_summary_row_top {
+#sylxhspkgu .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -673,11 +681,11 @@ están en analisis-respaldo/. -->
   border-bottom-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_striped {
+#sylxhspkgu .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#ftvimfxidn .gt_table_body {
+#sylxhspkgu .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -686,7 +694,7 @@ están en analisis-respaldo/. -->
   border-bottom-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_footnotes {
+#sylxhspkgu .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -700,7 +708,7 @@ están en analisis-respaldo/. -->
   border-right-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_footnote {
+#sylxhspkgu .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -709,7 +717,7 @@ están en analisis-respaldo/. -->
   padding-right: 5px;
 }
 
-#ftvimfxidn .gt_sourcenotes {
+#sylxhspkgu .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -723,7 +731,7 @@ están en analisis-respaldo/. -->
   border-right-color: #D3D3D3;
 }
 
-#ftvimfxidn .gt_sourcenote {
+#sylxhspkgu .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -731,64 +739,73 @@ están en analisis-respaldo/. -->
   padding-right: 5px;
 }
 
-#ftvimfxidn .gt_left {
+#sylxhspkgu .gt_left {
   text-align: left;
 }
 
-#ftvimfxidn .gt_center {
+#sylxhspkgu .gt_center {
   text-align: center;
 }
 
-#ftvimfxidn .gt_right {
+#sylxhspkgu .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#ftvimfxidn .gt_font_normal {
+#sylxhspkgu .gt_font_normal {
   font-weight: normal;
 }
 
-#ftvimfxidn .gt_font_bold {
+#sylxhspkgu .gt_font_bold {
   font-weight: bold;
 }
 
-#ftvimfxidn .gt_font_italic {
+#sylxhspkgu .gt_font_italic {
   font-style: italic;
 }
 
-#ftvimfxidn .gt_super {
+#sylxhspkgu .gt_super {
   font-size: 65%;
 }
 
-#ftvimfxidn .gt_footnote_marks {
+#sylxhspkgu .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#ftvimfxidn .gt_asterisk {
+#sylxhspkgu .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#ftvimfxidn .gt_indent_1 {
+#sylxhspkgu .gt_indent_1 {
   text-indent: 5px;
 }
 
-#ftvimfxidn .gt_indent_2 {
+#sylxhspkgu .gt_indent_2 {
   text-indent: 10px;
 }
 
-#ftvimfxidn .gt_indent_3 {
+#sylxhspkgu .gt_indent_3 {
   text-indent: 15px;
 }
 
-#ftvimfxidn .gt_indent_4 {
+#sylxhspkgu .gt_indent_4 {
   text-indent: 20px;
 }
 
-#ftvimfxidn .gt_indent_5 {
+#sylxhspkgu .gt_indent_5 {
   text-indent: 25px;
+}
+
+#sylxhspkgu .katex-display {
+  display: inline-flex !important;
+  margin-bottom: 0.75em !important;
+}
+
+#sylxhspkgu div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+  height: 0px !important;
 }
 </style>
 
@@ -800,8 +817,8 @@ están en analisis-respaldo/. -->
 </colgroup>
 <thead>
 <tr class="gt_col_headings header">
-<th id="<strong>Variable</strong>" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"><strong>Variable</strong></th>
-<th id="<strong>N = 12,315</strong><span class=&quot;gt_footnote_marks&quot; style=&quot;white-space:nowrap;font-style:italic;font-weight:normal;&quot;><sup>1</sup></span>" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col"><strong>N = 12,315</strong><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;"><sup>1</sup></span></th>
+<th id="label" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"><strong>Variable</strong></th>
+<th id="stat_0" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col"><strong>N = 12,315</strong><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;line-height:0;"><sup>1</sup></span></th>
 </tr>
 </thead>
 <tbody class="gt_table_body">
@@ -863,9 +880,9 @@ están en analisis-respaldo/. -->
 <td class="gt_row gt_left" headers="label">Edad</td>
 <td class="gt_row gt_center" headers="stat_0">49 (18)</td>
 </tr>
-</tbody><tfoot class="gt_footnotes">
-<tr class="odd">
-<td colspan="2" class="gt_footnote"><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;"><sup>1</sup></span> Mean (SD); n (%)</td>
+</tbody><tfoot>
+<tr class="gt_footnotes odd">
+<td colspan="2" class="gt_footnote"><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;line-height:0;"><sup>1</sup></span> Mean (SD); n (%)</td>
 </tr>
 </tfoot>
 
@@ -925,13 +942,13 @@ Model 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.54<sup>***</sup>
+1.54<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.48<sup>***</sup>
+1.48<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.48<sup>***</sup>
+1.48<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -953,13 +970,13 @@ Model 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1009,13 +1026,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1037,13 +1054,13 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1065,13 +1082,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1149,13 +1166,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1177,13 +1194,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1208,10 +1225,10 @@ educMedia
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1236,10 +1253,10 @@ educTécnica
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1264,10 +1281,10 @@ educUniversitaria o más
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1358,7 +1375,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05
 </td>
 </tr>
 </tfoot>
@@ -1416,16 +1433,16 @@ Interacción con GSE
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.54<sup>***</sup>
+1.54<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.50<sup>***</sup>
+1.50<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.55<sup>***</sup>
+1.55<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.55<sup>***</sup>
+1.55<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1450,16 +1467,16 @@ Interacción con GSE
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1518,16 +1535,16 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1552,16 +1569,16 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1586,16 +1603,16 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.04
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -1688,16 +1705,16 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1722,16 +1739,16 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1759,13 +1776,13 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -1793,13 +1810,13 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>***</sup>
+0.13<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>***</sup>
+0.13<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>***</sup>
+0.13<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1830,10 +1847,10 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>***</sup>
+-0.00<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>***</sup>
+-0.00<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -1976,7 +1993,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="5">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05
 </td>
 </tr>
 </tfoot>
@@ -2056,19 +2073,19 @@ Modelo 5
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.60<sup>***</sup>
+1.60<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.43<sup>***</sup>
+1.43<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.79<sup>***</sup>
+1.79<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.52<sup>***</sup>
+1.52<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.89<sup>***</sup>
+1.89<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -2096,16 +2113,16 @@ Modelo 5
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>***</sup>
+0.15<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.06
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>***</sup>
+0.15<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.05
@@ -2139,16 +2156,16 @@ factor(ola)88
 0.09
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>*</sup>
+0.11<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.08
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -2216,19 +2233,19 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.14<sup>**</sup>
+0.14<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>**</sup>
+0.13<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>**</sup>
+0.13<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -2256,19 +2273,19 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.20<sup>***</sup>
+0.20<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -2302,13 +2319,13 @@ factor(ola)93
 0.09
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.08
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -2336,19 +2353,19 @@ factor(ola)93
 factor(ola)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.20<sup>***</sup>
+0.20<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -2376,19 +2393,19 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>*</sup>
+0.11<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.14<sup>**</sup>
+0.14<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -2416,19 +2433,19 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.20<sup>***</sup>
+0.20<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -2459,7 +2476,7 @@ educMedia
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.12
@@ -2539,10 +2556,10 @@ educUniversitaria o más
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -2582,13 +2599,13 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.01<sup>**</sup>
+-0.01<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.02<sup>**</sup>
+-0.02<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -2625,10 +2642,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>*</sup>
+0.08<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>*</sup>
+0.08<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -2665,10 +2682,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -2755,7 +2772,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="6">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05
 </td>
 </tr>
 </tfoot>
@@ -2792,19 +2809,19 @@ Modelo 5
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.58<sup>***</sup>
+1.58<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.42<sup>***</sup>
+1.42<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.72<sup>***</sup>
+1.72<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.51<sup>***</sup>
+1.51<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.83<sup>***</sup>
+1.83<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -2832,19 +2849,19 @@ Modelo 5
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>***</sup>
+0.18<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>*</sup>
+0.08<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -2872,19 +2889,19 @@ educacion_ciudadana
 factor(ola)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>*</sup>
+0.08<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>*</sup>
+0.08<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.07
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -2918,13 +2935,13 @@ factor(ola)89
 0.07
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.07
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -2952,19 +2969,19 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>**</sup>
+0.10<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -2992,19 +3009,19 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>***</sup>
+0.18<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3032,19 +3049,19 @@ factor(ola)92
 factor(ola)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>*</sup>
+0.08<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.08
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.07
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -3072,19 +3089,19 @@ factor(ola)93
 factor(ola)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>**</sup>
+0.13<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>**</sup>
+0.13<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>***</sup>
+0.15<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>**</sup>
+0.12<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.14<sup>***</sup>
+0.14<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3112,19 +3129,19 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>*</sup>
+0.11<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>**</sup>
+0.12<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>**</sup>
+0.11<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -3152,19 +3169,19 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.20<sup>***</sup>
+0.20<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3195,10 +3212,10 @@ educMedia
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>**</sup>
+0.13<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -3235,10 +3252,10 @@ educTécnica
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -3275,10 +3292,10 @@ educUniversitaria o más
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -3318,13 +3335,13 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.01<sup>***</sup>
+-0.01<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.01<sup>***</sup>
+-0.01<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3361,10 +3378,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -3401,10 +3418,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3491,7 +3508,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="6">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05
 </td>
 </tr>
 </tfoot>
@@ -3574,13 +3591,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.54<sup>***</sup>
+1.54<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.48<sup>***</sup>
+1.48<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.48<sup>***</sup>
+1.48<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3602,13 +3619,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3658,13 +3675,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -3686,13 +3703,13 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -3714,13 +3731,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -3798,13 +3815,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3826,13 +3843,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -3857,10 +3874,10 @@ educMedia
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -3885,10 +3902,10 @@ educTécnica
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -3913,10 +3930,10 @@ educUniversitaria o más
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4007,7 +4024,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -4038,13 +4055,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.54<sup>***</sup>
+1.54<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.50<sup>***</sup>
+1.50<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.55<sup>***</sup>
+1.55<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4066,13 +4083,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4122,13 +4139,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -4150,13 +4167,13 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -4178,13 +4195,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.04
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -4262,13 +4279,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4290,13 +4307,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4321,10 +4338,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>**</sup>
+0.04<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -4349,10 +4366,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>***</sup>
+0.13<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>***</sup>
+0.13<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4380,7 +4397,7 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>***</sup>
+-0.00<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4443,7 +4460,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -4474,13 +4491,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.53<sup>***</sup>
+1.53<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.48<sup>***</sup>
+1.48<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.49<sup>***</sup>
+1.49<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4502,13 +4519,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4530,13 +4547,13 @@ educacion_ciudadana
 factor(ola)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -4558,13 +4575,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>***</sup>
+0.07<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4586,13 +4603,13 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4614,13 +4631,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4642,7 +4659,7 @@ factor(ola)92
 factor(ola)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.04
@@ -4670,13 +4687,13 @@ factor(ola)93
 factor(ola)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -4698,13 +4715,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>***</sup>
+0.12<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>***</sup>
+0.11<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>***</sup>
+0.11<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4726,13 +4743,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4785,10 +4802,10 @@ educTécnica
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -4813,10 +4830,10 @@ educUniversitaria o más
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4907,7 +4924,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -4938,13 +4955,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.53<sup>***</sup>
+1.53<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.49<sup>***</sup>
+1.49<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.55<sup>***</sup>
+1.55<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4966,13 +4983,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -4994,13 +5011,13 @@ educacion_ciudadana
 factor(ola)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5022,13 +5039,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5050,13 +5067,13 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5078,13 +5095,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>***</sup>
+0.08<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -5106,7 +5123,7 @@ factor(ola)92
 factor(ola)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.03
@@ -5134,7 +5151,7 @@ factor(ola)93
 factor(ola)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.03
@@ -5162,13 +5179,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>***</sup>
+0.12<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5190,13 +5207,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5221,10 +5238,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.03<sup>**</sup>
+0.03<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.03<sup>*</sup>
+0.03<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5249,10 +5266,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>***</sup>
+0.12<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>***</sup>
+0.12<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5280,7 +5297,7 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>***</sup>
+-0.00<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5343,7 +5360,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -5374,13 +5391,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.55<sup>***</sup>
+1.55<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.47<sup>***</sup>
+1.47<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.53<sup>***</sup>
+1.53<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5402,13 +5419,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.19<sup>***</sup>
+0.19<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5430,13 +5447,13 @@ educacion_ciudadana
 factor(ola)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5458,13 +5475,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -5514,13 +5531,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5576,7 +5593,7 @@ factor(ola)94
 0.05
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5598,13 +5615,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>***</sup>
+0.11<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>***</sup>
+0.11<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>***</sup>
+0.11<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5626,13 +5643,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5657,7 +5674,7 @@ educMedia
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.03
@@ -5685,7 +5702,7 @@ educTécnica
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.04
@@ -5713,10 +5730,10 @@ educUniversitaria o más
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.20<sup>***</sup>
+0.20<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>***</sup>
+0.18<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5744,7 +5761,7 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>*</sup>
+-0.00<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5807,7 +5824,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -5838,13 +5855,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.55<sup>***</sup>
+1.55<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.49<sup>***</sup>
+1.49<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.59<sup>***</sup>
+1.59<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5866,13 +5883,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>***</sup>
+0.18<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -5894,13 +5911,13 @@ educacion_ciudadana
 factor(ola)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.05
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -5922,13 +5939,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -5950,7 +5967,7 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.05
@@ -5978,13 +5995,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -6062,13 +6079,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>***</sup>
+0.11<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>***</sup>
+0.09<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6090,13 +6107,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6121,10 +6138,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -6149,10 +6166,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>***</sup>
+0.15<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6180,7 +6197,7 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>***</sup>
+-0.00<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6243,7 +6260,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -6274,13 +6291,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.53<sup>***</sup>
+1.53<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.47<sup>***</sup>
+1.47<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.53<sup>***</sup>
+1.53<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6302,13 +6319,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>***</sup>
+0.18<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6330,13 +6347,13 @@ educacion_ciudadana
 factor(ola)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -6358,13 +6375,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -6386,13 +6403,13 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6414,13 +6431,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6442,13 +6459,13 @@ factor(ola)92
 factor(ola)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6470,13 +6487,13 @@ factor(ola)93
 factor(ola)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6498,13 +6515,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>***</sup>
+0.13<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>***</sup>
+0.12<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>***</sup>
+0.12<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6526,13 +6543,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.27<sup>***</sup>
+0.27<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.27<sup>***</sup>
+0.27<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6557,7 +6574,7 @@ educMedia
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.04<sup>*</sup>
+0.04<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.02
@@ -6585,7 +6602,7 @@ educTécnica
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>**</sup>
+0.06<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.04
@@ -6613,10 +6630,10 @@ educUniversitaria o más
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>***</sup>
+0.18<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6644,7 +6661,7 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>*</sup>
+-0.00<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6707,7 +6724,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -6738,13 +6755,13 @@ Modelo 3
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.53<sup>***</sup>
+1.53<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.48<sup>***</sup>
+1.48<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.58<sup>***</sup>
+1.58<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6766,13 +6783,13 @@ Modelo 3
 educacion_ciudadana
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6794,13 +6811,13 @@ educacion_ciudadana
 factor(ola)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>**</sup>
+0.07<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6822,13 +6839,13 @@ factor(ola)88
 factor(ola)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>*</sup>
+0.08<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.08<sup>**</sup>
+0.08<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>**</sup>
+0.09<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -6850,13 +6867,13 @@ factor(ola)89
 factor(ola)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6878,13 +6895,13 @@ factor(ola)91
 factor(ola)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>***</sup>
+0.10<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>**</sup>
+0.09<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>**</sup>
+0.09<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -6906,13 +6923,13 @@ factor(ola)92
 factor(ola)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.07<sup>*</sup>
+0.07<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.05
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6934,13 +6951,13 @@ factor(ola)93
 factor(ola)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.06<sup>*</sup>
+0.06<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.04
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>*</sup>
+0.05<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -6962,13 +6979,13 @@ factor(ola)94
 factor(ola)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>***</sup>
+0.13<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>***</sup>
+0.11<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>***</sup>
+0.12<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -6990,13 +7007,13 @@ factor(ola)95
 factor(ola)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.28<sup>***</sup>
+0.28<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.27<sup>***</sup>
+0.27<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -7021,10 +7038,10 @@ gse3C3
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.05<sup>**</sup>
+0.05<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -7049,10 +7066,10 @@ gse3ABC1-C2
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.14<sup>***</sup>
+0.14<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.14<sup>***</sup>
+0.14<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -7080,7 +7097,7 @@ edad_nac
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.00<sup>***</sup>
+-0.00<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -7143,7 +7160,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="4">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -7355,16 +7372,16 @@ EF edad y ola
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.56<sup>***</sup>
+1.56<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.69<sup>***</sup>
+1.69<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.74<sup>***</sup>
+1.74<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.69<sup>***</sup>
+1.69<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -7423,16 +7440,16 @@ joven
 ola92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -7457,13 +7474,13 @@ ola92
 ola93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.12
@@ -7491,16 +7508,16 @@ ola93
 ola94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>*</sup>
+0.16<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -7525,13 +7542,13 @@ ola94
 ola95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>***</sup>
+0.18<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.14
@@ -7559,16 +7576,16 @@ ola95
 ola96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.26<sup>***</sup>
+0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>**</sup>
+0.23<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -7667,7 +7684,7 @@ factor(edad_nac)20
 -0.15
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.13<sup>*</sup>
+-0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.15
@@ -7769,7 +7786,7 @@ factor(edad_nac)24
 -0.09
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.19
@@ -7837,7 +7854,7 @@ factor(edad_nac)26
 -0.13
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>**</sup>
+-0.20<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.02
@@ -7871,7 +7888,7 @@ factor(edad_nac)27
 -0.16
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.26<sup>**</sup>
+-0.26<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.11
@@ -7905,7 +7922,7 @@ factor(edad_nac)28
 -0.18
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.22<sup>**</sup>
+-0.22<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.17
@@ -7939,7 +7956,7 @@ factor(edad_nac)29
 -0.16
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.21<sup>**</sup>
+-0.21<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.14
@@ -7973,7 +7990,7 @@ factor(edad_nac)30
 -0.20
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.26<sup>***</sup>
+-0.26<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.18
@@ -8041,7 +8058,7 @@ factor(edad_nac)22
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.16<sup>*</sup>
+-0.16<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -8075,7 +8092,7 @@ ola88
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>**</sup>
+0.12<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -8109,7 +8126,7 @@ ola89
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -8143,7 +8160,7 @@ ola91
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
@@ -8221,7 +8238,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="5">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05
 </td>
 </tr>
 </tfoot>
@@ -8266,22 +8283,22 @@ Statistical models
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.56<sup>***</sup>
+1.56<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.56<sup>***</sup>
+1.56<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.69<sup>***</sup>
+1.69<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.69<sup>***</sup>
+1.69<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.69<sup>***</sup>
+1.69<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.69<sup>***</sup>
+1.69<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -8358,22 +8375,22 @@ joven
 ola92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -8404,16 +8421,16 @@ ola92
 ola93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.12
@@ -8450,22 +8467,22 @@ ola93
 ola94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>*</sup>
+0.16<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>*</sup>
+0.16<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -8496,22 +8513,22 @@ ola94
 ola95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>***</sup>
+0.16<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.14
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.14<sup>*</sup>
+0.14<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -8542,22 +8559,22 @@ ola95
 ola96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>**</sup>
+0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>**</sup>
+0.23<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -8689,13 +8706,13 @@ factor(edad_nac)20
 -0.15
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.15<sup>*</sup>
+-0.15<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.15
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.15<sup>*</sup>
+-0.15<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -8833,7 +8850,7 @@ factor(edad_nac)24
 -0.19
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.19<sup>*</sup>
+-0.19<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -9100,10 +9117,10 @@ factor(edad_nac)30
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.18
@@ -9208,7 +9225,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="7">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -9516,16 +9533,16 @@ M2 no lineal
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.72<sup>***</sup>
+1.72<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.57<sup>***</sup>
+1.57<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--1.18<sup>***</sup>
+-1.18<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--1.45<sup>***</sup>
+-1.45<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -9754,13 +9771,13 @@ factor(edad_nac)23
 factor(edad_nac)24
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>*</sup>
+-0.17<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.03
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>*</sup>
+-0.31<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.05
@@ -9822,13 +9839,13 @@ factor(edad_nac)25
 factor(edad_nac)26
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>*</sup>
+-0.17<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.03
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.31<sup>*</sup>
+-0.31<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.06
@@ -9856,13 +9873,13 @@ factor(edad_nac)26
 factor(edad_nac)27
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.09
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.42<sup>**</sup>
+-0.42<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.18
@@ -9890,13 +9907,13 @@ factor(edad_nac)27
 factor(edad_nac)28
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.05
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.36<sup>**</sup>
+-0.36<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.10
@@ -9924,13 +9941,13 @@ factor(edad_nac)28
 factor(edad_nac)29
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>*</sup>
+-0.18<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.04
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.32<sup>*</sup>
+-0.32<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.08
@@ -9958,13 +9975,13 @@ factor(edad_nac)29
 factor(edad_nac)30
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.09
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.43<sup>**</sup>
+-0.43<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.18
@@ -9992,16 +10009,16 @@ factor(edad_nac)30
 factor(ola_num)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>**</sup>
+0.24<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>*</sup>
+0.24<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -10026,16 +10043,16 @@ factor(ola_num)88
 factor(ola_num)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>*</sup>
+0.11<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>*</sup>
+0.18<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>*</sup>
+0.22<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -10060,16 +10077,16 @@ factor(ola_num)89
 factor(ola_num)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.30<sup>**</sup>
+0.30<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>*</sup>
+0.24<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -10094,16 +10111,16 @@ factor(ola_num)91
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.44<sup>***</sup>
+0.44<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.43<sup>***</sup>
+0.43<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -10128,16 +10145,16 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.31<sup>**</sup>
+0.31<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.32<sup>**</sup>
+0.32<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -10162,16 +10179,16 @@ factor(ola_num)93
 factor(ola_num)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.43<sup>***</sup>
+0.43<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.49<sup>***</sup>
+0.49<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -10196,16 +10213,16 @@ factor(ola_num)94
 factor(ola_num)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>**</sup>
+0.17<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.34<sup>***</sup>
+0.34<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.34<sup>**</sup>
+0.34<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -10230,16 +10247,16 @@ factor(ola_num)95
 factor(ola_num)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.27<sup>***</sup>
+0.27<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.48<sup>***</sup>
+0.48<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.51<sup>***</sup>
+0.51<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -10783,7 +10800,7 @@ W:edad19_ola96
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.60<sup>*</sup>
+-0.60<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -10879,13 +10896,13 @@ W:edad20_ola93
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.32<sup>*</sup>
+0.32<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.50<sup>*</sup>
+0.50<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11334,7 +11351,7 @@ Deviance
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="5">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Modelos no lineales: coeficientes del índice. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Modelos no lineales: coeficientes del índice. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -11420,7 +11437,7 @@ M1 con adelantos
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.76<sup>***</sup>
+1.76<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -11500,7 +11517,7 @@ factor(edad_nac)21
 factor(edad_nac)22
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.21<sup>*</sup>
+-0.21<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11532,7 +11549,7 @@ factor(edad_nac)23
 factor(edad_nac)24
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11564,7 +11581,7 @@ factor(edad_nac)25
 factor(edad_nac)26
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11580,7 +11597,7 @@ factor(edad_nac)26
 factor(edad_nac)27
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.26<sup>**</sup>
+-0.26<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -11596,7 +11613,7 @@ factor(edad_nac)27
 factor(edad_nac)28
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -11612,7 +11629,7 @@ factor(edad_nac)28
 factor(edad_nac)29
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.21<sup>*</sup>
+-0.21<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11628,7 +11645,7 @@ factor(edad_nac)29
 factor(edad_nac)30
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.26<sup>**</sup>
+-0.26<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -11644,7 +11661,7 @@ factor(edad_nac)30
 factor(ola_num)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11676,7 +11693,7 @@ factor(ola_num)89
 factor(ola_num)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.14<sup>**</sup>
+0.14<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -11692,7 +11709,7 @@ factor(ola_num)91
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -11708,7 +11725,7 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11724,7 +11741,7 @@ factor(ola_num)93
 factor(ola_num)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.21<sup>***</sup>
+0.21<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -11740,7 +11757,7 @@ factor(ola_num)94
 factor(ola_num)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -11756,7 +11773,7 @@ factor(ola_num)95
 factor(ola_num)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.24<sup>***</sup>
+0.24<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -11772,7 +11789,7 @@ factor(ola_num)96
 adelanto_edad20_ola85
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.24<sup>*</sup>
+-0.24<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -11995,7 +12012,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="2">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -12121,10 +12138,10 @@ M1 (celda)
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.72<sup>***</sup>
+1.72<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.72<sup>***</sup>
+1.72<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12190,7 +12207,7 @@ factor(edad_nac)20
 -0.12
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.12<sup>*</sup>
+-0.12<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -12234,7 +12251,7 @@ factor(edad_nac)22
 -0.14
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.14<sup>*</sup>
+-0.14<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -12275,10 +12292,10 @@ factor(edad_nac)23
 factor(edad_nac)24
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>*</sup>
+-0.17<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>*</sup>
+-0.17<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -12319,10 +12336,10 @@ factor(edad_nac)25
 factor(edad_nac)26
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>*</sup>
+-0.17<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>**</sup>
+-0.17<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -12341,10 +12358,10 @@ factor(edad_nac)26
 factor(edad_nac)27
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -12363,10 +12380,10 @@ factor(edad_nac)27
 factor(edad_nac)28
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>**</sup>
+-0.20<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -12385,10 +12402,10 @@ factor(edad_nac)28
 factor(edad_nac)29
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>*</sup>
+-0.18<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>**</sup>
+-0.18<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -12407,10 +12424,10 @@ factor(edad_nac)29
 factor(edad_nac)30
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>***</sup>
+-0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12429,10 +12446,10 @@ factor(edad_nac)30
 factor(ola_num)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>**</sup>
+0.12<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -12451,10 +12468,10 @@ factor(ola_num)88
 factor(ola_num)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -12473,10 +12490,10 @@ factor(ola_num)89
 factor(ola_num)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>***</sup>
+0.15<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12495,10 +12512,10 @@ factor(ola_num)91
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12517,10 +12534,10 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>***</sup>
+0.15<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12539,10 +12556,10 @@ factor(ola_num)93
 factor(ola_num)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12561,10 +12578,10 @@ factor(ola_num)94
 factor(ola_num)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12583,10 +12600,10 @@ factor(ola_num)95
 factor(ola_num)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12659,7 +12676,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="3">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 o agrupados por celda de edad y ola entre paréntesis.
 </td>
 </tr>
 </tfoot>
@@ -12698,16 +12715,16 @@ Controles sin Plan
 (Intercept)
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.72<sup>***</sup>
+1.72<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.73<sup>***</sup>
+1.73<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.68<sup>***</sup>
+1.68<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-1.71<sup>***</sup>
+1.71<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -12803,7 +12820,7 @@ factor(edad_nac)20
 -0.12
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.16<sup>*</sup>
+-0.16<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.07
@@ -12936,16 +12953,16 @@ factor(edad_nac)23
 factor(edad_nac)24
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>*</sup>
+-0.17<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>*</sup>
+-0.18<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.12
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>*</sup>
+-0.23<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -13004,10 +13021,10 @@ factor(edad_nac)25
 factor(edad_nac)26
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.17<sup>*</sup>
+-0.17<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>*</sup>
+-0.18<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.10
@@ -13038,16 +13055,16 @@ factor(edad_nac)26
 factor(edad_nac)27
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.17
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -13072,16 +13089,16 @@ factor(edad_nac)27
 factor(edad_nac)28
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.20<sup>*</sup>
+-0.20<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.16
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>*</sup>
+-0.18<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -13106,16 +13123,16 @@ factor(edad_nac)28
 factor(edad_nac)29
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>*</sup>
+-0.18<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.18<sup>*</sup>
+-0.18<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.11
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.16<sup>*</sup>
+-0.16<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -13140,16 +13157,16 @@ factor(edad_nac)29
 factor(edad_nac)30
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.23<sup>**</sup>
+-0.23<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.24<sup>**</sup>
+-0.24<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 -0.16
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
--0.21<sup>**</sup>
+-0.21<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -13174,16 +13191,16 @@ factor(edad_nac)30
 factor(ola_num)88
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.12<sup>*</sup>
+0.12<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.10<sup>*</sup>
+0.10<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.11<sup>*</sup>
+0.11<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -13208,7 +13225,7 @@ factor(ola_num)88
 factor(ola_num)89
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.09<sup>*</sup>
+0.09<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 0.07
@@ -13242,16 +13259,16 @@ factor(ola_num)89
 factor(ola_num)91
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.18<sup>**</sup>
+0.18<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -13276,16 +13293,16 @@ factor(ola_num)91
 factor(ola_num)92
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.23<sup>***</sup>
+0.23<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -13310,16 +13327,16 @@ factor(ola_num)92
 factor(ola_num)93
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.13<sup>*</sup>
+0.13<sup class="texreg-stars">*</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>*</sup>
+0.15<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -13344,16 +13361,16 @@ factor(ola_num)93
 factor(ola_num)94
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.20<sup>***</sup>
+0.20<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 </tr>
 <tr>
@@ -13378,16 +13395,16 @@ factor(ola_num)94
 factor(ola_num)95
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.17<sup>***</sup>
+0.17<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.16<sup>**</sup>
+0.16<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>**</sup>
+0.15<sup class="texreg-stars">**</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.15<sup>*</sup>
+0.15<sup class="texreg-stars">*</sup>
 </td>
 </tr>
 <tr>
@@ -13412,16 +13429,16 @@ factor(ola_num)95
 factor(ola_num)96
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.25<sup>***</sup>
+0.25<sup class="texreg-stars">***</sup>
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
 &nbsp;
 </td>
 <td style="padding-left: 5px;padding-right: 5px;">
-0.22<sup>***</sup>
+0.22<sup class="texreg-stars">***</sup>
 </td>
 </tr>
 <tr>
@@ -13496,7 +13513,7 @@ Num. obs.
 <tfoot>
 <tr>
 <td style="font-size: 0.8em;" colspan="5">
-<sup>***</sup>p &lt; 0.001; <sup>**</sup>p &lt; 0.01; <sup>*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
+<sup class="texreg-stars">***</sup>p &lt; 0.001; <sup class="texreg-stars">**</sup>p &lt; 0.01; <sup class="texreg-stars">*</sup>p &lt; 0.05. Errores estándar HC1 entre paréntesis.
 </td>
 </tr>
 </tfoot>

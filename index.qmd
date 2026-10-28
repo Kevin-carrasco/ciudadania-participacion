@@ -27,6 +27,7 @@ renombrar <- function(m, ee, p) {
   nombres <- gsub("edad_nac", "Edad", nombres, fixed = TRUE)
   nombres <- gsub("educ(?=\\p{Lu})", "", nombres, perl = TRUE)
   nombres <- gsub("gse3", "GSE ", nombres, fixed = TRUE)
+  nombres <- gsub(":", " × ", nombres, fixed = TRUE)
   tr@coef.names <- nombres
   tr
 }
@@ -34,27 +35,27 @@ renombrar <- function(m, ee, p) {
 nota <- "%stars. Errores estándar HC1 entre paréntesis."
 
 # Tablas de un resultado en su muestra propia: una tabla por especificación,
-# con sus tres modelos
+# con sus cuatro modelos
 mostrar <- function(r, letra, filas) {
   nombre <- res$resultados$nombre[res$resultados$resultado == r]
   for (i in filas) {
     xs <- res$modelos[[r]][[i]]
     cat(texreg::htmlreg(
       lapply(xs, function(x) renombrar(x$modelo, x$ct[, 2], x$ct[, 4])),
-      custom.model.names = paste("Modelo", 1:3),
+      custom.model.names = paste("Modelo", 1:4),
       caption = paste0("Tabla ", letra, i, ". ", nombre, ": ", esp$titulo[i]),
       caption.above = TRUE, custom.note = nota), "\n\n")
   }
 }
 
-# Tablas de la muestra común: los tres modelos de cada resultado en cada
+# Tablas de la muestra común: los cuatro modelos de cada resultado en cada
 # especificación
 mostrar_comun <- function(filas) {
   for (i in filas) {
     xs <- unlist(lapply(res$modelos_comun, `[[`, i), recursive = FALSE)
     cat(texreg::htmlreg(
       lapply(xs, function(x) renombrar(x$modelo, x$ct[, 2], x$ct[, 4])),
-      custom.model.names = paste0(rep(c("Interés", "Confianza", "Voto"), each = 3), " M", 1:3),
+      custom.model.names = paste0(rep(c("Interés", "Confianza", "Voto"), each = 4), " M", 1:4),
       caption = paste0("Tabla D", i, ". Muestra común: ", esp$titulo[i]),
       caption.above = TRUE, custom.note = nota), "\n\n")
   }
@@ -76,15 +77,16 @@ coef_ec <- function(b, r, control, ponderacion, muestra, modelo = 3) {
 }
 
 # Oración con el coeficiente de la asignatura en el modelo 1 y en los ocho
-# modelos 3 de un resultado
+# modelos 3 de un resultado, y con la interacción del modelo 4
 describir <- function(b, r) {
   e <- res$efectos[res$efectos$base == b & res$efectos$resultado == r & res$efectos$modelo == 3, ]
+  e4 <- res$efectos[res$efectos$base == b & res$efectos$resultado == r & res$efectos$modelo == 4, ]
   k <- function(...) coef_ec(b, r, ...)
   paste0(
     "Solo con efectos fijos de ola (modelo 1), el coeficiente de la asignatura es ",
     k("educ", "Sin ponderar", "Muestra completa", modelo = 1), " en la muestra completa y ",
     k("educ", "Sin ponderar", "Menores de 30 años", modelo = 1), " en menores de 30 años, sin ponderar. ",
-    "Con el control socioeconómico y la edad (modelo 3), en la muestra completa sin ponderar es ",
+    "Con la edad y el control socioeconómico (modelo 3), en la muestra completa sin ponderar es ",
     k("educ", "Sin ponderar", "Muestra completa"), " con nivel educacional y ",
     k("gse3", "Sin ponderar", "Muestra completa"), " con grupo socioeconómico; con ponderadores, ",
     k("educ", "Ponderado", "Muestra completa"), " y ", k("gse3", "Ponderado", "Muestra completa"),
@@ -92,7 +94,12 @@ describir <- function(b, r) {
     k("gse3", "Sin ponderar", "Menores de 30 años"), " sin ponderar, y ",
     k("educ", "Ponderado", "Menores de 30 años"), " y ", k("gse3", "Ponderado", "Menores de 30 años"),
     " con ponderadores. En el modelo 3, ", sum(e$p < 0.05), " de las ", nrow(e),
-    " especificaciones son significativas al 5% (\\* p < 0,05; \\*\\* p < 0,01; \\*\\*\\* p < 0,001).")
+    " especificaciones son significativas al 5% (\\* p < 0,05; \\*\\* p < 0,01; \\*\\*\\* p < 0,001). ",
+    "En el modelo 4, la interacción entre la asignatura y la edad es significativa al 5% en ",
+    sum(e4$p_interaccion < 0.05), " de las ", nrow(e4), " especificaciones",
+    if (any(e4$p_interaccion < 0.05)) paste0(", con valores entre ",
+      num(min(e4$interaccion[e4$p_interaccion < 0.05]), 3), " y ",
+      num(max(e4$interaccion[e4$p_interaccion < 0.05]), 3)) else "", ".")
 }
 ```
 
@@ -120,7 +127,7 @@ La construcción de las bases está en el documento de [preparación](processing
 
 ## Especificaciones
 
-Cada tabla presenta tres modelos anidados, todos con efectos fijos de ola: solo la asignatura (1), con un control socioeconómico (2) y con el control socioeconómico y la edad (3). Las tablas muestran todos los coeficientes, incluidos los de cada ola (referencia: la primera ola de cada muestra). Cada resultado se presenta en ocho especificaciones, en este orden:
+Cada tabla presenta cuatro modelos, todos con efectos fijos de ola: solo la asignatura (1), con la edad (2), con la edad y un control socioeconómico (3) y con la interacción entre la asignatura y la edad (4). La edad entra primero porque es la principal fuente de confusión: quienes cursaron la asignatura son siempre los más jóvenes de cada ola. El modelo 4 evalúa si la diferencia asociada a la asignatura cambia con la edad. En ese modelo, el coeficiente de la asignatura corresponde a la diferencia a los 0 años, que es una extrapolación sin interpretación sustantiva, y debe leerse junto con la interacción: la diferencia a una edad dada es el coeficiente de la asignatura más la interacción multiplicada por esa edad. Como quienes cursaron la asignatura tienen entre 17 y 22 años, la interacción se estima con pocas edades entre los tratados. Las tablas muestran todos los coeficientes, incluidos los de cada ola (referencia: la primera ola de cada muestra). Cada resultado se presenta en ocho especificaciones, en este orden:
 
 1. Nivel educacional, sin ponderar, muestra completa.
 2. Grupo socioeconómico, sin ponderar, muestra completa.
@@ -160,7 +167,7 @@ mostrar("interes", "A", 5:8)
 
 `r describir("propia", "interes")`
 
-En la muestra completa sin ponderar, quienes cursaron la asignatura declaran más interés político que el resto cuando solo se comparan dentro de cada ola. Al agregar el nivel educacional (modelo 2) la diferencia desaparece, y con el grupo socioeconómico se mantiene. Esta diferencia entre controles surge porque el nivel educacional absorbe en parte la edad de quienes cursaron la asignatura y el grupo socioeconómico no lo hace. Al controlar además por la edad (modelo 3), el coeficiente queda cercano a cero con nivel educacional y es negativo con grupo socioeconómico. En menores de 30 años, donde el grupo de comparación tiene una edad similar, los coeficientes son cercanos a cero en los tres modelos.
+En la muestra completa sin ponderar, quienes cursaron la asignatura declaran más interés político que el resto cuando solo se comparan dentro de cada ola. Al controlar por la edad (modelo 2), el coeficiente pasa a ser negativo y significativo. Al agregar el control socioeconómico (modelo 3), queda cercano a cero con nivel educacional y se mantiene negativo con grupo socioeconómico. Esta diferencia entre controles surge porque, para quienes todavía estudian, el nivel educacional corresponde a la etapa en que se encuentran, por lo que absorbe parte de la diferencia asociada a ser joven, y el grupo socioeconómico no lo hace. En menores de 30 años, donde el grupo de comparación tiene una edad similar, los coeficientes son cercanos a cero en los modelos 1 a 3. En el modelo 4 la interacción con la edad no es significativa en ninguna especificación, por lo que no hay evidencia de que la diferencia asociada a la asignatura cambie con la edad.
 
 # B) Confianza política
 
@@ -190,7 +197,7 @@ mostrar("confianza", "B", 5:8)
 
 `r describir("propia", "confianza")`
 
-En la muestra completa, quienes cursaron la asignatura declaran más confianza en las instituciones políticas en los tres modelos, con cualquier control socioeconómico y con o sin ponderadores. En menores de 30 años la diferencia también es positiva y significativa en los modelos 1 y 2, pero se acerca a cero al controlar por la edad (modelo 3). La asociación positiva depende, por lo tanto, de la edad: entre personas de edad similar, controlar por la edad la elimina, y en la muestra completa la edad incluida de forma lineal no basta para separarla del efecto de la asignatura. Los diseños de diferencia en diferencias del documento de confianza evalúan esta diferencia con comparaciones más exigentes.
+En la muestra completa, quienes cursaron la asignatura declaran más confianza en las instituciones políticas en los modelos 1 a 3, con cualquier control socioeconómico y con o sin ponderadores; controlar por la edad (modelo 2) reduce el coeficiente solo levemente, y el control socioeconómico (modelo 3) casi no lo cambia. En menores de 30 años la diferencia es positiva y significativa en el modelo 1, pero se acerca a cero en cuanto se controla por la edad (modelo 2) y sigue así en el modelo 3. La asociación positiva depende, por lo tanto, de la edad: entre personas de edad similar, controlar por la edad la elimina, y en la muestra completa la edad incluida de forma lineal no basta para separarla del efecto de la asignatura. El modelo 4 apunta en la misma dirección: en la muestra completa con nivel educacional, la interacción con la edad es negativa y significativa, es decir, la diferencia a favor de quienes cursaron la asignatura es mayor entre los más jóvenes y disminuye con la edad; con grupo socioeconómico y en menores de 30 años la interacción no es significativa. Los diseños de la pestaña [Diferencia en diferencias](processing/analysis_did_principal.qmd) evalúan esta diferencia con comparaciones más exigentes.
 
 # C) Voto
 
@@ -220,13 +227,13 @@ mostrar("voto", "C", 5:8)
 
 `r describir("propia", "voto")`
 
-Quienes cursaron la asignatura votaron menos en la 2ª vuelta de 2021. En la muestra completa la diferencia se reduce a cerca de la mitad al controlar por la edad, pero sigue siendo negativa, y en menores de 30 años se mantiene en los tres modelos; en la muestra completa con ponderadores el coeficiente del modelo 3 deja de ser significativo. Sin embargo, quienes cursaron la asignatura y podían votar tenían 18 años en esa elección, por lo que eran los votantes más jóvenes de la muestra, y la edad incluida de forma lineal puede no capturar completamente las diferencias de participación en esas edades. Como la pregunta de voto se refiere a una sola elección, no es posible aplicar los diseños de diferencia en diferencias, por lo que estos coeficientes no pueden interpretarse como efectos de la asignatura.
+Quienes cursaron la asignatura votaron menos en la 2ª vuelta de 2021. En la muestra completa la diferencia se reduce a cerca de la mitad al controlar por la edad (modelo 2), pero sigue siendo negativa, y el control socioeconómico (modelo 3) casi no la cambia; con ponderadores, el coeficiente deja de ser significativo desde el modelo 2. En menores de 30 años la diferencia es negativa y significativa en los modelos 1 a 3. En el modelo 4 la interacción con la edad no es significativa en ninguna especificación. Sin embargo, quienes cursaron la asignatura y podían votar tenían 18 años en esa elección, por lo que eran los votantes más jóvenes de la muestra, y la edad incluida de forma lineal puede no capturar completamente las diferencias de participación en esas edades. Estos coeficientes no pueden interpretarse como efectos de la asignatura; la pestaña [Diferencia en diferencias](processing/analysis_did_principal.qmd) compara a votantes de distintas edades en la misma elección con un diseño por cohorte de nacimiento.
 
 # D) Muestra común
 
 Las muestras de las secciones anteriores difieren en olas, en casos y en quiénes son los tratados, por lo que sus coeficientes no son directamente comparables. La muestra común reúne a las personas con información completa en los tres resultados, el tratamiento, ambos controles socioeconómicos, la edad y el ponderador. Parte de la base de voto, la más restrictiva: solo personas habilitadas para votar en 2021 y con fecha de nacimiento real, en las olas que preguntan por los tres resultados (`r mu("comun", "olas")`).
 
-La muestra común tiene `r entero(mu("comun", "n"))` casos, de los cuales solo `r entero(mu("comun", "tratados"))` cursaron la asignatura, y `r entero(mu("comun", "n_menores_30"))` casos entre los menores de 30 años. Todos los tratados nacieron entre abril y diciembre de 2003, es decir, son la primera cohorte con la asignatura. Con tan pocos tratados, las estimaciones son poco precisas. Cada tabla presenta los tres modelos de los tres resultados en la misma especificación; los coeficientes de interés y confianza son lineales y los de voto están en log-odds.
+La muestra común tiene `r entero(mu("comun", "n"))` casos, de los cuales solo `r entero(mu("comun", "tratados"))` cursaron la asignatura, y `r entero(mu("comun", "n_menores_30"))` casos entre los menores de 30 años. Todos los tratados nacieron entre abril y diciembre de 2003, es decir, son la primera cohorte con la asignatura. Con tan pocos tratados, las estimaciones son poco precisas. Cada tabla presenta los cuatro modelos de los tres resultados en la misma especificación; los coeficientes de interés y confianza son lineales y los de voto están en log-odds.
 
 ## Muestra completa
 
@@ -256,4 +263,4 @@ mostrar_comun(5:8)
 
 **Voto.** `r describir("comun", "voto")`
 
-En la muestra común, los signos de la confianza (positivo) y del voto (negativo) coinciden con los de sus muestras propias, aunque con errores estándar mayores. Solo con efectos fijos de ola (modelo 1), sin ponderar y con la muestra completa, los tres coeficientes son significativos; al controlar por la edad (modelo 3), la mayoría deja de serlo. El interés político se comporta distinto que en su muestra propia: el coeficiente es positivo en los tres modelos, aunque no significativo en el modelo 3, mientras que en su muestra propia el modelo 3 es cercano a cero o negativo. Este cambio refleja quiénes son los tratados en cada muestra: en la muestra común solo está la primera cohorte con la asignatura, y en la muestra propia de interés político están también las cohortes posteriores. Las diferencias entre resultados en la muestra común no dependen de la muestra, pero con `r entero(mu("comun", "tratados"))` tratados ninguna de ellas puede establecerse con precisión.
+En la muestra común, los signos de la confianza (positivo) y del voto (negativo) coinciden con los de sus muestras propias, aunque con errores estándar mayores. Solo con efectos fijos de ola (modelo 1), sin ponderar y con la muestra completa, los tres coeficientes son significativos; al controlar por la edad (modelo 2), la mayoría deja de serlo, y el control socioeconómico (modelo 3) cambia poco los resultados. En el modelo 4, la interacción con la edad solo es significativa para la confianza con nivel educacional sin ponderar. El interés político se comporta distinto que en su muestra propia: el coeficiente es positivo en los modelos 1 a 3, aunque no significativo en los modelos 2 y 3, mientras que en su muestra propia el modelo 3 es cercano a cero o negativo. Este cambio refleja quiénes son los tratados en cada muestra: en la muestra común solo está la primera cohorte con la asignatura, y en la muestra propia de interés político están también las cohortes posteriores. Las diferencias entre resultados en la muestra común no dependen de la muestra, pero con `r entero(mu("comun", "tratados"))` tratados ninguna de ellas puede establecerse con precisión.

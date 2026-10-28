@@ -266,7 +266,7 @@ sjmisc::frq(base_85$esc_nivel_1)
 
 sjmisc::frq(base_85$interes_pol_1_b)
 
-base_2021 <- base_85 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
+base_2021 <- base_85 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1,
 int_pol=interes_pol_1_b)
 ```
 
@@ -286,7 +286,7 @@ sjmisc::frq(base_86$elec_part_37)
 sjmisc::frq(base_86$esc_nivel_1)
 sjmisc::frq(base_86$edad)
 
-base_2022 <- base_86 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
+base_2022 <- base_86 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1,
 primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37)
 ```
 
@@ -314,7 +314,7 @@ sjmisc::frq(base_88$elec_part_37)
 
 sjmisc::frq(base_88$interes_pol_1_b)
 
-base_2022_2 <- base_88 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
+base_2022_2 <- base_88 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1,
 const_1=constitucion_4_a, const_2=constitucion_19,
 primera_vuelta=elec_part_56, segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
@@ -342,7 +342,7 @@ sjmisc::frq(base_89$constitucion_34)
 
 sjmisc::frq(base_89$edad)
 
-base_2023 <- base_89 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1,
+base_2023 <- base_89 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1,
 const_1=constitucion_19, const_2=constitucion_34,
 segunda_vuelta=elec_part_37)
 ```
@@ -370,7 +370,7 @@ sjmisc::frq(base_90$constitucion_34)
 
 sjmisc::frq(base_90$edad)
 
-base_2023_2 <- base_90 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
+base_2023_2 <- base_90 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1_c,
 const_1=constitucion_19, const_2=constitucion_34,
 segunda_vuelta=elec_part_37)
 ```
@@ -387,7 +387,7 @@ sjmisc::frq(base_91$elec_part_37)
 
 sjmisc::frq(base_91$edad)
 
-base_2024 <- base_91 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
+base_2024 <- base_91 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37)
 ```
 
@@ -402,7 +402,7 @@ sjmisc::frq(base_92$elec_part_37)
 
 sjmisc::frq(base_92$interes_pol_1_b)
 
-base_2024_2 <- base_92 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
+base_2024_2 <- base_92 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -417,7 +417,7 @@ sjmisc::frq(base_93$elec_part_37)
 sjmisc::frq(base_93$esc_nivel_1_c)
 sjmisc::frq(base_93$interes_pol_1_b)
 
-base_2025 <- base_93 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
+base_2025 <- base_93 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -431,7 +431,7 @@ sjmisc::find_var(base_94, "elec")
 sjmisc::frq(base_94$elec_part_37)
 sjmisc::frq(base_94$edad)
 
-base_2025_2 <- base_94 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
+base_2025_2 <- base_94 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37)
 ```
 
@@ -451,7 +451,7 @@ sjmisc::frq(base_95$elec_part_4)
 
 sjmisc::frq(base_95$interes_pol_1_b)
 
-base_2025_3 <- base_95 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
+base_2025_3 <- base_95 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1_c,
 segunda_vuelta=elec_part_37,
 int_pol=interes_pol_1_b)
 ```
@@ -465,7 +465,7 @@ sjmisc::frq(base_96$interes_pol_1_b)
 sjmisc::frq(base_96$esc_nivel_1_c)
 sjmisc::frq(base_96$edad)
 
-base_2026 <- base_96 %>% dplyr::select(id_bu, edad, gse, pond, estrato, educ=esc_nivel_1_c,
+base_2026 <- base_96 %>% dplyr::select(id_bu, edad, sexo, gse, pond, estrato, educ=esc_nivel_1_c,
 int_pol=interes_pol_1_b)
 ```
 
@@ -584,6 +584,7 @@ data_voto <- data_voto %>%
     educ_det = etiquetar_educ(educ),
     educ     = agrupar_educ(educ),
     gse      = factor(gse, levels = 1:5, labels = c("ABC1", "C2", "C3", "D", "E")),
+    sexo     = factor(sexo, levels = 1:2, labels = c("Hombre", "Mujer")),
     ola      = factor(ola)
   )
 
@@ -662,6 +663,7 @@ data_int <- data_int %>%
     educ_det = etiquetar_educ(educ),
     educ     = agrupar_educ(educ),
     gse      = factor(gse, levels = 1:5, labels = c("ABC1", "C2", "C3", "D", "E")),
+    sexo     = factor(sexo, levels = 1:2, labels = c("Hombre", "Mujer")),
     ola      = factor(ola)
   )
 
@@ -1114,6 +1116,7 @@ base_pooled_act <- dplyr::bind_rows(lapply(names(bases_act), function(o) {
   b <- haven::zap_labels(bases_act[[o]])
   var_educ <- if ("esc_nivel_1_c" %in% names(b)) "esc_nivel_1_c" else "esc_nivel_1"
   d <- tibble::tibble(ola = o, id_bu = b$id_bu, edad = as.numeric(b$edad),
+                      sexo = as.numeric(b$sexo),
                       gse = as.numeric(b$gse), pond = as.numeric(b$pond),
                       estrato = as.numeric(b$estrato), educ = as.numeric(b[[var_educ]]))
   # Las variables que no existen en una ola quedan en NA
@@ -1131,6 +1134,7 @@ data_actitudes <- base_pooled_act %>%
     educ_det = etiquetar_educ(educ),
     educ     = agrupar_educ(educ),
     gse      = factor(gse, levels = 1:5, labels = c("ABC1", "C2", "C3", "D", "E")),
+    sexo     = factor(sexo, levels = 1:2, labels = c("Hombre", "Mujer")),
     apoyo_dem = dplyr::case_when(democracia_21 == 1 ~ 1L,
                                  democracia_21 %in% 2:3 ~ 0L),
     satisf_dem = dplyr::if_else(democracia_20 %in% 1:5, 6 - democracia_20, NA_real_),
@@ -1180,6 +1184,82 @@ data_comun %>%
                    menores_30 = sum(edad_nac < 30),
                    tratados_menores_30 = sum(educacion_ciudadana[edad_nac < 30]),
                    .groups = "drop")
+```
+
+# Covariables sociodemográficas adicionales
+
+Variables para el emparejamiento por puntaje de propensión (`analysis_psm.qmd`), construidas desde las bases originales y unidas a las bases de voto, interés político y actitudes por ola e identificador:
+
+- **Región** (`region`): 16 regiones. Está en `region` en las olas 85 a 89 y en `region_3` desde la ola 90. En la CEP 86 la variable viene vacía.
+- **Zona** (`zona`): urbana o rural (`zona_u_r`), en todas las olas.
+- **Pueblo originario** (`pueblo`): pertenencia a un pueblo originario o indígena (`info_enc_58`). No está en la CEP 86.
+- **Educación del jefe de hogar** (`educ_jefe`): la pregunta (`info_hogar_28_b` en la CEP 85, `info_hogar_28_c` en las demás) solo se hace a quienes no son jefes de hogar (`info_enc_57`); para quienes lo son, se usa su propio nivel educacional. En la CEP 94 la pregunta se refiere al sostenedor principal del hogar (`info_hogar_28_a_3`), con una escala de 0 a 9 que distingue los mismos cuatro grupos, y se hace a todos. En las CEP 85, 95 y 96 la escala va de 1 a 11 y se corre en uno. Se agrupa en las mismas cuatro categorías que `educ`. No está en la CEP 86.
+
+Los códigos de no sabe y no responde (-9, -8, 8, 9, 88 y 99) quedan como NA.
+
+```{r}
+bases_sociodem <- list("85" = base_85, "86" = base_86, "88" = base_88, "89" = base_89,
+                       "90" = base_90, "91" = base_91, "92" = base_92, "93" = base_93,
+                       "94" = base_94, "95" = base_95, "96" = base_96)
+
+sociodem <- dplyr::bind_rows(lapply(names(bases_sociodem), function(o) {
+  b <- haven::zap_labels(bases_sociodem[[o]])
+  # Primera variable disponible de la lista en la ola, o NA si no existe
+  v <- function(x) {
+    x <- intersect(x, names(b))
+    if (length(x)) as.numeric(b[[x[1]]]) else rep(NA_real_, nrow(b))
+  }
+  tibble::tibble(ola = o, id_bu = as.character(b$id_bu),
+                 region = v(c("region_3", "region")),
+                 zona = v("zona_u_r"),
+                 pueblo = v("info_enc_58"),
+                 es_jefe = v("info_enc_57"),
+                 educ_jefe_cod = v(c("info_hogar_28_a_3", "info_hogar_28_b", "info_hogar_28_c")))
+})) %>%
+  dplyr::mutate(
+    region = factor(region, levels = 1:16,
+                    labels = c("Tarapacá", "Antofagasta", "Atacama", "Coquimbo", "Valparaíso",
+                               "O'Higgins", "Maule", "Biobío", "La Araucanía", "Los Lagos",
+                               "Aysén", "Magallanes", "Metropolitana", "Los Ríos",
+                               "Arica y Parinacota", "Ñuble")),
+    zona = factor(zona, levels = 1:2, labels = c("Urbana", "Rural")),
+    pueblo = factor(pueblo, levels = c(2, 1), labels = c("No", "Sí")),
+    es_jefe = dplyr::if_else(es_jefe %in% 1:2, as.integer(es_jefe == 1), NA_integer_),
+    educ_jefe_cod = dplyr::if_else(educ_jefe_cod < 0 | educ_jefe_cod %in% c(88, 99), NA_real_, educ_jefe_cod),
+    # En las CEP 85, 95 y 96 la escala va de 1 a 11
+    educ_jefe_cod = dplyr::if_else(ola %in% c("85", "95", "96"), educ_jefe_cod - 1, educ_jefe_cod),
+    educ_jefe_hogar = agrupar_educ(educ_jefe_cod)
+  )
+
+# Une las covariables y asigna la educación propia a quienes son jefes de hogar
+agregar_sociodem <- function(d) {
+  niveles_ola <- levels(d$ola)
+  d %>%
+    dplyr::mutate(ola = as.character(ola), id_bu = as.character(id_bu)) %>%
+    dplyr::left_join(sociodem, by = c("ola", "id_bu"), relationship = "one-to-one") %>%
+    dplyr::mutate(ola = factor(ola, levels = niveles_ola),
+                  educ_jefe = dplyr::if_else(!is.na(es_jefe) & es_jefe == 1, educ, educ_jefe_hogar)) %>%
+    dplyr::select(-educ_jefe_cod, -educ_jefe_hogar)
+}
+
+n_antes <- c(voto = nrow(data_voto), int = nrow(data_int), actitudes = nrow(data_actitudes))
+data_voto <- agregar_sociodem(data_voto)
+data_int <- agregar_sociodem(data_int)
+data_actitudes <- agregar_sociodem(data_actitudes)
+
+## Chequeo -------------------------------------------------------------------------
+# La unión no duplica casos
+rbind(antes = n_antes,
+      despues = c(nrow(data_voto), nrow(data_int), nrow(data_actitudes)))
+
+# Casos con información en cada covariable, por ola
+data_actitudes %>%
+  dplyr::group_by(ola) %>%
+  dplyr::summarise(n = dplyr::n(), region = sum(!is.na(region)), zona = sum(!is.na(zona)),
+                   pueblo = sum(!is.na(pueblo)), educ_jefe = sum(!is.na(educ_jefe)),
+                   .groups = "drop")
+
+table(data_actitudes$educ_jefe, data_actitudes$es_jefe, useNA = "ifany")
 ```
 
 # Guardar datos procesados
