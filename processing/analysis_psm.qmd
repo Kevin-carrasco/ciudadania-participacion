@@ -2076,3 +2076,1392 @@ modelsummary_voto_edad <- modelsummary(model_list_voto_edad,
 modelsummary_voto_edad
 ```
 
+
+
+# Matching en la muestra de hasta 30 años
+
+Esta sección replica el análisis con las covariables adicionales, pero restringe las bases a personas de hasta 30 años (`edad_nac <= 30`) antes del emparejamiento, en lugar de usar cohortes de edad. Como todos los tratados tienen entre 17 y 22 años, la restricción deja fuera solo a no tratados, y los controles disponibles son personas de hasta 30 años que no cursaron la asignatura. Por eso `cohorte_edad` no entra en el puntaje de propensión ni en el emparejamiento exacto. En el conteo de casos, los casos perdidos incluyen a quienes quedan fuera por la restricción de edad. Los objetos de esta sección llevan el sufijo `_30`.
+
+## Interés político
+
+### Datos
+
+```{r}
+# Las rutas parten de la raíz del proyecto, para que el documento renderice
+# también fuera de la lista de render de _quarto.yml
+data_int <- readRDS(here::here("input/data/proc/data_int.rds"))
+
+# Grupo socioeconómico agrupado (referencia: D-E) y casos completos en
+# tratamiento, covariables, edad, ola y resultado
+psm_int_30 <- data_int %>%
+  dplyr::mutate(gse3 = factor(dplyr::case_when(gse %in% c("ABC1", "C2") ~ "ABC1-C2",
+                                               gse == "C3" ~ "C3",
+                                               gse %in% c("D", "E") ~ "D-E"),
+                              levels = c("D-E", "C3", "ABC1-C2"))) %>%
+  # Muestra de hasta 30 años
+  dplyr::filter(edad_nac <= 30) %>%
+  dplyr::select(educacion_ciudadana, sexo, educ, gse3, region, zona, pueblo, educ_jefe, edad_nac, ola, int_pol) %>%
+  na.omit() %>%
+  droplevels() %>%
+  as.data.frame()
+
+# Casos perdidos por información incompleta
+c(base = nrow(data_int), completos = nrow(psm_int_30), perdidos = nrow(data_int) - nrow(psm_int_30))
+dplyr::count(psm_int_30, educacion_ciudadana)
+```
+
+### Matching
+
+```{r}
+m_int_30 <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_int_30,
+                  method = "nearest",
+                  discard = "both",
+                  caliper = 0.01)
+
+summary(m_int_30)
+
+# Casos emparejados y descartados por grupo
+summary(m_int_30)$nn
+```
+
+### Visual inspection
+
+```{r}
+love.plot(m_int_30, 
+          stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
+          thresholds = c(m = 0.1, ks = 0.05), 
+          drop.distance = TRUE, 
+          colors = c("dodgerblue4", "firebrick"),
+          shapes = c(16, 17),
+          stars = "none")
+```
+
+### Convert Propensity Score Matched results into an analyzable data
+
+```{r}
+match_data_30 <- match.data(m_int_30)
+head(match_data_30)
+```
+
+### Inverse Probability Weight (IPW) Methods
+
+#### Using logistic regression to estimate the propensity score
+
+```{r}
+logit_int_30 <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_int_30,
+              family = "binomial"(link = "logit"))
+summary(logit_int_30)
+```
+
+
+```{r}
+## Method 1: Using augment_columns
+prob_fitted_30 <- augment_columns(logit_int_30, 
+                               data = psm_int_30,
+                               type.predict = "response") %>%
+                rename(propensity_score = .fitted)
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted_30$propensity_score)
+```
+
+
+```{r}
+## Method 2: Using mutate
+prob_fitted2_30 <- psm_int_30 %>%
+    mutate(
+        propensity_score =  glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                                data = psm_int_30,
+                                family = "binomial"(link = "logit")) %>%
+          predict(type = "response")
+          )
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted2_30$propensity_score)
+```
+
+
+```{r}
+## Visualize the propensity score distributions between groups
+ps_fitted_30 <- prob_fitted2_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_fitted_30) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_0)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_1, y = -after_stat(count))) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATE
+
+
+```{r}
+##############
+#### ATE IPW
+##############
+ate_fitted_30 <- prob_fitted2_30 %>%
+    mutate(
+        ipw_ate = (educacion_ciudadana / propensity_score) + ((1 - educacion_ciudadana) / (1 - propensity_score))
+          )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_ate_30 <- ate_fitted_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_ate_30) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_ate), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_ate, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATT
+
+```{r}
+##############
+#### ATT IPW
+##############
+att_fitted_30 <- prob_fitted2_30 %>%
+  mutate(
+    ipw_att = ((propensity_score * educacion_ciudadana) / propensity_score) + ((propensity_score * (1 - educacion_ciudadana)) / (1 - propensity_score))
+        )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_att_30 <- att_fitted_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_att_30) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_att), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_att, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### Comparison of propensity score matched methods
+
+```{r}
+## No matching
+model0_30 <- glm(int_pol ~ educacion_ciudadana,
+              data = psm_int_30)
+summary(model0_30)
+```
+
+```{r}
+## Nearest matching
+model1_30 <- glm(int_pol ~ educacion_ciudadana,
+              data = match_data_30)
+summary(model1_30)
+```
+
+```{r}
+## IPW with ATE
+model2_30 <- glm(int_pol ~ educacion_ciudadana, 
+              data = ate_fitted_30, 
+              weight = ipw_ate)
+summary(model2_30)
+```
+
+```{r}
+## IPW with ATT
+model3_30 <- glm(int_pol ~ educacion_ciudadana, 
+              data = att_fitted_30, 
+              weight = ipw_att)
+summary(model3_30)
+```
+
+
+```{r}
+#### Comparing the models together
+model_list_30 <- list("No matching" = model0_30,
+                   "Nearest matching" = model1_30,
+                   "IPW wih ATE" = model2_30,
+                   "IPW with ATT" = model3_30)
+
+modelsummary1_30 <- modelsummary(model_list_30,
+             stars = TRUE,
+             gof_omit = ".IC",
+             fmt = fmt_decimal(digits = 2, pdigits = 3),
+             statistic = NULL,
+             conf_level = 0.95,
+             vcov = "robust",
+             estimate = "{estimate} [{conf.low}, {conf.high}] {stars}",
+             notes = list("* p < 0,05; ** p < 0,01; *** p < 0,001"))
+modelsummary1_30
+```
+
+## Confianza política
+
+### Datos
+
+```{r}
+# Las rutas parten de la raíz del proyecto, para que el documento renderice
+# también fuera de la lista de render de _quarto.yml
+data_actitudes <- readRDS(here::here("input/data/proc/data_actitudes.rds"))
+
+# Grupo socioeconómico agrupado (referencia: D-E) y casos completos en
+# tratamiento, covariables, edad, ola y resultado
+psm_conf_30 <- data_actitudes %>%
+  dplyr::mutate(gse3 = factor(dplyr::case_when(gse %in% c("ABC1", "C2") ~ "ABC1-C2",
+                                               gse == "C3" ~ "C3",
+                                               gse %in% c("D", "E") ~ "D-E"),
+                              levels = c("D-E", "C3", "ABC1-C2"))) %>%
+  # Muestra de hasta 30 años
+  dplyr::filter(edad_nac <= 30) %>%
+  dplyr::select(educacion_ciudadana, sexo, educ, gse3, region, zona, pueblo, educ_jefe, edad_nac, ola, conf_pol) %>%
+  na.omit() %>%
+  droplevels() %>%
+  as.data.frame()
+
+# Casos perdidos por información incompleta
+c(base = nrow(data_actitudes), completos = nrow(psm_conf_30), perdidos = nrow(data_actitudes) - nrow(psm_conf_30))
+dplyr::count(psm_conf_30, educacion_ciudadana)
+```
+
+### Matching
+
+```{r}
+m_conf_30 <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_conf_30,
+                  method = "nearest",
+                  discard = "both",
+                  caliper = 0.01)
+
+summary(m_conf_30)
+
+# Casos emparejados y descartados por grupo
+summary(m_conf_30)$nn
+```
+
+### Visual inspection
+
+```{r}
+love.plot(m_conf_30, 
+          stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
+          thresholds = c(m = 0.1, ks = 0.05), 
+          drop.distance = TRUE, 
+          colors = c("dodgerblue4", "firebrick"),
+          shapes = c(16, 17),
+          stars = "none")
+```
+
+### Convert Propensity Score Matched results into an analyzable data
+
+```{r}
+match_data_conf_30 <- match.data(m_conf_30)
+head(match_data_conf_30)
+```
+
+### Inverse Probability Weight (IPW) Methods
+
+#### Using logistic regression to estimate the propensity score
+
+```{r}
+logit_conf_30 <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_conf_30,
+              family = "binomial"(link = "logit"))
+summary(logit_conf_30)
+```
+
+
+```{r}
+## Method 1: Using augment_columns
+prob_fitted_conf_30 <- augment_columns(logit_conf_30, 
+                               data = psm_conf_30,
+                               type.predict = "response") %>%
+                rename(propensity_score = .fitted)
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted_conf_30$propensity_score)
+```
+
+
+```{r}
+## Method 2: Using mutate
+prob_fitted2_conf_30 <- psm_conf_30 %>%
+    mutate(
+        propensity_score =  glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                                data = psm_conf_30,
+                                family = "binomial"(link = "logit")) %>%
+          predict(type = "response")
+          )
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted2_conf_30$propensity_score)
+```
+
+
+```{r}
+## Visualize the propensity score distributions between groups
+ps_fitted_conf_30 <- prob_fitted2_conf_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_fitted_conf_30) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_0)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_1, y = -after_stat(count))) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATE
+
+
+```{r}
+##############
+#### ATE IPW
+##############
+ate_fitted_conf_30 <- prob_fitted2_conf_30 %>%
+    mutate(
+        ipw_ate = (educacion_ciudadana / propensity_score) + ((1 - educacion_ciudadana) / (1 - propensity_score))
+          )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_ate_conf_30 <- ate_fitted_conf_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_ate_conf_30) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_ate), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_ate, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATT
+
+```{r}
+##############
+#### ATT IPW
+##############
+att_fitted_conf_30 <- prob_fitted2_conf_30 %>%
+  mutate(
+    ipw_att = ((propensity_score * educacion_ciudadana) / propensity_score) + ((propensity_score * (1 - educacion_ciudadana)) / (1 - propensity_score))
+        )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_att_conf_30 <- att_fitted_conf_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_att_conf_30) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_att), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_att, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### Comparison of propensity score matched methods
+
+```{r}
+## No matching
+model0_conf_30 <- glm(conf_pol ~ educacion_ciudadana,
+              data = psm_conf_30)
+summary(model0_conf_30)
+```
+
+```{r}
+## Nearest matching
+model1_conf_30 <- glm(conf_pol ~ educacion_ciudadana,
+              data = match_data_conf_30)
+summary(model1_conf_30)
+```
+
+```{r}
+## IPW with ATE
+model2_conf_30 <- glm(conf_pol ~ educacion_ciudadana, 
+              data = ate_fitted_conf_30, 
+              weight = ipw_ate)
+summary(model2_conf_30)
+```
+
+```{r}
+## IPW with ATT
+model3_conf_30 <- glm(conf_pol ~ educacion_ciudadana, 
+              data = att_fitted_conf_30, 
+              weight = ipw_att)
+summary(model3_conf_30)
+```
+
+
+```{r}
+#### Comparing the models together
+model_list_conf_30 <- list("No matching" = model0_conf_30,
+                   "Nearest matching" = model1_conf_30,
+                   "IPW wih ATE" = model2_conf_30,
+                   "IPW with ATT" = model3_conf_30)
+
+modelsummary_conf_30 <- modelsummary(model_list_conf_30,
+             stars = TRUE,
+             gof_omit = ".IC",
+             fmt = fmt_decimal(digits = 2, pdigits = 3),
+             statistic = NULL,
+             conf_level = 0.95,
+             vcov = "robust",
+             estimate = "{estimate} [{conf.low}, {conf.high}] {stars}",
+             notes = list("* p < 0,05; ** p < 0,01; *** p < 0,001"))
+modelsummary_conf_30
+```
+
+## Voto
+
+### Datos
+
+```{r}
+# Las rutas parten de la raíz del proyecto, para que el documento renderice
+# también fuera de la lista de render de _quarto.yml
+# Habilitados para votar en la 2ª vuelta de 2021, igual que en los análisis de voto
+data_voto <- readRDS(here::here("input/data/proc/data_voto.rds")) %>%
+  dplyr::filter(habilitado_2v == 1)
+
+# Grupo socioeconómico agrupado (referencia: D-E) y casos completos en
+# tratamiento, covariables, edad, ola y resultado
+psm_voto_30 <- data_voto %>%
+  dplyr::mutate(gse3 = factor(dplyr::case_when(gse %in% c("ABC1", "C2") ~ "ABC1-C2",
+                                               gse == "C3" ~ "C3",
+                                               gse %in% c("D", "E") ~ "D-E"),
+                              levels = c("D-E", "C3", "ABC1-C2"))) %>%
+  # Muestra de hasta 30 años
+  dplyr::filter(edad_nac <= 30) %>%
+  dplyr::select(educacion_ciudadana, sexo, educ, gse3, region, zona, pueblo, educ_jefe, edad_nac, ola, voto) %>%
+  na.omit() %>%
+  droplevels() %>%
+  as.data.frame()
+
+# Casos perdidos por información incompleta
+c(base = nrow(data_voto), completos = nrow(psm_voto_30), perdidos = nrow(data_voto) - nrow(psm_voto_30))
+dplyr::count(psm_voto_30, educacion_ciudadana)
+```
+
+### Matching
+
+```{r}
+m_voto_30 <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_voto_30,
+                  method = "nearest",
+                  discard = "both",
+                  caliper = 0.01)
+
+summary(m_voto_30)
+
+# Casos emparejados y descartados por grupo
+summary(m_voto_30)$nn
+```
+
+### Visual inspection
+
+```{r}
+love.plot(m_voto_30, 
+          stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
+          thresholds = c(m = 0.1, ks = 0.05), 
+          drop.distance = TRUE, 
+          colors = c("dodgerblue4", "firebrick"),
+          shapes = c(16, 17),
+          stars = "none")
+```
+
+### Convert Propensity Score Matched results into an analyzable data
+
+```{r}
+match_data_voto_30 <- match.data(m_voto_30)
+head(match_data_voto_30)
+```
+
+### Inverse Probability Weight (IPW) Methods
+
+#### Using logistic regression to estimate the propensity score
+
+```{r}
+logit_voto_30 <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_voto_30,
+              family = "binomial"(link = "logit"))
+summary(logit_voto_30)
+```
+
+
+```{r}
+## Method 1: Using augment_columns
+prob_fitted_voto_30 <- augment_columns(logit_voto_30, 
+                               data = psm_voto_30,
+                               type.predict = "response") %>%
+                rename(propensity_score = .fitted)
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted_voto_30$propensity_score)
+```
+
+
+```{r}
+## Method 2: Using mutate
+prob_fitted2_voto_30 <- psm_voto_30 %>%
+    mutate(
+        propensity_score =  glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                                data = psm_voto_30,
+                                family = "binomial"(link = "logit")) %>%
+          predict(type = "response")
+          )
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted2_voto_30$propensity_score)
+```
+
+
+```{r}
+## Visualize the propensity score distributions between groups
+ps_fitted_voto_30 <- prob_fitted2_voto_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_fitted_voto_30) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_0)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_1, y = -after_stat(count))) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATE
+
+
+```{r}
+##############
+#### ATE IPW
+##############
+ate_fitted_voto_30 <- prob_fitted2_voto_30 %>%
+    mutate(
+        ipw_ate = (educacion_ciudadana / propensity_score) + ((1 - educacion_ciudadana) / (1 - propensity_score))
+          )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_ate_voto_30 <- ate_fitted_voto_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_ate_voto_30) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_ate), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_ate, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATT
+
+```{r}
+##############
+#### ATT IPW
+##############
+att_fitted_voto_30 <- prob_fitted2_voto_30 %>%
+  mutate(
+    ipw_att = ((propensity_score * educacion_ciudadana) / propensity_score) + ((propensity_score * (1 - educacion_ciudadana)) / (1 - propensity_score))
+        )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_att_voto_30 <- att_fitted_voto_30 %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_att_voto_30) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_att), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_att, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### Comparison of propensity score matched methods
+
+```{r}
+## No matching
+model0_voto_30 <- glm(voto ~ educacion_ciudadana,
+              data = psm_voto_30)
+summary(model0_voto_30)
+```
+
+```{r}
+## Nearest matching
+model1_voto_30 <- glm(voto ~ educacion_ciudadana,
+              data = match_data_voto_30)
+summary(model1_voto_30)
+```
+
+```{r}
+## IPW with ATE
+model2_voto_30 <- glm(voto ~ educacion_ciudadana, 
+              data = ate_fitted_voto_30, 
+              weight = ipw_ate)
+summary(model2_voto_30)
+```
+
+```{r}
+## IPW with ATT
+model3_voto_30 <- glm(voto ~ educacion_ciudadana, 
+              data = att_fitted_voto_30, 
+              weight = ipw_att)
+summary(model3_voto_30)
+```
+
+
+```{r}
+#### Comparing the models together
+model_list_voto_30 <- list("No matching" = model0_voto_30,
+                   "Nearest matching" = model1_voto_30,
+                   "IPW wih ATE" = model2_voto_30,
+                   "IPW with ATT" = model3_voto_30)
+
+modelsummary_voto_30 <- modelsummary(model_list_voto_30,
+             stars = TRUE,
+             gof_omit = ".IC",
+             fmt = fmt_decimal(digits = 2, pdigits = 3),
+             statistic = NULL,
+             conf_level = 0.95,
+             vcov = "robust",
+             estimate = "{estimate} [{conf.low}, {conf.high}] {stars}",
+             notes = list("* p < 0,05; ** p < 0,01; *** p < 0,001"))
+modelsummary_voto_30
+```
+
+
+
+# Prueba con otros resultados
+
+Esta sección es una prueba exploratoria que aplica el diseño de la sección anterior (muestra de hasta 30 años y covariables adicionales) a otros tres resultados, construidos en `preparation.qmd` o leídos desde la base original:
+
+- **Apoyo a la democracia** (`apoyo_dem`): 1 si la persona prefiere la democracia a cualquier otra forma de gobierno y 0 en otro caso. Se estima como modelo lineal de probabilidad.
+- **Satisfacción con la democracia** (`satisf_dem`): escala de 1 (nada satisfecho) a 5 (muy satisfecho).
+- **Eficacia política interna** (`eficacia_int`): grado de acuerdo con "Me parece que entiendo bastante bien las cuestiones políticas más importantes de nuestro país" (`rol_gobierno_14_c`), en una escala de 1 a 5 invertida para que valores altos indiquen más eficacia. Solo está en la CEP 89 (junio y julio de 2023), por lo que el análisis usa solo esa ola y tiene pocos tratados.
+
+Los objetos llevan los sufijos `_apoyo`, `_satisf` y `_efic`.
+
+## Apoyo a la democracia
+
+### Datos
+
+```{r}
+# Las rutas parten de la raíz del proyecto, para que el documento renderice
+# también fuera de la lista de render de _quarto.yml
+data_actitudes <- readRDS(here::here("input/data/proc/data_actitudes.rds"))
+
+# Grupo socioeconómico agrupado (referencia: D-E) y casos completos en
+# tratamiento, covariables, edad, ola y resultado
+psm_apoyo <- data_actitudes %>%
+  dplyr::mutate(gse3 = factor(dplyr::case_when(gse %in% c("ABC1", "C2") ~ "ABC1-C2",
+                                               gse == "C3" ~ "C3",
+                                               gse %in% c("D", "E") ~ "D-E"),
+                              levels = c("D-E", "C3", "ABC1-C2"))) %>%
+  # Muestra de hasta 30 años
+  dplyr::filter(edad_nac <= 30) %>%
+  dplyr::select(educacion_ciudadana, sexo, educ, gse3, region, zona, pueblo, educ_jefe, edad_nac, ola, apoyo_dem) %>%
+  na.omit() %>%
+  droplevels() %>%
+  as.data.frame()
+
+# Casos perdidos por información incompleta
+c(base = nrow(data_actitudes), completos = nrow(psm_apoyo), perdidos = nrow(data_actitudes) - nrow(psm_apoyo))
+dplyr::count(psm_apoyo, educacion_ciudadana)
+```
+
+### Matching
+
+```{r}
+m_apoyo <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_apoyo,
+                  method = "nearest",
+                  discard = "both",
+                  caliper = 0.01)
+
+summary(m_apoyo)
+
+# Casos emparejados y descartados por grupo
+summary(m_apoyo)$nn
+```
+
+### Visual inspection
+
+```{r}
+love.plot(m_apoyo, 
+          stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
+          thresholds = c(m = 0.1, ks = 0.05), 
+          drop.distance = TRUE, 
+          colors = c("dodgerblue4", "firebrick"),
+          shapes = c(16, 17),
+          stars = "none")
+```
+
+### Convert Propensity Score Matched results into an analyzable data
+
+```{r}
+match_data_apoyo <- match.data(m_apoyo)
+head(match_data_apoyo)
+```
+
+### Inverse Probability Weight (IPW) Methods
+
+#### Using logistic regression to estimate the propensity score
+
+```{r}
+logit_apoyo <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_apoyo,
+              family = "binomial"(link = "logit"))
+summary(logit_apoyo)
+```
+
+
+```{r}
+## Method 1: Using augment_columns
+prob_fitted_apoyo <- augment_columns(logit_apoyo, 
+                               data = psm_apoyo,
+                               type.predict = "response") %>%
+                rename(propensity_score = .fitted)
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted_apoyo$propensity_score)
+```
+
+
+```{r}
+## Method 2: Using mutate
+prob_fitted2_apoyo <- psm_apoyo %>%
+    mutate(
+        propensity_score =  glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                                data = psm_apoyo,
+                                family = "binomial"(link = "logit")) %>%
+          predict(type = "response")
+          )
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted2_apoyo$propensity_score)
+```
+
+
+```{r}
+## Visualize the propensity score distributions between groups
+ps_fitted_apoyo <- prob_fitted2_apoyo %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_fitted_apoyo) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_0)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_1, y = -after_stat(count))) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATE
+
+
+```{r}
+##############
+#### ATE IPW
+##############
+ate_fitted_apoyo <- prob_fitted2_apoyo %>%
+    mutate(
+        ipw_ate = (educacion_ciudadana / propensity_score) + ((1 - educacion_ciudadana) / (1 - propensity_score))
+          )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_ate_apoyo <- ate_fitted_apoyo %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_ate_apoyo) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_ate), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_ate, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATT
+
+```{r}
+##############
+#### ATT IPW
+##############
+att_fitted_apoyo <- prob_fitted2_apoyo %>%
+  mutate(
+    ipw_att = ((propensity_score * educacion_ciudadana) / propensity_score) + ((propensity_score * (1 - educacion_ciudadana)) / (1 - propensity_score))
+        )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_att_apoyo <- att_fitted_apoyo %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_att_apoyo) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_att), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_att, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### Comparison of propensity score matched methods
+
+```{r}
+## No matching
+model0_apoyo <- glm(apoyo_dem ~ educacion_ciudadana,
+              data = psm_apoyo)
+summary(model0_apoyo)
+```
+
+```{r}
+## Nearest matching
+model1_apoyo <- glm(apoyo_dem ~ educacion_ciudadana,
+              data = match_data_apoyo)
+summary(model1_apoyo)
+```
+
+```{r}
+## IPW with ATE
+model2_apoyo <- glm(apoyo_dem ~ educacion_ciudadana, 
+              data = ate_fitted_apoyo, 
+              weight = ipw_ate)
+summary(model2_apoyo)
+```
+
+```{r}
+## IPW with ATT
+model3_apoyo <- glm(apoyo_dem ~ educacion_ciudadana, 
+              data = att_fitted_apoyo, 
+              weight = ipw_att)
+summary(model3_apoyo)
+```
+
+
+```{r}
+#### Comparing the models together
+model_list_apoyo <- list("No matching" = model0_apoyo,
+                   "Nearest matching" = model1_apoyo,
+                   "IPW wih ATE" = model2_apoyo,
+                   "IPW with ATT" = model3_apoyo)
+
+modelsummary_apoyo <- modelsummary(model_list_apoyo,
+             stars = TRUE,
+             gof_omit = ".IC",
+             fmt = fmt_decimal(digits = 2, pdigits = 3),
+             statistic = NULL,
+             conf_level = 0.95,
+             vcov = "robust",
+             estimate = "{estimate} [{conf.low}, {conf.high}] {stars}",
+             notes = list("* p < 0,05; ** p < 0,01; *** p < 0,001"))
+modelsummary_apoyo
+```
+
+
+## Satisfacción con la democracia
+
+### Datos
+
+```{r}
+# Las rutas parten de la raíz del proyecto, para que el documento renderice
+# también fuera de la lista de render de _quarto.yml
+data_actitudes <- readRDS(here::here("input/data/proc/data_actitudes.rds"))
+
+# Grupo socioeconómico agrupado (referencia: D-E) y casos completos en
+# tratamiento, covariables, edad, ola y resultado
+psm_satisf <- data_actitudes %>%
+  dplyr::mutate(gse3 = factor(dplyr::case_when(gse %in% c("ABC1", "C2") ~ "ABC1-C2",
+                                               gse == "C3" ~ "C3",
+                                               gse %in% c("D", "E") ~ "D-E"),
+                              levels = c("D-E", "C3", "ABC1-C2"))) %>%
+  # Muestra de hasta 30 años
+  dplyr::filter(edad_nac <= 30) %>%
+  dplyr::select(educacion_ciudadana, sexo, educ, gse3, region, zona, pueblo, educ_jefe, edad_nac, ola, satisf_dem) %>%
+  na.omit() %>%
+  droplevels() %>%
+  as.data.frame()
+
+# Casos perdidos por información incompleta
+c(base = nrow(data_actitudes), completos = nrow(psm_satisf), perdidos = nrow(data_actitudes) - nrow(psm_satisf))
+dplyr::count(psm_satisf, educacion_ciudadana)
+```
+
+### Matching
+
+```{r}
+m_satisf <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_satisf,
+                  method = "nearest",
+                  discard = "both",
+                  caliper = 0.01)
+
+summary(m_satisf)
+
+# Casos emparejados y descartados por grupo
+summary(m_satisf)$nn
+```
+
+### Visual inspection
+
+```{r}
+love.plot(m_satisf, 
+          stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
+          thresholds = c(m = 0.1, ks = 0.05), 
+          drop.distance = TRUE, 
+          colors = c("dodgerblue4", "firebrick"),
+          shapes = c(16, 17),
+          stars = "none")
+```
+
+### Convert Propensity Score Matched results into an analyzable data
+
+```{r}
+match_data_satisf <- match.data(m_satisf)
+head(match_data_satisf)
+```
+
+### Inverse Probability Weight (IPW) Methods
+
+#### Using logistic regression to estimate the propensity score
+
+```{r}
+logit_satisf <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_satisf,
+              family = "binomial"(link = "logit"))
+summary(logit_satisf)
+```
+
+
+```{r}
+## Method 1: Using augment_columns
+prob_fitted_satisf <- augment_columns(logit_satisf, 
+                               data = psm_satisf,
+                               type.predict = "response") %>%
+                rename(propensity_score = .fitted)
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted_satisf$propensity_score)
+```
+
+
+```{r}
+## Method 2: Using mutate
+prob_fitted2_satisf <- psm_satisf %>%
+    mutate(
+        propensity_score =  glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                                data = psm_satisf,
+                                family = "binomial"(link = "logit")) %>%
+          predict(type = "response")
+          )
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted2_satisf$propensity_score)
+```
+
+
+```{r}
+## Visualize the propensity score distributions between groups
+ps_fitted_satisf <- prob_fitted2_satisf %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_fitted_satisf) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_0)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_1, y = -after_stat(count))) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATE
+
+
+```{r}
+##############
+#### ATE IPW
+##############
+ate_fitted_satisf <- prob_fitted2_satisf %>%
+    mutate(
+        ipw_ate = (educacion_ciudadana / propensity_score) + ((1 - educacion_ciudadana) / (1 - propensity_score))
+          )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_ate_satisf <- ate_fitted_satisf %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_ate_satisf) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_ate), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_ate, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATT
+
+```{r}
+##############
+#### ATT IPW
+##############
+att_fitted_satisf <- prob_fitted2_satisf %>%
+  mutate(
+    ipw_att = ((propensity_score * educacion_ciudadana) / propensity_score) + ((propensity_score * (1 - educacion_ciudadana)) / (1 - propensity_score))
+        )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_att_satisf <- att_fitted_satisf %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_att_satisf) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_att), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_att, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### Comparison of propensity score matched methods
+
+```{r}
+## No matching
+model0_satisf <- glm(satisf_dem ~ educacion_ciudadana,
+              data = psm_satisf)
+summary(model0_satisf)
+```
+
+```{r}
+## Nearest matching
+model1_satisf <- glm(satisf_dem ~ educacion_ciudadana,
+              data = match_data_satisf)
+summary(model1_satisf)
+```
+
+```{r}
+## IPW with ATE
+model2_satisf <- glm(satisf_dem ~ educacion_ciudadana, 
+              data = ate_fitted_satisf, 
+              weight = ipw_ate)
+summary(model2_satisf)
+```
+
+```{r}
+## IPW with ATT
+model3_satisf <- glm(satisf_dem ~ educacion_ciudadana, 
+              data = att_fitted_satisf, 
+              weight = ipw_att)
+summary(model3_satisf)
+```
+
+
+```{r}
+#### Comparing the models together
+model_list_satisf <- list("No matching" = model0_satisf,
+                   "Nearest matching" = model1_satisf,
+                   "IPW wih ATE" = model2_satisf,
+                   "IPW with ATT" = model3_satisf)
+
+modelsummary_satisf <- modelsummary(model_list_satisf,
+             stars = TRUE,
+             gof_omit = ".IC",
+             fmt = fmt_decimal(digits = 2, pdigits = 3),
+             statistic = NULL,
+             conf_level = 0.95,
+             vcov = "robust",
+             estimate = "{estimate} [{conf.low}, {conf.high}] {stars}",
+             notes = list("* p < 0,05; ** p < 0,01; *** p < 0,001"))
+modelsummary_satisf
+```
+
+
+## Eficacia política interna (CEP 89)
+
+### Datos
+
+```{r}
+# Las rutas parten de la raíz del proyecto, para que el documento renderice
+# también fuera de la lista de render de _quarto.yml
+# Eficacia política interna (rol_gobierno_14_c), solo en la CEP 89: "Me parece que
+# entiendo bastante bien las cuestiones políticas más importantes de nuestro país".
+# Se invierte para que valores altos indiquen más eficacia; no sabe y no contesta quedan en NA
+eficacia_89 <- haven::read_sav(here::here("input/data/original/base_89.sav")) %>%
+  dplyr::transmute(id_bu = as.character(id_bu),
+                   eficacia_int = dplyr::if_else(as.numeric(rol_gobierno_14_c) %in% 1:5,
+                                                 6 - as.numeric(rol_gobierno_14_c), NA_real_))
+
+data_efic <- readRDS(here::here("input/data/proc/data_actitudes.rds")) %>%
+  dplyr::filter(ola == "89") %>%
+  dplyr::mutate(id_bu = as.character(id_bu)) %>%
+  dplyr::left_join(eficacia_89, by = "id_bu")
+
+# Grupo socioeconómico agrupado (referencia: D-E) y casos completos en
+# tratamiento, covariables, edad, ola y resultado
+psm_efic <- data_efic %>%
+  dplyr::mutate(gse3 = factor(dplyr::case_when(gse %in% c("ABC1", "C2") ~ "ABC1-C2",
+                                               gse == "C3" ~ "C3",
+                                               gse %in% c("D", "E") ~ "D-E"),
+                              levels = c("D-E", "C3", "ABC1-C2"))) %>%
+  # Muestra de hasta 30 años
+  dplyr::filter(edad_nac <= 30) %>%
+  dplyr::select(educacion_ciudadana, sexo, educ, gse3, region, zona, pueblo, educ_jefe, edad_nac, ola, eficacia_int) %>%
+  na.omit() %>%
+  droplevels() %>%
+  as.data.frame()
+
+# Casos perdidos por información incompleta
+c(base = nrow(data_efic), completos = nrow(psm_efic), perdidos = nrow(data_efic) - nrow(psm_efic))
+dplyr::count(psm_efic, educacion_ciudadana)
+```
+
+### Matching
+
+```{r}
+m_efic <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_efic,
+                  method = "nearest",
+                  discard = "both",
+                  caliper = 0.01)
+
+summary(m_efic)
+
+# Casos emparejados y descartados por grupo
+summary(m_efic)$nn
+```
+
+### Visual inspection
+
+```{r}
+love.plot(m_efic, 
+          stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
+          thresholds = c(m = 0.1, ks = 0.05), 
+          drop.distance = TRUE, 
+          colors = c("dodgerblue4", "firebrick"),
+          shapes = c(16, 17),
+          stars = "none")
+```
+
+### Convert Propensity Score Matched results into an analyzable data
+
+```{r}
+match_data_efic <- match.data(m_efic)
+head(match_data_efic)
+```
+
+### Inverse Probability Weight (IPW) Methods
+
+#### Using logistic regression to estimate the propensity score
+
+```{r}
+logit_efic <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                  data = psm_efic,
+              family = "binomial"(link = "logit"))
+summary(logit_efic)
+```
+
+
+```{r}
+## Method 1: Using augment_columns
+prob_fitted_efic <- augment_columns(logit_efic, 
+                               data = psm_efic,
+                               type.predict = "response") %>%
+                rename(propensity_score = .fitted)
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted_efic$propensity_score)
+```
+
+
+```{r}
+## Method 2: Using mutate
+prob_fitted2_efic <- psm_efic %>%
+    mutate(
+        propensity_score =  glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
+                                data = psm_efic,
+                                family = "binomial"(link = "logit")) %>%
+          predict(type = "response")
+          )
+
+## Inspect propensity scores (propensity_score)
+summary(prob_fitted2_efic$propensity_score)
+```
+
+
+```{r}
+## Visualize the propensity score distributions between groups
+ps_fitted_efic <- prob_fitted2_efic %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_fitted_efic) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_0)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_1, y = -after_stat(count))) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATE
+
+
+```{r}
+##############
+#### ATE IPW
+##############
+ate_fitted_efic <- prob_fitted2_efic %>%
+    mutate(
+        ipw_ate = (educacion_ciudadana / propensity_score) + ((1 - educacion_ciudadana) / (1 - propensity_score))
+          )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_ate_efic <- ate_fitted_efic %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_ate_efic) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_ate), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_ate, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### IPW for ATT
+
+```{r}
+##############
+#### ATT IPW
+##############
+att_fitted_efic <- prob_fitted2_efic %>%
+  mutate(
+    ipw_att = ((propensity_score * educacion_ciudadana) / propensity_score) + ((propensity_score * (1 - educacion_ciudadana)) / (1 - propensity_score))
+        )
+
+## Visualize the propensity scores between the educacion_ciudadana and no-educacion_ciudadana groups
+ps_att_efic <- att_fitted_efic %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  tidyr::pivot_wider(names_from = educacion_ciudadana,
+                     values_from = propensity_score,
+                     names_prefix = "educacion_ciudadana_")
+
+ggplot(ps_att_efic) +
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1), alpha = 0.5) + 
+  geom_histogram(bins = 50, aes(educacion_ciudadana_1, weight = ipw_att), fill = "green", alpha = 0.5) + 
+  geom_histogram(bins = 50, alpha = 0.5, aes(x = educacion_ciudadana_0, y = -..count..)) + 
+  geom_histogram(bins = 50, aes(x = educacion_ciudadana_0, weight = ipw_att, y = -..count..), fill = "blue", alpha = 0.5) + 
+  ylab("count") + xlab("p") +
+  geom_hline(yintercept = 0, lwd = 0.5) +
+  scale_y_continuous(label = abs) 
+```
+
+### Comparison of propensity score matched methods
+
+```{r}
+## No matching
+model0_efic <- glm(eficacia_int ~ educacion_ciudadana,
+              data = psm_efic)
+summary(model0_efic)
+```
+
+```{r}
+## Nearest matching
+model1_efic <- glm(eficacia_int ~ educacion_ciudadana,
+              data = match_data_efic)
+summary(model1_efic)
+```
+
+```{r}
+## IPW with ATE
+model2_efic <- glm(eficacia_int ~ educacion_ciudadana, 
+              data = ate_fitted_efic, 
+              weight = ipw_ate)
+summary(model2_efic)
+```
+
+```{r}
+## IPW with ATT
+model3_efic <- glm(eficacia_int ~ educacion_ciudadana, 
+              data = att_fitted_efic, 
+              weight = ipw_att)
+summary(model3_efic)
+```
+
+
+```{r}
+#### Comparing the models together
+model_list_efic <- list("No matching" = model0_efic,
+                   "Nearest matching" = model1_efic,
+                   "IPW wih ATE" = model2_efic,
+                   "IPW with ATT" = model3_efic)
+
+modelsummary_efic <- modelsummary(model_list_efic,
+             stars = TRUE,
+             gof_omit = ".IC",
+             fmt = fmt_decimal(digits = 2, pdigits = 3),
+             statistic = NULL,
+             conf_level = 0.95,
+             vcov = "robust",
+             estimate = "{estimate} [{conf.low}, {conf.high}] {stars}",
+             notes = list("* p < 0,05; ** p < 0,01; *** p < 0,001"))
+modelsummary_efic
+```
+
