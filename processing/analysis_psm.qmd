@@ -29,6 +29,52 @@ p_load("tidyverse",
        "tinytable")
 ```
 
+# Resumen: menores de 30 años
+
+Esta sección reúne las tablas comparativas de los análisis con la muestra de hasta 30 años y las covariables adicionales, que se detallan en las secciones "Matching en la muestra de hasta 30 años" y "Prueba con otros resultados" al final del documento. Cada tabla compara cuatro estimaciones del efecto de `educacion_ciudadana`: la diferencia simple en la muestra de hasta 30 años (*No matching*), el emparejamiento por vecino más cercano (*Nearest matching*) y la ponderación por probabilidad inversa para el efecto promedio (*IPW with ATE*) y para el efecto sobre los tratados (*IPW with ATT*). Los intervalos de confianza usan errores estándar robustos. Los resultados dicotómicos (voto y apoyo a la democracia) se estiman como modelos lineales de probabilidad.
+
+```{r}
+#| label: ejecutar-menores-30
+#| include: false
+#| ref.label: !expr knitr::all_labels()[grepl("^m30-", knitr::all_labels())]
+```
+
+## Interés político
+
+```{r}
+modelsummary1_30
+```
+
+## Confianza política
+
+```{r}
+modelsummary_conf_30
+```
+
+## Voto
+
+```{r}
+modelsummary_voto_30
+```
+
+## Apoyo a la democracia
+
+```{r}
+modelsummary_apoyo
+```
+
+## Satisfacción con la democracia
+
+```{r}
+modelsummary_satisf
+```
+
+## Eficacia política interna (CEP 89)
+
+```{r}
+modelsummary_efic
+```
+
 # Interés político
 
 ## Datos
@@ -2087,6 +2133,7 @@ Esta sección replica el análisis con las covariables adicionales, pero restrin
 ### Datos
 
 ```{r}
+#| label: m30-001
 # Las rutas parten de la raíz del proyecto, para que el documento renderice
 # también fuera de la lista de render de _quarto.yml
 data_int <- readRDS(here::here("input/data/proc/data_int.rds"))
@@ -2113,6 +2160,7 @@ dplyr::count(psm_int_30, educacion_ciudadana)
 ### Matching
 
 ```{r}
+#| label: m30-002
 m_int_30 <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_int_30,
                   method = "nearest",
@@ -2128,6 +2176,7 @@ summary(m_int_30)$nn
 ### Visual inspection
 
 ```{r}
+#| label: m30-003
 love.plot(m_int_30, 
           stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
           thresholds = c(m = 0.1, ks = 0.05), 
@@ -2140,6 +2189,7 @@ love.plot(m_int_30,
 ### Convert Propensity Score Matched results into an analyzable data
 
 ```{r}
+#| label: m30-004
 match_data_30 <- match.data(m_int_30)
 head(match_data_30)
 ```
@@ -2149,6 +2199,7 @@ head(match_data_30)
 #### Using logistic regression to estimate the propensity score
 
 ```{r}
+#| label: m30-005
 logit_int_30 <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_int_30,
               family = "binomial"(link = "logit"))
@@ -2157,6 +2208,7 @@ summary(logit_int_30)
 
 
 ```{r}
+#| label: m30-006
 ## Method 1: Using augment_columns
 prob_fitted_30 <- augment_columns(logit_int_30, 
                                data = psm_int_30,
@@ -2169,6 +2221,7 @@ summary(prob_fitted_30$propensity_score)
 
 
 ```{r}
+#| label: m30-007
 ## Method 2: Using mutate
 prob_fitted2_30 <- psm_int_30 %>%
     mutate(
@@ -2184,6 +2237,7 @@ summary(prob_fitted2_30$propensity_score)
 
 
 ```{r}
+#| label: m30-008
 ## Visualize the propensity score distributions between groups
 ps_fitted_30 <- prob_fitted2_30 %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
@@ -2203,6 +2257,7 @@ ggplot(ps_fitted_30) +
 
 
 ```{r}
+#| label: m30-009
 ##############
 #### ATE IPW
 ##############
@@ -2231,6 +2286,7 @@ ggplot(ps_ate_30) +
 ### IPW for ATT
 
 ```{r}
+#| label: m30-010
 ##############
 #### ATT IPW
 ##############
@@ -2259,6 +2315,7 @@ ggplot(ps_att_30) +
 ### Comparison of propensity score matched methods
 
 ```{r}
+#| label: m30-011
 ## No matching
 model0_30 <- glm(int_pol ~ educacion_ciudadana,
               data = psm_int_30)
@@ -2266,6 +2323,7 @@ summary(model0_30)
 ```
 
 ```{r}
+#| label: m30-012
 ## Nearest matching
 model1_30 <- glm(int_pol ~ educacion_ciudadana,
               data = match_data_30)
@@ -2273,6 +2331,7 @@ summary(model1_30)
 ```
 
 ```{r}
+#| label: m30-013
 ## IPW with ATE
 model2_30 <- glm(int_pol ~ educacion_ciudadana, 
               data = ate_fitted_30, 
@@ -2281,6 +2340,7 @@ summary(model2_30)
 ```
 
 ```{r}
+#| label: m30-014
 ## IPW with ATT
 model3_30 <- glm(int_pol ~ educacion_ciudadana, 
               data = att_fitted_30, 
@@ -2290,6 +2350,7 @@ summary(model3_30)
 
 
 ```{r}
+#| label: m30-015
 #### Comparing the models together
 model_list_30 <- list("No matching" = model0_30,
                    "Nearest matching" = model1_30,
@@ -2313,6 +2374,7 @@ modelsummary1_30
 ### Datos
 
 ```{r}
+#| label: m30-016
 # Las rutas parten de la raíz del proyecto, para que el documento renderice
 # también fuera de la lista de render de _quarto.yml
 data_actitudes <- readRDS(here::here("input/data/proc/data_actitudes.rds"))
@@ -2339,6 +2401,7 @@ dplyr::count(psm_conf_30, educacion_ciudadana)
 ### Matching
 
 ```{r}
+#| label: m30-017
 m_conf_30 <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_conf_30,
                   method = "nearest",
@@ -2354,6 +2417,7 @@ summary(m_conf_30)$nn
 ### Visual inspection
 
 ```{r}
+#| label: m30-018
 love.plot(m_conf_30, 
           stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
           thresholds = c(m = 0.1, ks = 0.05), 
@@ -2366,6 +2430,7 @@ love.plot(m_conf_30,
 ### Convert Propensity Score Matched results into an analyzable data
 
 ```{r}
+#| label: m30-019
 match_data_conf_30 <- match.data(m_conf_30)
 head(match_data_conf_30)
 ```
@@ -2375,6 +2440,7 @@ head(match_data_conf_30)
 #### Using logistic regression to estimate the propensity score
 
 ```{r}
+#| label: m30-020
 logit_conf_30 <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_conf_30,
               family = "binomial"(link = "logit"))
@@ -2383,6 +2449,7 @@ summary(logit_conf_30)
 
 
 ```{r}
+#| label: m30-021
 ## Method 1: Using augment_columns
 prob_fitted_conf_30 <- augment_columns(logit_conf_30, 
                                data = psm_conf_30,
@@ -2395,6 +2462,7 @@ summary(prob_fitted_conf_30$propensity_score)
 
 
 ```{r}
+#| label: m30-022
 ## Method 2: Using mutate
 prob_fitted2_conf_30 <- psm_conf_30 %>%
     mutate(
@@ -2410,6 +2478,7 @@ summary(prob_fitted2_conf_30$propensity_score)
 
 
 ```{r}
+#| label: m30-023
 ## Visualize the propensity score distributions between groups
 ps_fitted_conf_30 <- prob_fitted2_conf_30 %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
@@ -2429,6 +2498,7 @@ ggplot(ps_fitted_conf_30) +
 
 
 ```{r}
+#| label: m30-024
 ##############
 #### ATE IPW
 ##############
@@ -2457,6 +2527,7 @@ ggplot(ps_ate_conf_30) +
 ### IPW for ATT
 
 ```{r}
+#| label: m30-025
 ##############
 #### ATT IPW
 ##############
@@ -2485,6 +2556,7 @@ ggplot(ps_att_conf_30) +
 ### Comparison of propensity score matched methods
 
 ```{r}
+#| label: m30-026
 ## No matching
 model0_conf_30 <- glm(conf_pol ~ educacion_ciudadana,
               data = psm_conf_30)
@@ -2492,6 +2564,7 @@ summary(model0_conf_30)
 ```
 
 ```{r}
+#| label: m30-027
 ## Nearest matching
 model1_conf_30 <- glm(conf_pol ~ educacion_ciudadana,
               data = match_data_conf_30)
@@ -2499,6 +2572,7 @@ summary(model1_conf_30)
 ```
 
 ```{r}
+#| label: m30-028
 ## IPW with ATE
 model2_conf_30 <- glm(conf_pol ~ educacion_ciudadana, 
               data = ate_fitted_conf_30, 
@@ -2507,6 +2581,7 @@ summary(model2_conf_30)
 ```
 
 ```{r}
+#| label: m30-029
 ## IPW with ATT
 model3_conf_30 <- glm(conf_pol ~ educacion_ciudadana, 
               data = att_fitted_conf_30, 
@@ -2516,6 +2591,7 @@ summary(model3_conf_30)
 
 
 ```{r}
+#| label: m30-030
 #### Comparing the models together
 model_list_conf_30 <- list("No matching" = model0_conf_30,
                    "Nearest matching" = model1_conf_30,
@@ -2539,6 +2615,7 @@ modelsummary_conf_30
 ### Datos
 
 ```{r}
+#| label: m30-031
 # Las rutas parten de la raíz del proyecto, para que el documento renderice
 # también fuera de la lista de render de _quarto.yml
 # Habilitados para votar en la 2ª vuelta de 2021, igual que en los análisis de voto
@@ -2567,6 +2644,7 @@ dplyr::count(psm_voto_30, educacion_ciudadana)
 ### Matching
 
 ```{r}
+#| label: m30-032
 m_voto_30 <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_voto_30,
                   method = "nearest",
@@ -2582,6 +2660,7 @@ summary(m_voto_30)$nn
 ### Visual inspection
 
 ```{r}
+#| label: m30-033
 love.plot(m_voto_30, 
           stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
           thresholds = c(m = 0.1, ks = 0.05), 
@@ -2594,6 +2673,7 @@ love.plot(m_voto_30,
 ### Convert Propensity Score Matched results into an analyzable data
 
 ```{r}
+#| label: m30-034
 match_data_voto_30 <- match.data(m_voto_30)
 head(match_data_voto_30)
 ```
@@ -2603,6 +2683,7 @@ head(match_data_voto_30)
 #### Using logistic regression to estimate the propensity score
 
 ```{r}
+#| label: m30-035
 logit_voto_30 <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_voto_30,
               family = "binomial"(link = "logit"))
@@ -2611,6 +2692,7 @@ summary(logit_voto_30)
 
 
 ```{r}
+#| label: m30-036
 ## Method 1: Using augment_columns
 prob_fitted_voto_30 <- augment_columns(logit_voto_30, 
                                data = psm_voto_30,
@@ -2623,6 +2705,7 @@ summary(prob_fitted_voto_30$propensity_score)
 
 
 ```{r}
+#| label: m30-037
 ## Method 2: Using mutate
 prob_fitted2_voto_30 <- psm_voto_30 %>%
     mutate(
@@ -2638,6 +2721,7 @@ summary(prob_fitted2_voto_30$propensity_score)
 
 
 ```{r}
+#| label: m30-038
 ## Visualize the propensity score distributions between groups
 ps_fitted_voto_30 <- prob_fitted2_voto_30 %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
@@ -2657,6 +2741,7 @@ ggplot(ps_fitted_voto_30) +
 
 
 ```{r}
+#| label: m30-039
 ##############
 #### ATE IPW
 ##############
@@ -2685,6 +2770,7 @@ ggplot(ps_ate_voto_30) +
 ### IPW for ATT
 
 ```{r}
+#| label: m30-040
 ##############
 #### ATT IPW
 ##############
@@ -2713,6 +2799,7 @@ ggplot(ps_att_voto_30) +
 ### Comparison of propensity score matched methods
 
 ```{r}
+#| label: m30-041
 ## No matching
 model0_voto_30 <- glm(voto ~ educacion_ciudadana,
               data = psm_voto_30)
@@ -2720,6 +2807,7 @@ summary(model0_voto_30)
 ```
 
 ```{r}
+#| label: m30-042
 ## Nearest matching
 model1_voto_30 <- glm(voto ~ educacion_ciudadana,
               data = match_data_voto_30)
@@ -2727,6 +2815,7 @@ summary(model1_voto_30)
 ```
 
 ```{r}
+#| label: m30-043
 ## IPW with ATE
 model2_voto_30 <- glm(voto ~ educacion_ciudadana, 
               data = ate_fitted_voto_30, 
@@ -2735,6 +2824,7 @@ summary(model2_voto_30)
 ```
 
 ```{r}
+#| label: m30-044
 ## IPW with ATT
 model3_voto_30 <- glm(voto ~ educacion_ciudadana, 
               data = att_fitted_voto_30, 
@@ -2744,6 +2834,7 @@ summary(model3_voto_30)
 
 
 ```{r}
+#| label: m30-045
 #### Comparing the models together
 model_list_voto_30 <- list("No matching" = model0_voto_30,
                    "Nearest matching" = model1_voto_30,
@@ -2779,6 +2870,7 @@ Los objetos llevan los sufijos `_apoyo`, `_satisf` y `_efic`.
 ### Datos
 
 ```{r}
+#| label: m30-046
 # Las rutas parten de la raíz del proyecto, para que el documento renderice
 # también fuera de la lista de render de _quarto.yml
 data_actitudes <- readRDS(here::here("input/data/proc/data_actitudes.rds"))
@@ -2805,6 +2897,7 @@ dplyr::count(psm_apoyo, educacion_ciudadana)
 ### Matching
 
 ```{r}
+#| label: m30-047
 m_apoyo <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_apoyo,
                   method = "nearest",
@@ -2820,6 +2913,7 @@ summary(m_apoyo)$nn
 ### Visual inspection
 
 ```{r}
+#| label: m30-048
 love.plot(m_apoyo, 
           stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
           thresholds = c(m = 0.1, ks = 0.05), 
@@ -2832,6 +2926,7 @@ love.plot(m_apoyo,
 ### Convert Propensity Score Matched results into an analyzable data
 
 ```{r}
+#| label: m30-049
 match_data_apoyo <- match.data(m_apoyo)
 head(match_data_apoyo)
 ```
@@ -2841,6 +2936,7 @@ head(match_data_apoyo)
 #### Using logistic regression to estimate the propensity score
 
 ```{r}
+#| label: m30-050
 logit_apoyo <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_apoyo,
               family = "binomial"(link = "logit"))
@@ -2849,6 +2945,7 @@ summary(logit_apoyo)
 
 
 ```{r}
+#| label: m30-051
 ## Method 1: Using augment_columns
 prob_fitted_apoyo <- augment_columns(logit_apoyo, 
                                data = psm_apoyo,
@@ -2861,6 +2958,7 @@ summary(prob_fitted_apoyo$propensity_score)
 
 
 ```{r}
+#| label: m30-052
 ## Method 2: Using mutate
 prob_fitted2_apoyo <- psm_apoyo %>%
     mutate(
@@ -2876,6 +2974,7 @@ summary(prob_fitted2_apoyo$propensity_score)
 
 
 ```{r}
+#| label: m30-053
 ## Visualize the propensity score distributions between groups
 ps_fitted_apoyo <- prob_fitted2_apoyo %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
@@ -2895,6 +2994,7 @@ ggplot(ps_fitted_apoyo) +
 
 
 ```{r}
+#| label: m30-054
 ##############
 #### ATE IPW
 ##############
@@ -2923,6 +3023,7 @@ ggplot(ps_ate_apoyo) +
 ### IPW for ATT
 
 ```{r}
+#| label: m30-055
 ##############
 #### ATT IPW
 ##############
@@ -2951,6 +3052,7 @@ ggplot(ps_att_apoyo) +
 ### Comparison of propensity score matched methods
 
 ```{r}
+#| label: m30-056
 ## No matching
 model0_apoyo <- glm(apoyo_dem ~ educacion_ciudadana,
               data = psm_apoyo)
@@ -2958,6 +3060,7 @@ summary(model0_apoyo)
 ```
 
 ```{r}
+#| label: m30-057
 ## Nearest matching
 model1_apoyo <- glm(apoyo_dem ~ educacion_ciudadana,
               data = match_data_apoyo)
@@ -2965,6 +3068,7 @@ summary(model1_apoyo)
 ```
 
 ```{r}
+#| label: m30-058
 ## IPW with ATE
 model2_apoyo <- glm(apoyo_dem ~ educacion_ciudadana, 
               data = ate_fitted_apoyo, 
@@ -2973,6 +3077,7 @@ summary(model2_apoyo)
 ```
 
 ```{r}
+#| label: m30-059
 ## IPW with ATT
 model3_apoyo <- glm(apoyo_dem ~ educacion_ciudadana, 
               data = att_fitted_apoyo, 
@@ -2982,6 +3087,7 @@ summary(model3_apoyo)
 
 
 ```{r}
+#| label: m30-060
 #### Comparing the models together
 model_list_apoyo <- list("No matching" = model0_apoyo,
                    "Nearest matching" = model1_apoyo,
@@ -3006,6 +3112,7 @@ modelsummary_apoyo
 ### Datos
 
 ```{r}
+#| label: m30-061
 # Las rutas parten de la raíz del proyecto, para que el documento renderice
 # también fuera de la lista de render de _quarto.yml
 data_actitudes <- readRDS(here::here("input/data/proc/data_actitudes.rds"))
@@ -3032,6 +3139,7 @@ dplyr::count(psm_satisf, educacion_ciudadana)
 ### Matching
 
 ```{r}
+#| label: m30-062
 m_satisf <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_satisf,
                   method = "nearest",
@@ -3047,6 +3155,7 @@ summary(m_satisf)$nn
 ### Visual inspection
 
 ```{r}
+#| label: m30-063
 love.plot(m_satisf, 
           stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
           thresholds = c(m = 0.1, ks = 0.05), 
@@ -3059,6 +3168,7 @@ love.plot(m_satisf,
 ### Convert Propensity Score Matched results into an analyzable data
 
 ```{r}
+#| label: m30-064
 match_data_satisf <- match.data(m_satisf)
 head(match_data_satisf)
 ```
@@ -3068,6 +3178,7 @@ head(match_data_satisf)
 #### Using logistic regression to estimate the propensity score
 
 ```{r}
+#| label: m30-065
 logit_satisf <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_satisf,
               family = "binomial"(link = "logit"))
@@ -3076,6 +3187,7 @@ summary(logit_satisf)
 
 
 ```{r}
+#| label: m30-066
 ## Method 1: Using augment_columns
 prob_fitted_satisf <- augment_columns(logit_satisf, 
                                data = psm_satisf,
@@ -3088,6 +3200,7 @@ summary(prob_fitted_satisf$propensity_score)
 
 
 ```{r}
+#| label: m30-067
 ## Method 2: Using mutate
 prob_fitted2_satisf <- psm_satisf %>%
     mutate(
@@ -3103,6 +3216,7 @@ summary(prob_fitted2_satisf$propensity_score)
 
 
 ```{r}
+#| label: m30-068
 ## Visualize the propensity score distributions between groups
 ps_fitted_satisf <- prob_fitted2_satisf %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
@@ -3122,6 +3236,7 @@ ggplot(ps_fitted_satisf) +
 
 
 ```{r}
+#| label: m30-069
 ##############
 #### ATE IPW
 ##############
@@ -3150,6 +3265,7 @@ ggplot(ps_ate_satisf) +
 ### IPW for ATT
 
 ```{r}
+#| label: m30-070
 ##############
 #### ATT IPW
 ##############
@@ -3178,6 +3294,7 @@ ggplot(ps_att_satisf) +
 ### Comparison of propensity score matched methods
 
 ```{r}
+#| label: m30-071
 ## No matching
 model0_satisf <- glm(satisf_dem ~ educacion_ciudadana,
               data = psm_satisf)
@@ -3185,6 +3302,7 @@ summary(model0_satisf)
 ```
 
 ```{r}
+#| label: m30-072
 ## Nearest matching
 model1_satisf <- glm(satisf_dem ~ educacion_ciudadana,
               data = match_data_satisf)
@@ -3192,6 +3310,7 @@ summary(model1_satisf)
 ```
 
 ```{r}
+#| label: m30-073
 ## IPW with ATE
 model2_satisf <- glm(satisf_dem ~ educacion_ciudadana, 
               data = ate_fitted_satisf, 
@@ -3200,6 +3319,7 @@ summary(model2_satisf)
 ```
 
 ```{r}
+#| label: m30-074
 ## IPW with ATT
 model3_satisf <- glm(satisf_dem ~ educacion_ciudadana, 
               data = att_fitted_satisf, 
@@ -3209,6 +3329,7 @@ summary(model3_satisf)
 
 
 ```{r}
+#| label: m30-075
 #### Comparing the models together
 model_list_satisf <- list("No matching" = model0_satisf,
                    "Nearest matching" = model1_satisf,
@@ -3233,6 +3354,7 @@ modelsummary_satisf
 ### Datos
 
 ```{r}
+#| label: m30-076
 # Las rutas parten de la raíz del proyecto, para que el documento renderice
 # también fuera de la lista de render de _quarto.yml
 # Eficacia política interna (rol_gobierno_14_c), solo en la CEP 89: "Me parece que
@@ -3270,6 +3392,7 @@ dplyr::count(psm_efic, educacion_ciudadana)
 ### Matching
 
 ```{r}
+#| label: m30-077
 m_efic <- matchit(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_efic,
                   method = "nearest",
@@ -3285,6 +3408,7 @@ summary(m_efic)$nn
 ### Visual inspection
 
 ```{r}
+#| label: m30-078
 love.plot(m_efic, 
           stats = c("m", "ks"), ### m = mean difference; ks = Kolmogorov-Smirnov
           thresholds = c(m = 0.1, ks = 0.05), 
@@ -3297,6 +3421,7 @@ love.plot(m_efic,
 ### Convert Propensity Score Matched results into an analyzable data
 
 ```{r}
+#| label: m30-079
 match_data_efic <- match.data(m_efic)
 head(match_data_efic)
 ```
@@ -3306,6 +3431,7 @@ head(match_data_efic)
 #### Using logistic regression to estimate the propensity score
 
 ```{r}
+#| label: m30-080
 logit_efic <- glm(educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe,
                   data = psm_efic,
               family = "binomial"(link = "logit"))
@@ -3314,6 +3440,7 @@ summary(logit_efic)
 
 
 ```{r}
+#| label: m30-081
 ## Method 1: Using augment_columns
 prob_fitted_efic <- augment_columns(logit_efic, 
                                data = psm_efic,
@@ -3326,6 +3453,7 @@ summary(prob_fitted_efic$propensity_score)
 
 
 ```{r}
+#| label: m30-082
 ## Method 2: Using mutate
 prob_fitted2_efic <- psm_efic %>%
     mutate(
@@ -3341,6 +3469,7 @@ summary(prob_fitted2_efic$propensity_score)
 
 
 ```{r}
+#| label: m30-083
 ## Visualize the propensity score distributions between groups
 ps_fitted_efic <- prob_fitted2_efic %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
@@ -3360,6 +3489,7 @@ ggplot(ps_fitted_efic) +
 
 
 ```{r}
+#| label: m30-084
 ##############
 #### ATE IPW
 ##############
@@ -3388,6 +3518,7 @@ ggplot(ps_ate_efic) +
 ### IPW for ATT
 
 ```{r}
+#| label: m30-085
 ##############
 #### ATT IPW
 ##############
@@ -3416,6 +3547,7 @@ ggplot(ps_att_efic) +
 ### Comparison of propensity score matched methods
 
 ```{r}
+#| label: m30-086
 ## No matching
 model0_efic <- glm(eficacia_int ~ educacion_ciudadana,
               data = psm_efic)
@@ -3423,6 +3555,7 @@ summary(model0_efic)
 ```
 
 ```{r}
+#| label: m30-087
 ## Nearest matching
 model1_efic <- glm(eficacia_int ~ educacion_ciudadana,
               data = match_data_efic)
@@ -3430,6 +3563,7 @@ summary(model1_efic)
 ```
 
 ```{r}
+#| label: m30-088
 ## IPW with ATE
 model2_efic <- glm(eficacia_int ~ educacion_ciudadana, 
               data = ate_fitted_efic, 
@@ -3438,6 +3572,7 @@ summary(model2_efic)
 ```
 
 ```{r}
+#| label: m30-089
 ## IPW with ATT
 model3_efic <- glm(eficacia_int ~ educacion_ciudadana, 
               data = att_fitted_efic, 
@@ -3447,6 +3582,7 @@ summary(model3_efic)
 
 
 ```{r}
+#| label: m30-090
 #### Comparing the models together
 model_list_efic <- list("No matching" = model0_efic,
                    "Nearest matching" = model1_efic,
