@@ -2,6 +2,8 @@
 
 Análisis del efecto de la asignatura de Educación Ciudadana y del Plan de Formación Ciudadana sobre la participación electoral y el interés político, con datos de la Encuesta CEP (olas 77 a 95).
 
+Sitio con todos los análisis: <https://kevin-carrasco.github.io/ciudadania-participacion/>
+
 La estructura de carpetas sigue el protocolo IPO (Input-Processing-Output) de análisis reproducibles del Laboratorio de Ciencia Social Abierta (LISA-COES): <https://lisa-coes.github.io/ipo/>
 
 ## Estructura
@@ -40,5 +42,4 @@ La estructura de carpetas sigue el protocolo IPO (Input-Processing-Output) de an
 ```
 
 Las tablas de regresión reportan todos los coeficientes de cada modelo, incluidos los efectos fijos de ola y de edad.
-
 Para reproducir los resultados se renderiza el proyecto completo con `quarto render` desde la raíz. El orden de `_quarto.yml` respeta las dependencias: `preparation.qmd` genera las bases, `analysis_did_interes_ext.qmd` usa el modelo guardado por `analysis_did_interes.qmd` y la portada (`index.qmd`) lee los modelos guardados por los análisis.
