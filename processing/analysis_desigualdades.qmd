@@ -1,0 +1,1131 @@
+---
+title: "Tipos de desigualdad en la participación política"
+subtitle: "Educación ciudadana y participación política"
+author: "Kevin Carrasco"
+date: today
+lang: es
+execute:
+  # Reutiliza los resultados si el documento no cambió (el bootstrap toma varios minutos)
+  freeze: auto
+---
+
+# Qué se hace y por qué
+
+## Qué se hace
+
+Este documento estima el efecto de la asignatura de Educación Ciudadana sobre cuatro medidas de la distribución del interés político, la confianza política y el voto en la 2ª vuelta presidencial de 2021: el nivel (la media o la proporción), la dispersión (la desviación estándar), la brecha social (la diferencia entre personas de origen social alto y bajo) y la insuficiencia (la proporción bajo un umbral mínimo). Cada medida se calcula en celdas de ola y grupo de edad, y el efecto se estima con una diferencia en diferencias sobre esas medidas, siguiendo los diseños de la pestaña [Diferencia en diferencias](analysis_did_principal.qmd). Las estimaciones se complementan con chequeos de regresión individual, pruebas de robustez, un placebo con olas previas a la asignatura y una comparación descriptiva con emparejamiento por puntaje de propensión.
+
+## Por qué se hace
+
+Los análisis anteriores evalúan si la asignatura cambió el promedio de cada resultado. Una política educativa puede, sin embargo, afectar la distribución sin mover el promedio, por ejemplo reduciendo la distancia entre jóvenes de distinto origen social. Lindgren, Oskarsson y Dawes (2017, "Can Political Inequalities Be Educated Away?", *American Journal of Political Science*) muestran que una reforma educativa sueca redujo la brecha de participación según origen social, y esa es la hipótesis sustantiva que se evalúa aquí: la asignatura podría reducir la brecha social en participación aunque no cambie el nivel.
+
+El enfoque se adapta de Strello, Strietholt, Steinmann y Siepmann (2021, "Early tracking and different types of inequalities in achievement", *Educational Assessment, Evaluation and Accountability*). Para evaluar la selección temprana de estudiantes, estos autores calculan en cada país cuatro medidas del rendimiento: el nivel, la dispersión, la brecha social según los libros en el hogar y la insuficiencia, es decir, la proporción bajo un umbral mínimo. Con ellas estiman una diferencia en diferencias a la Hanushek y Wößmann (2006), que compara el cambio entre primaria y secundaria en países con y sin selección temprana, por separado para cada medida y en muchos pares de estudios internacionales. Luego sintetizan las estimaciones con una media ponderada por el inverso de la varianza. Encuentran efectos claros sobre la brecha social, menores sobre la dispersión, débiles sobre la insuficiencia y nulos sobre el nivel, con estimaciones muy variables entre pares por el bajo número de países.
+
+La traducción a este proyecto tiene cinco diferencias:
+
+- **Unidades:** las unidades son grupos de edad dentro de cada ola de la Encuesta CEP (jóvenes de 18 a 21 años y personas de 23 años o más), no países.
+- **Períodos:** el período previo es la CEP 85, en la que casi ningún joven había cursado la asignatura, y los posteriores son las olas 92 en adelante; cada combinación de la CEP 85 con una ola posterior es un "par de estudios". En el voto, que se refiere a una sola elección, los pares son años de nacimiento.
+- **Origen social:** la brecha se define con el nivel educacional del jefe de hogar (`educ_jefe`) en lugar de los libros en el hogar.
+- **Incertidumbre:** hay pocas unidades y celdas pequeñas, por lo que los errores estándar se obtienen por bootstrap dentro de cada celda.
+- **Datos faltantes:** se trabaja con casos completos, sin imputación múltiple.
+
+Strello et al. estandarizan los efectos con la desviación estándar de cada medida entre países. Con tan pocas unidades eso no es posible, por lo que aquí los efectos sobre el nivel, la dispersión y la brecha se dividen por la desviación estándar individual del resultado en el grupo de comparación en la CEP 85, y la insuficiencia se reporta en puntos porcentuales.
+
+# Resumen
+
+```{r}
+#| label: ejecutar-calculos
+#| include: false
+#| ref.label: !expr knitr::all_labels()[grepl("^calc-", knitr::all_labels())]
+```
+
+La tabla resume el estimador principal de cada medida y resultado. En interés y confianza es la síntesis por el inverso de la varianza de los pares de olas, con el grupo de comparación de 23 años o más y sin ponderador. En el voto es el estimador agrupado, que compara a los nacidos en 2003 con todos los nacidos antes. Entre paréntesis se presenta el error estándar bootstrap, y entre corchetes el efecto estandarizado (en desviaciones estándar del resultado) o, en la insuficiencia, el efecto en puntos porcentuales. Una brecha negativa indica que la brecha a favor del origen alto se redujo. De las `r sum(!is.na(principal$p))` estimaciones de la tabla, `r sum(principal$p < 0.05, na.rm = TRUE)` son significativas al 5%: el nivel y la brecha social de la confianza política y el nivel del voto. Ninguna medida del interés político cambia de forma significativa, y la reducción de la brecha en la confianza depende de cómo se mide el origen social, como se discute en la sección B.
+
+```{r}
+#| label: tabla-resumen
+knitr::kable(tabla_resumen, align = "lccc",
+             caption = "Efecto de la asignatura sobre cada medida (estimador principal, error estándar bootstrap y efecto estandarizado)")
+```
+
+```{r}
+#| label: grafico-resumen
+#| fig-width: 8
+#| fig-height: 5.5
+grafico_resumen
+```
+
+# Datos y funciones
+
+Los bloques de cálculo de este documento se muestran en la sección que les corresponde, pero se ejecutan una sola vez al comienzo, para presentar el resumen antes que los detalles.
+
+```{r}
+#| label: calc-00-funciones
+#| eval: false
+pacman::p_load(dplyr, tidyr, texreg, sandwich, lmtest, ggplot2, MatchIt)
+
+B <- 1000
+semilla <- 20261123
+pausa <- 2  # segundos de pausa cada 100 réplicas del bootstrap
+
+# Agrupación de gse (referencia: D-E), igual que en analysis_regresiones.qmd
+agrupar_gse <- function(x) {
+  factor(dplyr::case_when(x %in% c("ABC1", "C2") ~ "ABC1-C2",
+                          x == "C3" ~ "C3",
+                          x %in% c("D", "E") ~ "D-E"),
+         levels = c("D-E", "C3", "ABC1-C2"))
+}
+
+# Origen social alto: jefe de hogar con educación técnica o universitaria
+origen_alto <- function(e) {
+  dplyr::if_else(is.na(e), NA_integer_, as.integer(e %in% c("Técnica", "Universitaria o más")))
+}
+
+## Estadísticos ponderados --------------------------------------------------------
+wmean <- function(x, w) if (length(x) == 0) NA_real_ else sum(w * x) / sum(w)
+wsd <- function(x, w) {
+  if (length(x) < 2) return(NA_real_)
+  m <- wmean(x, w)
+  sqrt(sum(w * (x - m)^2) / sum(w))
+}
+wmedian <- function(x, w) {
+  if (length(x) == 0) return(NA_real_)
+  o <- order(x)
+  x[o][which(cumsum(w[o]) / sum(w) >= 0.5)[1]]
+}
+# Desviación absoluta media respecto de la mediana
+mad_med <- function(x, w) wmean(abs(x - wmedian(x, w)), w)
+# Índice ordinal de Leik: D = 2 * suma(d_i) / (K - 1), con d_i = F_i si F_i <= 0,5
+# y 1 - F_i en otro caso, donde F_i es la proporción acumulada hasta la categoría i
+leik <- function(x, w, K) {
+  if (length(x) == 0) return(NA_real_)
+  # Suma de pesos por categoría (más rápido que factor y tapply en el bootstrap)
+  F <- cumsum(vapply(seq_len(K), function(k) sum(w[x == k]), numeric(1))) / sum(w)
+  d <- ifelse(F <= 0.5, F, 1 - F)
+  2 * sum(d[-K]) / (K - 1)
+}
+
+## Medidas de una celda -----------------------------------------------------------
+nombres_medidas <- c("nivel", "de", "mad", "leik", "insuf1", "insuf2",
+                     "brecha", "brecha_rel", "brecha_gse", "brecha_gse_rel")
+
+medidas <- function(y, ins1, ins2, alto, galto, w, K) {
+  de <- wsd(y, w)
+  # Diferencia de medias entre origen alto (1) y bajo (0); los NA quedan fuera
+  brecha <- function(g) {
+    a <- which(g == 1)
+    b <- which(g == 0)
+    if (!length(a) || !length(b)) return(NA_real_)
+    wmean(y[a], w[a]) - wmean(y[b], w[b])
+  }
+  br <- brecha(alto)
+  bg <- brecha(galto)
+  c(nivel = wmean(y, w), de = de, mad = mad_med(y, w),
+    leik = if (is.na(K)) NA_real_ else leik(y, w, K),
+    insuf1 = wmean(ins1, w), insuf2 = wmean(ins2, w),
+    brecha = br, brecha_rel = br / de, brecha_gse = bg, brecha_gse_rel = bg / de)
+}
+
+## Celdas, medidas y diferencias en diferencias -----------------------------------
+# Índices de cada combinación de grupo y período
+armar_celdas <- function(grupos, periodos) {
+  out <- list()
+  for (g in names(grupos)) for (p in names(periodos)) {
+    out[[paste(g, p, sep = "_")]] <- which(grupos[[g]] & periodos[[p]])
+  }
+  out
+}
+
+# Arreglo celda x medida x ponderación ("sin" y "con" pond)
+calcular <- function(d, celdas, K) {
+  A <- array(NA_real_, c(length(celdas), length(nombres_medidas), 2),
+             dimnames = list(names(celdas), nombres_medidas, c("sin", "con")))
+  for (p in c("sin", "con")) {
+    w <- if (p == "sin") rep(1, length(d$y)) else d$pond
+    for (cc in names(celdas)) {
+      i <- celdas[[cc]]
+      A[cc, , p] <- medidas(d$y[i], d$ins1[i], d$ins2[i], d$alto[i], d$galto[i], w[i], K)
+    }
+  }
+  A
+}
+
+# Delta = [M(a) - M(b)] - [M(c) - M(e)]: a y b son el grupo tratado después y
+# antes, c y e el grupo de comparación después y antes
+calcular_deltas <- function(A, pares) {
+  D <- (A[pares$a, , , drop = FALSE] - A[pares$b, , , drop = FALSE]) -
+    (A[pares$c, , , drop = FALSE] - A[pares$e, , , drop = FALSE])
+  dimnames(D)[[1]] <- pares$id
+  D
+}
+
+# Bootstrap estratificado: remuestrea personas dentro de cada estrato y recalcula
+# todas las medidas y todos los pares en cada réplica
+bootstrap <- function(d, celdas, pares, estrato, K) {
+  set.seed(semilla)
+  estratos <- split(seq_len(nrow(d)), estrato, drop = TRUE)
+  cols <- as.list(d[c("y", "ins1", "ins2", "alto", "galto", "pond")])
+  reps <- array(NA_real_, c(B, nrow(pares), length(nombres_medidas), 2),
+                dimnames = list(NULL, pares$id, nombres_medidas, c("sin", "con")))
+  for (b in seq_len(B)) {
+    idx <- seq_len(nrow(d))
+    for (s in estratos) idx[s] <- s[sample.int(length(s), length(s), replace = TRUE)]
+    reps[b, , , ] <- calcular_deltas(calcular(lapply(cols, function(v) v[idx]), celdas, K), pares)
+    # Pausa breve cada 100 réplicas para no mantener el procesador al máximo
+    if (b %% 100 == 0) Sys.sleep(pausa)
+  }
+  reps
+}
+
+# Síntesis de los pares: media ponderada por el inverso de la varianza, con su
+# error estándar analítico y el bootstrap con los pesos fijos, y pesos iguales
+sintetizar <- function(delta, reps) {
+  se <- apply(reps, 2, stats::sd, na.rm = TRUE)
+  ok <- is.finite(delta) & is.finite(se) & se > 0
+  if (!any(ok)) return(c(est = NA, se_an = NA, se_boot = NA, est_eq = NA, se_eq = NA, n = 0))
+  w <- (1 / se[ok]^2) / sum(1 / se[ok]^2)
+  r <- reps[, ok, drop = FALSE]
+  c(est = sum(w * delta[ok]), se_an = sqrt(1 / sum(1 / se[ok]^2)),
+    se_boot = stats::sd(r %*% w, na.rm = TRUE),
+    est_eq = mean(delta[ok]), se_eq = stats::sd(rowMeans(r), na.rm = TRUE), n = sum(ok))
+}
+
+# Réplicas de un conjunto de pares como matriz B x pares
+matriz <- function(R, ids, m, p) matrix(R[, ids, m, p], nrow = dim(R)[1])
+
+estrellas <- function(p) dplyr::case_when(p < 0.001 ~ "***", p < 0.01 ~ "**", p < 0.05 ~ "*", TRUE ~ "")
+
+etiquetas_medidas <- c(nivel = "Nivel", de = "Dispersión (DE)",
+                       mad = "Dispersión (desviación absoluta respecto de la mediana)",
+                       leik = "Dispersión (índice de Leik)", insuf1 = "Insuficiencia",
+                       insuf2 = "Insuficiencia (umbral alternativo)",
+                       brecha = "Brecha social (educación del jefe de hogar)",
+                       brecha_rel = "Brecha social relativa (educación del jefe de hogar)",
+                       brecha_gse = "Brecha social (GSE)", brecha_gse_rel = "Brecha social relativa (GSE)")
+estandarizables <- c("nivel", "de", "mad", "brecha", "brecha_gse")
+
+# Tabla de síntesis de un resultado: cada comparación, ponderación y medida
+resumir <- function(D, R, pares, sd_ref, resultado) {
+  tipos <- c(agrupado = "Agrupado", agrupado_9802 = "Agrupado, nacidos 1998-2002")
+  filas <- list()
+  for (comp in unique(pares$comp)) for (p in c("sin", "con")) for (m in nombres_medidas) {
+    ks <- pares$id[pares$comp == comp & pares$tipo == "par"]
+    s <- sintetizar(D[ks, m, p], matriz(R, ks, m, p))
+    f <- data.frame(tipo = c("Inverso de la varianza", "Pesos iguales"),
+                    est = c(s[["est"]], s[["est_eq"]]), se = c(s[["se_boot"]], s[["se_eq"]]),
+                    se_an = c(s[["se_an"]], NA), n_pares = s[["n"]])
+    if (m %in% c("brecha", "brecha_rel")) {
+      ks2 <- ks[pares$min_sub[match(ks, pares$id)] >= 15]
+      s2 <- sintetizar(D[ks2, m, p], matriz(R, ks2, m, p))
+      f <- rbind(f, data.frame(tipo = "Inverso de la varianza, sin pares con celdas de menos de 15 casos",
+                               est = s2[["est"]], se = s2[["se_boot"]], se_an = s2[["se_an"]], n_pares = s2[["n"]]))
+    }
+    for (t in intersect(names(tipos), pares$tipo[pares$comp == comp])) {
+      ag <- pares$id[pares$comp == comp & pares$tipo == t]
+      f <- rbind(f, data.frame(tipo = tipos[[t]], est = D[ag, m, p],
+                               se = stats::sd(R[, ag, m, p], na.rm = TRUE), se_an = NA, n_pares = NA))
+    }
+    filas[[length(filas) + 1]] <- data.frame(resultado, comp, pond = p, medida = m, f)
+  }
+  out <- dplyr::bind_rows(filas)
+  out$sd_ref <- sd_ref[cbind(out$comp, out$pond)]
+  out %>%
+    dplyr::mutate(p = 2 * stats::pnorm(-abs(est / se)),
+                  estrellas = estrellas(p),
+                  efecto = dplyr::case_when(medida %in% estandarizables ~ est / sd_ref,
+                                            medida %in% c("insuf1", "insuf2") ~ 100 * est,
+                                            TRUE ~ NA_real_),
+                  se_efecto = dplyr::case_when(medida %in% estandarizables ~ se / sd_ref,
+                                               medida %in% c("insuf1", "insuf2") ~ 100 * se,
+                                               TRUE ~ NA_real_))
+}
+
+# Tamaños de cada celda: total y por origen social
+contar <- function(d, celdas) {
+  t(sapply(celdas, function(i) c(n = length(i), n_alto = sum(d$alto[i] == 1, na.rm = TRUE),
+                                 n_bajo = sum(d$alto[i] == 0, na.rm = TRUE))))
+}
+
+# Menor subcelda de origen social entre las cuatro celdas de cada par
+min_sub <- function(n, pares) {
+  sub <- pmin(n[, "n_alto"], n[, "n_bajo"])
+  pmin(sub[pares$a], sub[pares$b], sub[pares$c], sub[pares$e])
+}
+
+## Chequeos con regresión: errores HC1 --------------------------------------------
+nota <- "%stars. Errores estándar HC1 entre paréntesis."
+tabla_hc1 <- function(modelos, file = NULL) {
+  ct <- lapply(modelos, lmtest::coeftest, vcov. = sandwich::vcovHC, type = "HC1")
+  args <- list(modelos, custom.model.names = names(modelos),
+               override.se = lapply(ct, function(x) x[, 2]),
+               override.pvalues = lapply(ct, function(x) x[, 4]),
+               custom.note = nota)
+  if (!is.null(file)) do.call(texreg::htmlreg, c(args, file = file))
+  do.call(texreg::htmlreg, args)
+}
+
+## Formato de números en el texto ---------------------------------------------------
+num <- function(x, d = 2) formatC(round(x, d) + 0, format = "f", digits = d, decimal.mark = ",")
+entero <- function(x) format(x, big.mark = ".", decimal.mark = ",")
+```
+
+## Muestras
+
+Interés y confianza usan la muestra de casos completos del diseño 2x2 de `analysis_did_principal.qmd` (edades de 18 a 21 y de 23 años o más, CEP 85 y olas 92 en adelante, con nivel educacional, grupo socioeconómico, edad y ponderador), restringida además a los casos con educación del jefe de hogar, de modo que las cuatro medidas se calculan sobre los mismos casos. El voto usa la muestra completa del diseño por cohorte de nacimiento, incluida la CEP 86, para el nivel y para la brecha según grupo socioeconómico; la brecha según la educación del jefe de hogar usa solo los casos con esa variable, lo que deja fuera la CEP 86.
+
+```{r}
+#| label: calc-01-muestras
+#| eval: false
+controles <- c("educacion_ciudadana", "educ", "gse3", "edad_nac", "pond")
+
+# Muestra del diseño 2x2, igual que en analysis_did_principal.qmd
+base_2x2 <- function(d, y) {
+  d %>%
+    dplyr::mutate(gse3 = agrupar_gse(gse), ola_num = as.numeric(as.character(ola))) %>%
+    dplyr::filter(edad_nac >= 18, edad_nac != 22, ola_num == 85 | ola_num >= 92) %>%
+    tidyr::drop_na(dplyr::all_of(c("ola", y, controles))) %>%
+    droplevels() %>%
+    dplyr::mutate(joven = as.integer(edad_nac <= 21), post = as.integer(ola_num >= 92))
+}
+
+# Muestra de las medidas: casos con educación del jefe de hogar
+base_desig <- function(d, y) {
+  d %>%
+    dplyr::filter(!is.na(educ_jefe)) %>%
+    dplyr::mutate(y = .data[[y]],
+                  grupo = dplyr::case_when(joven == 1 ~ "joven", edad_nac <= 29 ~ "23-29", TRUE ~ "30+"),
+                  alto = origen_alto(educ_jefe),
+                  galto = as.integer(gse3 == "ABC1-C2"))
+}
+
+val_int <- base_2x2(readRDS("input/data/proc/data_int.rds"), "int_pol")
+val_conf <- base_2x2(readRDS("input/data/proc/data_actitudes.rds"), "conf_pol")
+
+# Interés: insuficiencia en "nada interesado" (1) y, como robustez, hasta "no muy interesado" (2)
+d_int <- base_desig(val_int, "int_pol") %>%
+  dplyr::mutate(ins1 = as.numeric(y == 1), ins2 = as.numeric(y <= 2))
+
+# Confianza: suma de los tres ítems; insuficiencia en nada de confianza en las
+# tres instituciones (suma 3) y, como robustez, suma de hasta 4
+d_conf <- base_desig(val_conf, "conf_pol") %>%
+  dplyr::mutate(suma = round(y * 3), ins1 = as.numeric(suma <= 3), ins2 = as.numeric(suma <= 4))
+
+# Voto: muestra del diseño por cohorte de nacimiento de analysis_did_principal.qmd
+d_voto <- readRDS("input/data/proc/data_voto.rds") %>%
+  dplyr::filter(habilitado_2v == 1) %>%
+  dplyr::mutate(gse3 = agrupar_gse(gse),
+                anio_nac = as.integer(format(fecha_nac, "%Y")),
+                tardio = as.integer(as.integer(format(fecha_nac, "%m")) >= 4),
+                cohorte_2003 = as.integer(anio_nac == 2003)) %>%
+  tidyr::drop_na(dplyr::all_of(c("ola", "voto", controles, "anio_nac", "tardio", "cohorte_2003"))) %>%
+  droplevels() %>%
+  dplyr::mutate(y = voto, ins1 = NA_real_, ins2 = NA_real_,
+                alto = origen_alto(educ_jefe), galto = as.integer(gse3 == "ABC1-C2"),
+                cohorte = dplyr::case_when(anio_nac == 2003 ~ "2003",
+                                           anio_nac %in% 1998:2002 ~ as.character(anio_nac),
+                                           TRUE ~ "1997 o antes"))
+
+## Pérdida de casos por educación del jefe de hogar ---------------------------------
+perdida <- data.frame(
+  resultado = c("Interés político", "Confianza política", "Voto"),
+  muestra_did = c(nrow(val_int), nrow(val_conf), nrow(d_voto)),
+  con_educ_jefe = c(nrow(d_int), nrow(d_conf), sum(!is.na(d_voto$alto)))
+) %>%
+  dplyr::mutate(perdidos = muestra_did - con_educ_jefe, pct_perdido = 100 * perdidos / muestra_did)
+```
+
+```{r}
+#| label: tabla-perdida
+knitr::kable(perdida, digits = 1,
+             caption = "Casos de la muestra de diferencia en diferencias y casos con educación del jefe de hogar")
+```
+
+## Validación
+
+Antes de calcular las medidas se reproduce el modelo 1 de interés y de confianza de `analysis_did_principal.qmd` (`y ~ factor(ola) + joven * post`, sin ponderador, muestra completa) con la misma muestra, y se verifica que el coeficiente `joven:post` coincide con el guardado en `output/models/modelos_did_principal.rds`. Si no coincide, el documento se detiene.
+
+```{r}
+#| label: calc-02-validacion
+#| eval: false
+ref_did <- readRDS("output/models/modelos_did_principal.rds")$efectos %>%
+  dplyr::filter(base == "propia", control == "educ", ponderacion == "Sin ponderar",
+                muestra == "Muestra completa", modelo == 1)
+
+validacion <- data.frame(
+  resultado = c("interes", "confianza"),
+  coef_aqui = c(coef(lm(int_pol ~ factor(ola) + joven * post, data = val_int))[["joven:post"]],
+                coef(lm(conf_pol ~ factor(ola) + joven * post, data = val_conf))[["joven:post"]])
+) %>%
+  dplyr::left_join(dplyr::select(ref_did, resultado, coef_did_principal = estimacion), by = "resultado") %>%
+  dplyr::mutate(diferencia = coef_aqui - coef_did_principal)
+
+stopifnot(isTRUE(all.equal(validacion$coef_aqui, validacion$coef_did_principal, tolerance = 1e-8)))
+```
+
+```{r}
+#| label: tabla-validacion
+knitr::kable(validacion, digits = 6, caption = "Coeficiente joven:post del modelo 1: este documento y analysis_did_principal.qmd")
+```
+
+# A) Interés político
+
+Las celdas combinan la ola (CEP 85 y olas 92, 93, 95 y 96) con el grupo de edad: jóvenes de 18 a 21 años, personas de 23 años o más (comparación principal) y de 23 a 29 años (robustez). Cada par de estudios compara la CEP 85 con una ola posterior, y el estimador agrupado junta todas las olas posteriores. El bootstrap remuestrea personas dentro de cada celda de ola, grupo de edad (18 a 21, 23 a 29 y 30 o más) y origen social, de modo que ninguna réplica queda con celdas vacías. La dispersión se mide con la desviación estándar y, como robustez, con la desviación absoluta media respecto de la mediana y el índice ordinal de Leik. La insuficiencia es la proporción "nada interesada" y, como robustez, la proporción "nada" o "no muy interesada".
+
+```{r}
+#| label: calc-10-interes
+#| eval: false
+## Celdas ---------------------------------------------------------------------------
+olas_int <- sort(unique(d_int$ola_num))
+celdas_int <- armar_celdas(
+  list(joven = d_int$grupo == "joven", c23 = d_int$grupo != "joven", c2329 = d_int$grupo == "23-29"),
+  c(setNames(lapply(olas_int, function(k) d_int$ola_num == k), olas_int), list(agr = d_int$ola_num != 85))
+)
+
+## Pares: CEP 85 frente a cada ola posterior, y todas las posteriores agrupadas -------
+armar_pares_ola <- function(olas_post, comps = c("c23", "c2329")) {
+  dplyr::bind_rows(lapply(comps, function(cp) {
+    data.frame(comp = cp, k = c(olas_post, "agr"), tipo = c(rep("par", length(olas_post)), "agrupado")) %>%
+      dplyr::mutate(id = paste(comp, k, sep = ":"),
+                    a = paste0("joven_", k), b = "joven_85", c = paste0(comp, "_", k), e = paste0(comp, "_85"))
+  }))
+}
+pares_int <- armar_pares_ola(setdiff(olas_int, 85))
+n_int <- contar(d_int, celdas_int)
+pares_int$min_sub <- min_sub(n_int, pares_int)
+
+## Medidas, deltas y bootstrap --------------------------------------------------------
+A_int <- calcular(d_int, celdas_int, K = 5)
+D_int <- calcular_deltas(A_int, pares_int)
+R_int <- bootstrap(d_int, celdas_int, pares_int, interaction(d_int$ola_num, d_int$grupo, d_int$alto), K = 5)
+
+# DE individual del interés en el grupo de comparación en la CEP 85
+sd_int <- sapply(c(sin = "sin", con = "con"), function(p) sapply(c(c23 = "c23", c2329 = "c2329"), function(cp) {
+  i <- celdas_int[[paste0(cp, "_85")]]
+  wsd(d_int$y[i], if (p == "sin") rep(1, length(i)) else d_int$pond[i])
+}))
+sint_int <- resumir(D_int, R_int, pares_int, sd_int, "interes")
+```
+
+## Medidas por celda
+
+```{r}
+#| label: tabla-celdas-interes
+tabla_celdas <- function(A, n, medidas_sel) {
+  data.frame(celda = rownames(n), n, A[rownames(n), medidas_sel, "sin"], row.names = NULL)
+}
+celdas_tab_int <- tabla_celdas(A_int, n_int, c("nivel", "de", "mad", "leik", "brecha", "insuf1", "insuf2"))
+knitr::kable(celdas_tab_int, digits = 3,
+             caption = "Interés político: medidas por celda, sin ponderar (agr: olas posteriores agrupadas)")
+```
+
+## Diferencias en diferencias por par y síntesis
+
+```{r}
+#| label: tabla-pares-interes
+# Tabla de pares: n de las cuatro celdas, menor subcelda de origen y Delta (EE bootstrap)
+tabla_pares <- function(D, R, pares, n, comp, medidas_sel, p = "sin") {
+  pr <- pares[pares$comp == comp, ]
+  cel <- data.frame(par = pr$k, n_trat_desp = n[pr$a, "n"], n_trat_antes = n[pr$b, "n"],
+                    n_comp_desp = n[pr$c, "n"], n_comp_antes = n[pr$e, "n"], min_subcelda_origen = pr$min_sub)
+  for (m in medidas_sel) {
+    se <- apply(matriz(R, pr$id, m, p), 2, stats::sd, na.rm = TRUE)
+    cel[[etiquetas_medidas[[m]]]] <- paste0(num(D[pr$id, m, p], 3), " (", num(se, 3), ")")
+  }
+  cel
+}
+# Síntesis de las medidas principales para una comparación y ponderación
+tabla_sintesis <- function(sint, comp_sel, p = "sin", medidas_sel = c("nivel", "de", "brecha", "insuf1")) {
+  sint %>%
+    dplyr::filter(comp == comp_sel, pond == p, medida %in% medidas_sel) %>%
+    dplyr::transmute(medida = etiquetas_medidas[medida], tipo, n_pares, est, se_boot = se, se_analitico = se_an,
+                     efecto, p, estrellas)
+}
+pares_tab_int <- tabla_pares(D_int, R_int, pares_int, n_int, "c23", c("nivel", "de", "brecha", "insuf1"))
+knitr::kable(pares_tab_int, caption = "Interés político: Delta por par (comparación 23 años o más, sin ponderar). Error estándar bootstrap entre paréntesis")
+```
+
+```{r}
+#| label: tabla-sintesis-interes
+knitr::kable(tabla_sintesis(sint_int, "c23"), digits = 3,
+             caption = "Interés político: síntesis de los pares (comparación 23 años o más, sin ponderar). Efecto: en DE del resultado o, en la insuficiencia, en puntos porcentuales")
+```
+
+La síntesis por el inverso de la varianza informa dos errores estándar. El analítico, √(1/Σw), es el que usan Strello et al. y supone que los pares son independientes. Aquí todos los pares comparten la CEP 85, por lo que sus estimaciones están correlacionadas y ese error subestima la incertidumbre; el error bootstrap del promedio ponderado con los pesos fijos incorpora esa correlación y es el que se usa para las pruebas.
+
+## Chequeos con regresión
+
+Los chequeos estiman las mismas diferencias en diferencias con regresiones individuales, efectos fijos de ola y de edad, y errores HC1, con la comparación de 23 años o más y sin ponderador. La brecha se estima con una triple diferencia (`joven × post × origen alto`), cuyo coeficiente es la diferencia en diferencias de la brecha. La dispersión se estima sobre la desviación cuadrática respecto de la media de la celda de ola y grupo, cuyo promedio en la celda es la varianza.
+
+```{r}
+#| label: calc-11-regresion-interes
+#| eval: false
+chequeos_ola <- function(d) {
+  d$dev2 <- (d$y - stats::ave(d$y, d$ola, d$joven))^2
+  list("Nivel" = lm(y ~ factor(edad_nac) + factor(ola) + joven * post, data = d),
+       "Insuficiencia" = lm(ins1 ~ factor(edad_nac) + factor(ola) + joven * post, data = d),
+       "Brecha" = lm(y ~ factor(edad_nac) + factor(ola) * alto + joven * post * alto, data = d),
+       "Dispersión" = lm(dev2 ~ factor(edad_nac) + factor(ola) + joven * post, data = d))
+}
+reg_int <- chequeos_ola(d_int)
+```
+
+```{r}
+#| label: tabla-regresion-interes
+#| results: asis
+tabla_hc1(reg_int, file = "output/tables/desig_interes_regresion.html")
+```
+
+## Robustez
+
+```{r}
+#| label: tabla-robustez-interes
+# Especificaciones de robustez a partir de la tabla de síntesis
+tabla_robustez <- function(sint, principal = list(comp = "c23", tipo = "Inverso de la varianza")) {
+  esp <- function(nombre, comp_sel, p, tipo_sel, med) {
+    sint %>% dplyr::filter(comp == comp_sel, pond == p, tipo == tipo_sel, medida %in% med) %>%
+      dplyr::mutate(especificacion = nombre)
+  }
+  pc <- principal$comp
+  pt <- principal$tipo
+  principales <- c("nivel", "de", "brecha", "insuf1")
+  dplyr::bind_rows(
+    esp("Principal", pc, "sin", pt, principales),
+    esp("Con ponderador", pc, "con", pt, principales),
+    esp("Comparación de 23 a 29 años", "c2329", "sin", pt, principales),
+    esp("Pesos iguales", pc, "sin", "Pesos iguales", principales),
+    esp("Olas posteriores agrupadas", pc, "sin", "Agrupado", principales),
+    esp("Medidas alternativas", pc, "sin", pt, c("insuf2", "mad", "leik", "brecha_rel", "brecha_gse", "brecha_gse_rel")),
+    esp("Sin pares con celdas de menos de 15 casos", pc, "sin",
+        "Inverso de la varianza, sin pares con celdas de menos de 15 casos", c("brecha", "brecha_rel"))
+  ) %>%
+    dplyr::filter(!is.na(est)) %>%
+    dplyr::transmute(especificacion, medida = etiquetas_medidas[medida], n_pares, est, se_boot = se, efecto, p, estrellas)
+}
+robustez_int <- tabla_robustez(sint_int)
+knitr::kable(robustez_int, digits = 3, caption = "Interés político: robustez (síntesis por el inverso de la varianza salvo que se indique otra cosa)")
+writeLines(c(knitr::kable(celdas_tab_int, format = "html", digits = 3, caption = "Interés político: medidas por celda"),
+             knitr::kable(pares_tab_int, format = "html", caption = "Interés político: Delta por par"),
+             knitr::kable(tabla_sintesis(sint_int, "c23"), format = "html", digits = 3, caption = "Interés político: síntesis"),
+             knitr::kable(robustez_int, format = "html", digits = 3, caption = "Interés político: robustez")),
+           "output/tables/desig_interes.html")
+```
+
+## Interpretación
+
+En el interés político ninguna de las cuatro medidas principales cambia de forma significativa. Con la comparación de 23 años o más, el estimador sintetizado del nivel es `r tx(sint_int, "c23", "nivel")`, el de la dispersión `r tx(sint_int, "c23", "de")`, el de la brecha social `r tx(sint_int, "c23", "brecha")` y el de la insuficiencia `r tx(sint_int, "c23", "insuf1")`, es decir, `r efe(sint_int, "c23", "insuf1")` puntos porcentuales. El signo de la brecha es compatible con una reducción, pero su error estándar es mayor que el estimador, y con la comparación de 23 a 29 años la brecha cambia de signo (`r tx(sint_int, "c2329", "brecha")`), igual que la dispersión. Los pares varían mucho entre sí, como en Strello et al., lo que refleja el tamaño pequeño de las celdas de jóvenes, en especial las de origen alto. Los chequeos con regresión individual coinciden: la triple diferencia de la brecha es `r coef_reg(reg_int, "Brecha", "alto:joven:post")`. En total, `r n_sig(sint_int)` de las `r n_tot(sint_int)` estimaciones sintetizadas de esta sección son significativas al 5%, una proporción cercana a la que se esperaría por azar.
+
+Entre la CEP 85 y las olas 92 en adelante, los jóvenes difieren en la asignatura y también en los años de exposición al Plan de Formación Ciudadana, por lo que estos estimadores corresponden al efecto conjunto de la asignatura y de una mayor exposición al Plan.
+
+# B) Confianza política
+
+El diseño es el mismo que en el interés político, con la CEP 85 y las olas 92 a 96. La confianza política es el promedio de tres ítems de 1 a 4, por lo que no tiene categorías ordinales y no se calcula el índice de Leik. La insuficiencia es la proporción sin confianza en ninguna de las tres instituciones (suma de los tres ítems igual a 3) y, como robustez, la proporción con una suma de hasta 4, es decir, con "poca" confianza en a lo más una institución. El umbral de "hasta 2" en el promedio dejaba al 89% de la CEP 85 bajo el umbral, por lo que no distinguía insuficiencia.
+
+```{r}
+#| label: calc-20-confianza
+#| eval: false
+olas_conf <- sort(unique(d_conf$ola_num))
+celdas_conf <- armar_celdas(
+  list(joven = d_conf$grupo == "joven", c23 = d_conf$grupo != "joven", c2329 = d_conf$grupo == "23-29"),
+  c(setNames(lapply(olas_conf, function(k) d_conf$ola_num == k), olas_conf), list(agr = d_conf$ola_num != 85))
+)
+pares_conf <- armar_pares_ola(setdiff(olas_conf, 85))
+n_conf <- contar(d_conf, celdas_conf)
+pares_conf$min_sub <- min_sub(n_conf, pares_conf)
+
+A_conf <- calcular(d_conf, celdas_conf, K = NA)
+D_conf <- calcular_deltas(A_conf, pares_conf)
+R_conf <- bootstrap(d_conf, celdas_conf, pares_conf, interaction(d_conf$ola_num, d_conf$grupo, d_conf$alto), K = NA)
+
+sd_conf <- sapply(c(sin = "sin", con = "con"), function(p) sapply(c(c23 = "c23", c2329 = "c2329"), function(cp) {
+  i <- celdas_conf[[paste0(cp, "_85")]]
+  wsd(d_conf$y[i], if (p == "sin") rep(1, length(i)) else d_conf$pond[i])
+}))
+sint_conf <- resumir(D_conf, R_conf, pares_conf, sd_conf, "confianza")
+reg_conf <- chequeos_ola(d_conf)
+```
+
+## Medidas por celda
+
+```{r}
+#| label: tabla-celdas-confianza
+celdas_tab_conf <- tabla_celdas(A_conf, n_conf, c("nivel", "de", "mad", "brecha", "insuf1", "insuf2"))
+knitr::kable(celdas_tab_conf, digits = 3,
+             caption = "Confianza política: medidas por celda, sin ponderar (agr: olas posteriores agrupadas)")
+```
+
+## Diferencias en diferencias por par y síntesis
+
+```{r}
+#| label: tabla-pares-confianza
+pares_tab_conf <- tabla_pares(D_conf, R_conf, pares_conf, n_conf, "c23", c("nivel", "de", "brecha", "insuf1"))
+knitr::kable(pares_tab_conf, caption = "Confianza política: Delta por par (comparación 23 años o más, sin ponderar). Error estándar bootstrap entre paréntesis")
+```
+
+```{r}
+#| label: tabla-sintesis-confianza
+knitr::kable(tabla_sintesis(sint_conf, "c23"), digits = 3,
+             caption = "Confianza política: síntesis de los pares (comparación 23 años o más, sin ponderar). Efecto: en DE del resultado o, en la insuficiencia, en puntos porcentuales")
+```
+
+## Chequeos con regresión
+
+```{r}
+#| label: tabla-regresion-confianza
+#| results: asis
+tabla_hc1(reg_conf, file = "output/tables/desig_confianza_regresion.html")
+```
+
+## Robustez
+
+```{r}
+#| label: tabla-robustez-confianza
+robustez_conf <- tabla_robustez(sint_conf)
+knitr::kable(robustez_conf, digits = 3, caption = "Confianza política: robustez (síntesis por el inverso de la varianza salvo que se indique otra cosa)")
+writeLines(c(knitr::kable(celdas_tab_conf, format = "html", digits = 3, caption = "Confianza política: medidas por celda"),
+             knitr::kable(pares_tab_conf, format = "html", caption = "Confianza política: Delta por par"),
+             knitr::kable(tabla_sintesis(sint_conf, "c23"), format = "html", digits = 3, caption = "Confianza política: síntesis"),
+             knitr::kable(robustez_conf, format = "html", digits = 3, caption = "Confianza política: robustez")),
+           "output/tables/desig_confianza.html")
+```
+
+## Confianza por institución
+
+La CEP 85 se levantó durante el gobierno de Sebastián Piñera, las olas 92 a 95 durante el de Gabriel Boric y la 96 durante el gobierno que asumió en marzo de 2026. Si la confianza de los jóvenes en el Gobierno cambió de forma distinta a la de los adultos con el cambio de gobierno, ese cambio podría explicar los resultados sin relación con la asignatura. Para evaluarlo, el nivel y la brecha se estiman por separado para la confianza en los partidos políticos, en el Congreso y en el Gobierno, y para un índice que excluye el ítem de Gobierno (promedio de partidos y Congreso). Se usan la misma muestra, las mismas celdas y las mismas réplicas bootstrap que en el índice completo.
+
+```{r}
+#| label: calc-21-items-confianza
+#| eval: false
+d_conf <- d_conf %>% dplyr::mutate(conf_sin_gob = (conf_partidos + conf_congreso) / 2)
+items_conf <- c(conf_pol = "Índice completo", conf_partidos = "Partidos políticos", conf_congreso = "Congreso",
+                conf_gobierno = "Gobierno", conf_sin_gob = "Índice sin Gobierno")
+
+# DE individual de un resultado en el grupo de comparación en la CEP 85
+sd_ref_ola <- function(d, celdas) {
+  sapply(c(sin = "sin", con = "con"), function(p) sapply(c(c23 = "c23", c2329 = "c2329"), function(cp) {
+    i <- celdas[[paste0(cp, "_85")]]
+    wsd(d$y[i], if (p == "sin") rep(1, length(i)) else d$pond[i])
+  }))
+}
+
+sint_items <- dplyr::bind_rows(lapply(names(items_conf)[-1], function(v) {
+  di <- d_conf
+  di$y <- di[[v]]
+  D <- calcular_deltas(calcular(di, celdas_conf, K = NA), pares_conf)
+  R <- bootstrap(di, celdas_conf, pares_conf, interaction(di$ola_num, di$grupo, di$alto), K = NA)
+  resumir(D, R, pares_conf, sd_ref_ola(di, celdas_conf), v)
+})) %>%
+  dplyr::bind_rows(dplyr::mutate(sint_conf, resultado = "conf_pol")) %>%
+  dplyr::filter(medida %in% c("nivel", "brecha"), comp == "c23", pond == "sin", tipo == "Inverso de la varianza")
+
+items_tab <- sint_items %>%
+  dplyr::transmute(indicador = factor(items_conf[resultado], levels = items_conf),
+                   medida = etiquetas_medidas[medida], est, se_boot = se, efecto, p, estrellas) %>%
+  dplyr::arrange(medida, indicador)
+```
+
+```{r}
+#| label: tabla-items-confianza
+knitr::kable(items_tab, digits = 3,
+             caption = "Confianza por institución: síntesis por el inverso de la varianza (comparación 23 años o más, sin ponderar). Efecto en DE de cada indicador")
+```
+
+## Pares por ola
+
+```{r}
+#| label: calc-22-pares-confianza
+#| eval: false
+pares_conf_graf <- dplyr::bind_rows(lapply(c("nivel", "brecha"), function(m) {
+  pr <- pares_conf[pares_conf$comp == "c23", ]
+  se <- apply(matriz(R_conf, pr$id, m, "sin"), 2, stats::sd, na.rm = TRUE)
+  data.frame(medida = etiquetas_medidas[[m]],
+             par = ifelse(pr$k == "agr", "Agrupado", paste0("85-", pr$k)),
+             n_jovenes = n_conf[pr$a, "n"] + n_conf[pr$b, "n"],
+             n_comparacion = n_conf[pr$c, "n"] + n_conf[pr$e, "n"],
+             min_subcelda_origen = pr$min_sub,
+             delta = unname(D_conf[pr$id, m, "sin"]), se = unname(se))
+})) %>%
+  dplyr::mutate(ic_inf = delta - 1.96 * se, ic_sup = delta + 1.96 * se)
+
+grafico_pares_conf <- ggplot2::ggplot(pares_conf_graf, ggplot2::aes(x = par, y = delta)) +
+  ggplot2::geom_hline(yintercept = 0, colour = "grey50") +
+  ggplot2::geom_errorbar(ggplot2::aes(ymin = ic_inf, ymax = ic_sup), width = 0.15) +
+  ggplot2::geom_point(size = 2.5) +
+  ggplot2::facet_wrap(~ medida, scales = "free_y") +
+  ggplot2::labs(x = "Par de olas", y = "Delta (intervalo al 95% con error estándar bootstrap)") +
+  ggplot2::theme_minimal()
+ggplot2::ggsave("output/graphs/desig_confianza_pares.png", grafico_pares_conf, width = 8, height = 4.5, dpi = 300)
+```
+
+```{r}
+#| label: tabla-pares-confianza-ola
+#| fig-width: 8
+#| fig-height: 4.5
+knitr::kable(pares_conf_graf, digits = 3,
+             caption = "Confianza política: Delta de nivel y brecha por par de olas (comparación 23 años o más, sin ponderar). n: casos de las dos celdas de cada grupo")
+grafico_pares_conf
+```
+
+## Dirección del cambio en la brecha
+
+Una brecha que disminuye puede deberse a que sube la confianza de los jóvenes de origen bajo, a que baja la de los jóvenes de origen alto, o a ambas cosas. La primera tabla muestra las medias por origen social para jóvenes y para el grupo de comparación en la CEP 85 y en las olas posteriores agrupadas. La segunda estima la diferencia en diferencias del nivel por separado en cada origen social, con la misma síntesis y el mismo bootstrap que el análisis principal.
+
+```{r}
+#| label: calc-23-direccion-brecha
+#| eval: false
+medias_origen <- d_conf %>%
+  dplyr::mutate(grupo2 = factor(dplyr::if_else(grupo == "joven", "Jóvenes (18 a 21)", "Comparación (23 o más)"),
+                                levels = c("Jóvenes (18 a 21)", "Comparación (23 o más)")),
+                periodo = factor(dplyr::if_else(ola_num == 85, "CEP 85", "Olas 92 a 96"),
+                                 levels = c("CEP 85", "Olas 92 a 96"))) %>%
+  dplyr::group_by(grupo2, periodo) %>%
+  dplyr::summarise(n_alto = sum(alto == 1), media_alto = mean(y[alto == 1]),
+                   n_bajo = sum(alto == 0), media_bajo = mean(y[alto == 0]),
+                   brecha = media_alto - media_bajo, .groups = "drop")
+
+did_origen <- dplyr::bind_rows(lapply(c(alto = 1, bajo = 0), function(s) {
+  ds <- d_conf[d_conf$alto == s, ]
+  cs <- armar_celdas(
+    list(joven = ds$grupo == "joven", c23 = ds$grupo != "joven", c2329 = ds$grupo == "23-29"),
+    c(setNames(lapply(olas_conf, function(k) ds$ola_num == k), olas_conf), list(agr = ds$ola_num != 85))
+  )
+  D <- calcular_deltas(calcular(ds, cs, K = NA), pares_conf)
+  R <- bootstrap(ds, cs, pares_conf, interaction(ds$ola_num, ds$grupo), K = NA)
+  # Se estandariza con la DE de la muestra completa, para comparar ambos orígenes
+  resumir(D, R, pares_conf, sd_conf, if (s == 1) "Origen alto" else "Origen bajo") %>%
+    dplyr::filter(medida == "nivel", comp == "c23", pond == "sin",
+                  tipo %in% c("Inverso de la varianza", "Agrupado"))
+})) %>%
+  dplyr::transmute(origen = resultado, tipo, est, se_boot = se, efecto, p, estrellas)
+```
+
+```{r}
+#| label: tabla-direccion-brecha
+knitr::kable(medias_origen, digits = 3,
+             caption = "Confianza política: medias por origen social, grupo y período (sin ponderar)")
+knitr::kable(did_origen, digits = 3,
+             caption = "Confianza política: diferencia en diferencias del nivel por origen social (comparación 23 años o más, sin ponderar)")
+writeLines(c(knitr::kable(items_tab, format = "html", digits = 3, caption = "Confianza por institución"),
+             knitr::kable(pares_conf_graf, format = "html", digits = 3, caption = "Confianza: Delta por par"),
+             knitr::kable(medias_origen, format = "html", digits = 3, caption = "Confianza: medias por origen social"),
+             knitr::kable(did_origen, format = "html", digits = 3, caption = "Confianza: diferencia en diferencias del nivel por origen")),
+           "output/tables/desig_confianza_complementos.html")
+```
+
+## Interpretación
+
+En la confianza política el nivel aumenta: el estimador sintetizado es `r tx(sint_conf, "c23", "nivel")`, equivalente a `r efe(sint_conf, "c23", "nivel")` desviaciones estándar, en línea con el modelo 1 de `analysis_did_principal.qmd`. El aumento es positivo en las tres instituciones, aunque solo es significativo en la confianza en el Congreso: partidos (`r tx_item("conf_partidos", "nivel")`), Congreso (`r tx_item("conf_congreso", "nivel")`) y Gobierno (`r tx_item("conf_gobierno", "nivel")`), y el índice sin el ítem de Gobierno da un resultado similar al del índice completo (`r tx_item("conf_sin_gob", "nivel")`). Por eso no parece explicarse solo por un cambio en la confianza de los jóvenes en el Gobierno de turno. Por pares, el Delta del nivel va de `r rango_par("nivel")` en los pares 85-92 a 85-95, y es menor en el par 85-96 (`r tx_par("nivel", "85-96")`, con intervalo al 95% entre corchetes), la única ola levantada bajo el gobierno que asumió en 2026; con un solo par no es posible distinguir si esa diferencia refleja el cambio de gobierno o variación muestral.
+
+La brecha social según la educación del jefe de hogar se reduce: `r tx(sint_conf, "c23", "brecha")`, es decir, `r efe(sint_conf, "c23", "brecha")` desviaciones estándar. Es la forma de desigualdad que, según la hipótesis de Lindgren, Oskarsson y Dawes, podría cambiar aunque el nivel no cambie. Las tablas complementarias muestran de dónde viene esta reducción:
+
+- **Dirección:** la brecha baja porque aumenta la confianza de los jóvenes de origen bajo (diferencia en diferencias del nivel de `r tx_origen("Origen bajo")`), mientras que la de los jóvenes de origen alto no cambia (`r tx_origen("Origen alto")`). Entre los jóvenes, la confianza media pasa de `r media_or("Jóvenes (18 a 21)", "CEP 85", "media_bajo")` a `r media_or("Jóvenes (18 a 21)", "Olas 92 a 96", "media_bajo")` en el origen bajo y de `r media_or("Jóvenes (18 a 21)", "CEP 85", "media_alto")` a `r media_or("Jóvenes (18 a 21)", "Olas 92 a 96", "media_alto")` en el origen alto, de modo que la brecha se cierra (de `r media_or("Jóvenes (18 a 21)", "CEP 85", "brecha")` a `r media_or("Jóvenes (18 a 21)", "Olas 92 a 96", "brecha")`) sin cambiar de signo.
+- **Brecha inicial:** en la CEP 85 la brecha de los jóvenes (`r media_or("Jóvenes (18 a 21)", "CEP 85", "brecha")`) era mucho mayor que la del grupo de comparación (`r media_or("Comparación (23 o más)", "CEP 85", "brecha")`), y se calcula con solo `r medias_origen$n_alto[medias_origen$grupo2 == "Jóvenes (18 a 21)" & medias_origen$periodo == "CEP 85"]` jóvenes de origen alto. Parte de la reducción posterior puede reflejar regresión a la media de una brecha inicial alta por azar muestral, más que un efecto de la asignatura.
+- **Por institución:** el estimador de la brecha es negativo con los tres ítems, aunque solo es significativo en la confianza en los partidos (partidos `r tx_item("conf_partidos", "brecha")`, Congreso `r tx_item("conf_congreso", "brecha")` y Gobierno `r tx_item("conf_gobierno", "brecha")`) y con el índice sin Gobierno (`r tx_item("conf_sin_gob", "brecha")`), por lo que tampoco depende del ítem de Gobierno.
+- **Por par:** la reducción aparece en casi todos los pares, con la excepción del par 85-95 (`r tx_par("brecha", "85-95")`); el par 85-96 (`r tx_par("brecha", "85-96")`) no se aparta de los demás.
+
+La reducción se mantiene con pesos iguales (`r tx(sint_conf, "c23", "brecha", "Pesos iguales")`), con las olas posteriores agrupadas (`r tx(sint_conf, "c23", "brecha", "Agrupado")`), sin los pares con celdas de menos de 15 casos (`r tx(sint_conf, "c23", "brecha", "Inverso de la varianza, sin pares con celdas de menos de 15 casos")`), con el ponderador (`r tx(sint_conf, "c23", "brecha", p = "con")`) y en la triple diferencia con regresión individual (`r coef_reg(reg_conf, "Brecha", "alto:joven:post")`). Aun así, hay cuatro razones para no tomarla como evidencia de un efecto de la asignatura:
+
+- **Comparaciones múltiples:** `r n_sig(sint_conf)` de las `r n_tot(sint_conf)` estimaciones sintetizadas de esta sección son significativas al 5%, y varias de ellas son versiones de las mismas dos medidas, por lo que no son evidencia independiente.
+- **Comparación de 23 a 29 años:** el estimador es de magnitud similar (`r tx(sint_conf, "c2329", "brecha")`), pero no es significativo. Esta comparación importa porque `educ_jefe` corresponde a la educación de los padres entre los jóvenes que viven con ellos y suele ser la propia entre las personas mayores, que más a menudo son jefes de hogar.
+- **Grupo socioeconómico:** cuando el origen social se mide con él, la brecha no se reduce (`r tx(sint_conf, "c23", "brecha_gse")`), de modo que el resultado depende de la operacionalización del origen.
+- **Brecha inicial y regresión a la media:** como se indicó, la brecha de los jóvenes en la CEP 85 era inusualmente alta y descansa en pocos casos.
+
+El error estándar analítico de la síntesis de la brecha (`r se_an(sint_conf, "c23", "brecha")`) es menor que el bootstrap, porque no considera que todos los pares comparten la CEP 85. Entre la CEP 85 y las olas posteriores los jóvenes difieren también en su exposición al Plan de Formación Ciudadana, y el período posterior coincide con cambios en la confianza institucional que pueden haber afectado de forma distinta a jóvenes y adultos.
+
+# C) Voto
+
+El voto usa el diseño por cohorte de nacimiento de `analysis_did_principal.qmd`. Las celdas combinan el momento del año de nacimiento (abril a diciembre, `tardio = 1`, o enero a marzo) con el año de nacimiento. El estimador principal es el agrupado: Delta = [M(tardío, 2003) − M(temprano, 2003)] − [M(tardío, antes de 2003) − M(temprano, antes de 2003)]. Como sensibilidad, cada año de nacimiento entre 1998 y 2002 forma un par con 2003 y los pares se sintetizan; como robustez, el estimador agrupado se restringe a los nacidos entre 1998 y 2002. En una variable dicotómica la desviación estándar es función de la proporción y la insuficiencia equivale a no votar, por lo que solo se estiman el nivel y la brecha. El bootstrap remuestrea personas dentro de cada combinación de año de nacimiento, momento del año y origen social.
+
+```{r}
+#| label: calc-30-voto
+#| eval: false
+cohortes_v <- c("2003", as.character(1998:2002))
+periodos_v <- c(setNames(lapply(cohortes_v, function(k) d_voto$anio_nac == as.integer(k)), cohortes_v),
+                list(pre = d_voto$anio_nac < 2003, `9802` = d_voto$anio_nac %in% 1998:2002))
+celdas_voto <- armar_celdas(list(t = d_voto$tardio == 1, e = d_voto$tardio == 0), periodos_v)
+
+pares_voto <- data.frame(k = c(as.character(1998:2002), "pre", "9802"),
+                         tipo = c(rep("par", 5), "agrupado", "agrupado_9802")) %>%
+  dplyr::mutate(comp = "cohortes", id = paste(comp, k, sep = ":"),
+                a = "t_2003", b = "e_2003", c = paste0("t_", k), e = paste0("e_", k))
+n_voto <- contar(d_voto, celdas_voto)
+pares_voto$min_sub <- min_sub(n_voto, pares_voto)
+
+A_voto <- calcular(d_voto, celdas_voto, K = NA)
+D_voto <- calcular_deltas(A_voto, pares_voto)
+R_voto <- bootstrap(d_voto, celdas_voto, pares_voto,
+                    interaction(d_voto$cohorte, d_voto$tardio, dplyr::coalesce(d_voto$alto, -1L)), K = NA)
+
+# DE individual del voto entre los nacidos antes de 2003
+sd_voto <- matrix(sapply(c("sin", "con"), function(p) {
+  i <- which(d_voto$anio_nac < 2003)
+  wsd(d_voto$y[i], if (p == "sin") rep(1, length(i)) else d_voto$pond[i])
+}), nrow = 1, dimnames = list("cohortes", c("sin", "con")))
+sint_voto <- resumir(D_voto, R_voto, pares_voto, sd_voto, "voto") %>%
+  dplyr::filter(medida %in% c("nivel", "brecha", "brecha_rel", "brecha_gse", "brecha_gse_rel"))
+
+## Chequeos con regresión: nivel con la muestra completa, brecha con educ_jefe ------
+reg_voto <- list(
+  "Nivel" = lm(y ~ factor(anio_nac) + factor(ola) + tardio * cohorte_2003, data = d_voto),
+  "Brecha" = lm(y ~ factor(anio_nac) + factor(ola) + tardio * cohorte_2003 * alto,
+                data = dplyr::filter(d_voto, !is.na(alto)))
+)
+```
+
+## Medidas por celda
+
+```{r}
+#| label: tabla-celdas-voto
+celdas_tab_voto <- tabla_celdas(A_voto, n_voto, c("nivel", "brecha", "brecha_gse"))
+knitr::kable(celdas_tab_voto, digits = 3,
+             caption = "Voto: medidas por celda, sin ponderar (t: abril a diciembre; e: enero a marzo; pre: antes de 2003; 9802: 1998 a 2002)")
+```
+
+## Diferencias en diferencias por par y síntesis
+
+```{r}
+#| label: tabla-pares-voto
+pares_tab_voto <- tabla_pares(D_voto, R_voto, pares_voto, n_voto, "cohortes", c("nivel", "brecha", "brecha_gse"))
+knitr::kable(pares_tab_voto, caption = "Voto: Delta por año de nacimiento de comparación (pre: todos los nacidos antes de 2003; 9802: 1998 a 2002), sin ponderar. Error estándar bootstrap entre paréntesis")
+```
+
+```{r}
+#| label: tabla-sintesis-voto
+knitr::kable(tabla_sintesis(sint_voto, "cohortes", medidas_sel = c("nivel", "brecha", "brecha_gse")), digits = 3,
+             caption = "Voto: estimador agrupado y síntesis de los pares por año de nacimiento, sin ponderar. Efecto en DE del voto")
+```
+
+Los cinco pares por año de nacimiento comparten la celda de los nacidos en 2003, que además es la más pequeña. Por eso sus estimaciones están fuertemente correlacionadas y el error estándar analítico de la síntesis, que las trata como independientes, subestima la incertidumbre; el error bootstrap con los pesos fijos la incorpora.
+
+## Chequeos con regresión
+
+Modelos lineales de probabilidad con efectos fijos de año de nacimiento y de ola, y errores HC1. El nivel usa la muestra completa y la brecha, la muestra con educación del jefe de hogar.
+
+```{r}
+#| label: tabla-regresion-voto
+#| results: asis
+tabla_hc1(reg_voto, file = "output/tables/desig_voto_regresion.html")
+```
+
+## Robustez
+
+```{r}
+#| label: tabla-robustez-voto
+robustez_voto <- dplyr::bind_rows(
+  sint_voto %>% dplyr::filter(pond == "sin", tipo == "Agrupado", medida %in% c("nivel", "brecha")) %>% dplyr::mutate(especificacion = "Principal"),
+  sint_voto %>% dplyr::filter(pond == "con", tipo == "Agrupado", medida %in% c("nivel", "brecha")) %>% dplyr::mutate(especificacion = "Con ponderador"),
+  sint_voto %>% dplyr::filter(pond == "sin", tipo %in% c("Inverso de la varianza", "Pesos iguales"), medida %in% c("nivel", "brecha")) %>%
+    dplyr::mutate(especificacion = paste("Síntesis por año de nacimiento,", tolower(tipo))),
+  sint_voto %>% dplyr::filter(pond == "sin", tipo == "Agrupado, nacidos 1998-2002", medida %in% c("nivel", "brecha")) %>% dplyr::mutate(especificacion = "Agrupado, nacidos 1998-2002"),
+  sint_voto %>% dplyr::filter(pond == "sin", tipo == "Agrupado", medida %in% c("brecha_rel", "brecha_gse", "brecha_gse_rel")) %>% dplyr::mutate(especificacion = "Medidas alternativas")
+) %>%
+  dplyr::transmute(especificacion, medida = etiquetas_medidas[medida], est, se_boot = se, se_analitico = se_an, efecto, p, estrellas)
+knitr::kable(robustez_voto, digits = 3, caption = "Voto: robustez")
+writeLines(c(knitr::kable(celdas_tab_voto, format = "html", digits = 3, caption = "Voto: medidas por celda"),
+             knitr::kable(pares_tab_voto, format = "html", caption = "Voto: Delta por par"),
+             knitr::kable(robustez_voto, format = "html", digits = 3, caption = "Voto: robustez")),
+           "output/tables/desig_voto.html")
+```
+
+## Interpretación
+
+El estimador agrupado del nivel es `r tx(sint_voto, "cohortes", "nivel", "Agrupado")`, equivalente a `r efe(sint_voto, "cohortes", "nivel", "Agrupado")` desviaciones estándar del voto: quienes nacieron entre abril y diciembre de 2003 votaron menos de lo que predice la diferencia entre nacidos a inicio y a fin de año en las cohortes anteriores, en línea con la regresión individual (`r coef_reg(reg_voto, "Nivel", "tardio:cohorte_2003")`). La síntesis por año de nacimiento da un estimador menor y no significativo con el error bootstrap (`r tx(sint_voto, "cohortes", "nivel")`). Su error estándar analítico (`r se_an(sint_voto, "cohortes", "nivel")`) es casi la mitad del bootstrap y llevaría a declararlo significativo, lo que ilustra por qué el error analítico subestima la incertidumbre cuando todos los pares comparten la celda de 2003. Con el ponderador el nivel tampoco es significativo (`r tx(sint_voto, "cohortes", "nivel", "Agrupado", p = "con")`).
+
+La brecha social no muestra cambios: `r tx(sint_voto, "cohortes", "brecha", "Agrupado")` según la educación del jefe de hogar y `r tx(sint_voto, "cohortes", "brecha_gse", "Agrupado")` según el grupo socioeconómico. La celda de nacidos entre enero y marzo de 2003 tiene muy pocos casos de cada origen social, por lo que la brecha no puede estimarse con precisión. En total, `r n_sig(sint_voto)` de las `r n_tot(sint_voto)` estimaciones de esta sección son significativas al 5%. Como en los análisis anteriores, los tratados tenían 18 años en la elección, por lo que el diseño supone que la diferencia de participación entre nacidos a inicio y a fin de año es la misma entre votantes primerizos que a edades mayores.
+
+# D) Placebo con olas previas (interés político)
+
+Si las tendencias de jóvenes y personas mayores fueran paralelas, las diferencias en diferencias entre olas en que ningún joven había cursado la asignatura deberían ser cercanas a cero. El placebo usa la base extendida de interés político (`data_int_ext`) y compara cada ola previa (77, 82, 83 y 84) con la CEP 85: Delta = [M(joven, 85) − M(joven, k)] − [M(comparación, 85) − M(comparación, k)], con la comparación de 23 años o más. La ola 81 queda fuera porque su escala no incluye "no muy interesado". Estas olas no tienen la educación del jefe de hogar, por lo que la brecha se calcula con el grupo socioeconómico, disponible en las olas 82, 83 y 85.
+
+La exposición al Plan de Formación Ciudadana (Ley 20.911, desde 2016) difiere entre las olas. Los jóvenes de la CEP 85 tenían varios años de Plan durante su escolaridad, mientras que los de las olas 77 a 84 tenían poca o ninguna exposición. Por eso un placebo distinto de cero puede reflejar el efecto del Plan y no necesariamente una violación del supuesto de tendencias paralelas. La tabla de dosis muestra los años promedio de Plan en cada celda.
+
+```{r}
+#| label: calc-40-placebo
+#| eval: false
+d_pla <- readRDS("input/data/proc/data_int_ext.rds") %>%
+  dplyr::mutate(ola_num = as.numeric(as.character(ola))) %>%
+  dplyr::filter(ola_num %in% c(77, 82, 83, 84, 85), edad_nac >= 18, edad_nac != 22,
+                !is.na(int_pol), !is.na(pond)) %>%
+  dplyr::mutate(y = int_pol, grupo = dplyr::if_else(edad_nac <= 21, "joven", "c23"),
+                ins1 = as.numeric(y == 1), ins2 = as.numeric(y <= 2),
+                galto = dplyr::if_else(is.na(gse), NA_integer_, as.integer(gse %in% c("ABC1", "C2"))),
+                alto = galto)
+
+olas_pla <- c(77, 82, 83, 84, 85)
+celdas_pla <- armar_celdas(
+  list(joven = d_pla$grupo == "joven", c23 = d_pla$grupo == "c23"),
+  c(setNames(lapply(olas_pla, function(k) d_pla$ola_num == k), olas_pla), list(agr = d_pla$ola_num != 85))
+)
+pares_pla <- data.frame(k = c("77", "82", "83", "84", "agr"), tipo = c(rep("par", 4), "agrupado")) %>%
+  dplyr::mutate(comp = "c23", id = paste(comp, k, sep = ":"),
+                a = "joven_85", b = paste0("joven_", k), c = "c23_85", e = paste0("c23_", k))
+n_pla <- contar(d_pla, celdas_pla)
+pares_pla$min_sub <- min_sub(n_pla, pares_pla)
+
+A_pla <- calcular(d_pla, celdas_pla, K = 5)
+D_pla <- calcular_deltas(A_pla, pares_pla)
+R_pla <- bootstrap(d_pla, celdas_pla, pares_pla,
+                   interaction(d_pla$ola_num, d_pla$grupo, dplyr::coalesce(d_pla$alto, -1L)), K = 5)
+sd_pla <- matrix(sapply(c("sin", "con"), function(p) {
+  i <- celdas_pla[["c23_85"]]
+  wsd(d_pla$y[i], if (p == "sin") rep(1, length(i)) else d_pla$pond[i])
+}), nrow = 1, dimnames = list("c23", c("sin", "con")))
+sint_pla <- resumir(D_pla, R_pla, pares_pla, sd_pla, "placebo") %>%
+  dplyr::filter(medida %in% c("nivel", "de", "mad", "leik", "insuf1", "insuf2", "brecha_gse"))
+
+dosis_pla <- d_pla %>%
+  dplyr::group_by(ola_num, grupo) %>%
+  dplyr::summarise(n = dplyr::n(), dosis_plan = mean(dosis_plan, na.rm = TRUE), .groups = "drop")
+```
+
+```{r}
+#| label: tabla-placebo
+knitr::kable(dosis_pla, digits = 2, caption = "Placebo: años promedio de exposición al Plan de Formación Ciudadana por ola y grupo")
+pares_tab_pla <- tabla_pares(D_pla, R_pla, pares_pla, n_pla, "c23", c("nivel", "de", "insuf1", "brecha_gse"))
+knitr::kable(pares_tab_pla, caption = "Placebo: Delta entre cada ola previa y la CEP 85, sin ponderar. Error estándar bootstrap entre paréntesis (la menor subcelda corresponde al grupo socioeconómico)")
+sint_tab_pla <- tabla_sintesis(sint_pla, "c23", medidas_sel = c("nivel", "de", "mad", "leik", "insuf1", "insuf2", "brecha_gse"))
+knitr::kable(sint_tab_pla, digits = 3, caption = "Placebo: síntesis de los pares, sin ponderar")
+writeLines(c(knitr::kable(dosis_pla, format = "html", digits = 2, caption = "Placebo: dosis de Plan"),
+             knitr::kable(pares_tab_pla, format = "html", caption = "Placebo: Delta por par"),
+             knitr::kable(sint_tab_pla, format = "html", digits = 3, caption = "Placebo: síntesis")),
+           "output/tables/desig_placebo.html")
+```
+
+Ninguna de las `r n_tot(sint_pla)` estimaciones del placebo es significativa al 5% (`r n_sig(sint_pla)` en total). El nivel (`r tx(sint_pla, "c23", "nivel")`), la dispersión (`r tx(sint_pla, "c23", "de")`) y la insuficiencia (`r tx(sint_pla, "c23", "insuf1")`) son cercanos a cero, lo que es compatible con tendencias paralelas en esas medidas. La brecha según grupo socioeconómico, estimada solo con dos pares, es grande aunque imprecisa (`r tx(sint_pla, "c23", "brecha_gse")`), y de magnitud similar a la brecha según grupo socioeconómico del interés político en la sección A. Por eso esa brecha no puede atribuirse a la asignatura: puede reflejar tendencias previas o la exposición al Plan, que en la CEP 85 ya alcanzaba en promedio `r num(dosis_pla$dosis_plan[dosis_pla$ola_num == 85 & dosis_pla$grupo == "joven"], 1)` años entre los jóvenes, frente a `r num(dosis_pla$dosis_plan[dosis_pla$ola_num == 77 & dosis_pla$grupo == "joven"], 1)` en la ola 77. El placebo solo puede hacerse para el interés político, que es el único resultado con olas previas comparables.
+
+# E) Propensity score matching
+
+Como comparación descriptiva, se reutiliza el emparejamiento de la muestra de hasta 30 años con covariables adicionales de [`analysis_psm.qmd`](analysis_psm.qmd) (sexo, nivel educacional, grupo socioeconómico, región, zona, pueblo originario y educación del jefe de hogar, vecino más cercano con *caliper* de 0,01), agregando emparejamiento exacto por ola y por origen social, para comparar las brechas dentro de cada estrato. En la muestra emparejada se estiman el nivel (ATT), la dispersión (DE de tratados menos DE de controles), la brecha (brecha en tratados menos brecha en controles) y la insuficiencia (diferencia de proporciones). Los errores estándar se obtienen por bootstrap de pares emparejados, remuestreando las subclases (Abadie y Spiess, 2022). Si el emparejamiento deja menos de 30 tratados de algún origen social, sumando las olas, solo se estiman el nivel, la dispersión y la insuficiencia. Se reporta además el ATT de nivel con la especificación de la sección de hasta 30 años de `analysis_psm.qmd`, sin emparejamiento exacto, para compararlo con el resumen de esa pestaña.
+
+La edad no puede balancearse, porque el tratamiento es función de la edad: los tratados tienen entre 17 y 22 años y sus controles, hasta 30. Estas estimaciones mezclan el efecto de la asignatura con el de la edad y sirven solo como comparación descriptiva.
+
+```{r}
+#| label: calc-50-psm
+#| eval: false
+psm_base <- function(d, y) {
+  d %>%
+    dplyr::mutate(gse3 = agrupar_gse(gse)) %>%
+    dplyr::filter(edad_nac <= 30) %>%
+    dplyr::select(dplyr::all_of(c("educacion_ciudadana", "sexo", "educ", "gse3", "region", "zona",
+                                  "pueblo", "educ_jefe", "edad_nac", "ola", y))) %>%
+    na.omit() %>%
+    droplevels() %>%
+    dplyr::mutate(y = .data[[y]], origen_alto = origen_alto(educ_jefe)) %>%
+    as.data.frame()
+}
+psm_datos <- list(
+  interes = psm_base(readRDS("input/data/proc/data_int.rds"), "int_pol") %>% dplyr::mutate(ins1 = as.numeric(y == 1)),
+  confianza = psm_base(readRDS("input/data/proc/data_actitudes.rds"), "conf_pol") %>% dplyr::mutate(ins1 = as.numeric(round(y * 3) <= 3)),
+  voto = psm_base(dplyr::filter(readRDS("input/data/proc/data_voto.rds"), habilitado_2v == 1), "voto") %>% dplyr::mutate(ins1 = NA_real_)
+)
+
+f_psm <- educacion_ciudadana ~ sexo + educ + gse3 + region + zona + pueblo + educ_jefe
+
+# Medidas en la muestra emparejada: tratados menos controles
+psm_medidas <- function(md, voto) {
+  t <- md$educacion_ciudadana == 1
+  w <- md$weights
+  m <- function(s) wmean(md$y[s], w[s])
+  br <- function(s) m(s & md$origen_alto == 1) - m(s & md$origen_alto == 0)
+  c(nivel = m(t) - m(!t),
+    de = if (voto) NA_real_ else wsd(md$y[t], w[t]) - wsd(md$y[!t], w[!t]),
+    brecha = br(t) - br(!t),
+    insuf1 = if (voto) NA_real_ else wmean(md$ins1[t], w[t]) - wmean(md$ins1[!t], w[!t]))
+}
+# Bootstrap de pares emparejados: remuestreo de subclases
+psm_boot <- function(md, voto) {
+  set.seed(semilla)
+  sub <- split(seq_len(nrow(md)), md$subclass, drop = TRUE)
+  t(replicate(B, psm_medidas(md[unlist(sub[sample.int(length(sub), length(sub), replace = TRUE)]), ], voto)))
+}
+
+psm_res <- list()
+psm_n <- list()
+for (r in names(psm_datos)) {
+  d <- psm_datos[[r]]
+  voto <- r == "voto"
+  # Con emparejamiento exacto por ola y origen social
+  m_ex <- MatchIt::matchit(f_psm, data = d, method = "nearest", discard = "both", caliper = 0.01,
+                           exact = ~ ola + origen_alto)
+  md <- MatchIt::match.data(m_ex)
+  n_trat <- table(factor(md$origen_alto[md$educacion_ciudadana == 1], levels = 0:1))
+  est <- psm_medidas(md, voto)
+  rep_b <- psm_boot(md, voto)
+  if (min(n_trat) < 30) {
+    est["brecha"] <- NA
+    rep_b[, "brecha"] <- NA
+  }
+  # Especificación de analysis_psm.qmd, sin emparejamiento exacto: solo nivel
+  m_sin <- MatchIt::matchit(f_psm, data = d, method = "nearest", discard = "both", caliper = 0.01)
+  md_sin <- MatchIt::match.data(m_sin)
+  est_sin <- psm_medidas(md_sin, voto)[["nivel"]]
+  se_sin <- stats::sd(psm_boot(md_sin, voto)[, "nivel"])
+  psm_n[[r]] <- data.frame(resultado = r, tratados_origen_bajo = as.integer(n_trat[["0"]]),
+                           tratados_origen_alto = as.integer(n_trat[["1"]]),
+                           tratados_total = sum(d$educacion_ciudadana), emparejados = sum(md$educacion_ciudadana),
+                           emparejados_sin_exacto = sum(md_sin$educacion_ciudadana))
+  psm_res[[r]] <- dplyr::bind_rows(
+    data.frame(resultado = r, especificacion = "Exacto por ola y origen social", medida = names(est),
+               est = est, se = apply(rep_b, 2, stats::sd, na.rm = TRUE)),
+    data.frame(resultado = r, especificacion = "Sin exacto (analysis_psm.qmd)", medida = "nivel", est = est_sin, se = se_sin)
+  )
+}
+psm_n <- dplyr::bind_rows(psm_n)
+psm_res <- dplyr::bind_rows(psm_res) %>%
+  dplyr::filter(!(is.na(est) & medida != "brecha")) %>%
+  dplyr::mutate(p = 2 * stats::pnorm(-abs(est / se)), estrellas = estrellas(p))
+rownames(psm_res) <- NULL
+```
+
+```{r}
+#| label: tabla-psm
+knitr::kable(psm_n, caption = "Propensity score matching: tratados por origen social en la muestra emparejada con emparejamiento exacto")
+psm_tab <- psm_res %>% dplyr::mutate(medida = etiquetas_medidas[medida])
+knitr::kable(psm_tab, digits = 3,
+             caption = "Propensity score matching: diferencias entre tratados y controles emparejados (error estándar por bootstrap de pares)")
+writeLines(c(knitr::kable(psm_n, format = "html", caption = "PSM: tratados por origen social"),
+             knitr::kable(psm_tab, format = "html", digits = 3, caption = "PSM: diferencias entre tratados y controles")),
+           "output/tables/desig_psm.html")
+```
+
+El emparejamiento exacto por ola y origen social conserva menos tratados que la especificación sin emparejamiento exacto, porque el *caliper* se aplica dentro de cada estrato (`r entero(psm_n$emparejados[psm_n$resultado == "interes"])` de `r entero(psm_n$tratados_total[psm_n$resultado == "interes"])` en interés y `r entero(psm_n$emparejados[psm_n$resultado == "confianza"])` de `r entero(psm_n$tratados_total[psm_n$resultado == "confianza"])` en confianza). En el voto quedan `r psm_n$tratados_origen_alto[psm_n$resultado == "voto"]` tratados de origen alto, menos de 30, por lo que su brecha no se estima. En el interés político no hay diferencias entre tratados y controles emparejados (nivel `r tx_psm("interes", "nivel")`, brecha `r tx_psm("interes", "brecha")`). En la confianza política los tratados tienen más confianza (`r tx_psm("confianza", "nivel")`), una brecha social menor (`r tx_psm("confianza", "brecha")`) y menos insuficiencia (`r tx_psm("confianza", "insuf1")`), en la misma dirección que la diferencia en diferencias. En el voto el nivel es `r tx_psm("voto", "nivel")`. Sin emparejamiento exacto, el ATT de nivel es `r tx_psm("interes", "nivel", "Sin exacto (analysis_psm.qmd)")` en interés, `r tx_psm("confianza", "nivel", "Sin exacto (analysis_psm.qmd)")` en confianza y `r tx_psm("voto", "nivel", "Sin exacto (analysis_psm.qmd)")` en voto, iguales a los del resumen de la pestaña de PSM. Como la edad no puede balancearse, estas diferencias son descriptivas.
+
+# Qué funcionó y qué no
+
+```{r}
+#| label: calc-60-estado
+#| eval: false
+brecha_psm <- function(r) !is.na(psm_res$est[psm_res$resultado == r & psm_res$medida == "brecha"][1])
+estado <- dplyr::bind_rows(
+  expand.grid(resultado = c("Interés político", "Confianza política"),
+              medida = c("Nivel", "Dispersión", "Brecha social", "Insuficiencia"),
+              ruta = "Diferencia en diferencias", stringsAsFactors = FALSE) %>%
+    dplyr::mutate(estado = "Estimada",
+                  razon = dplyr::if_else(medida == "Brecha social",
+                                         "Estimada con celdas de jóvenes de origen alto pequeñas; se agrega la síntesis sin pares con celdas de menos de 15 casos",
+                                         "Celdas suficientes en todos los pares")),
+  data.frame(resultado = "Voto", medida = c("Nivel", "Dispersión", "Brecha social", "Insuficiencia"),
+             ruta = "Diferencia en diferencias",
+             estado = c("Estimada", "No aplica", "Estimada", "No aplica"),
+             razon = c("Muestra completa, incluida la CEP 86",
+                       "En una variable dicotómica la DE es función de la proporción",
+                       "Celda de nacidos en enero a marzo de 2003 muy pequeña; estimación imprecisa",
+                       "Equivale a 1 menos el nivel")),
+  data.frame(resultado = "Interés político", medida = c("Nivel", "Dispersión", "Brecha social", "Insuficiencia"),
+             ruta = "Placebo",
+             estado = "Estimada",
+             razon = c("Olas 77, 82, 83 y 84 frente a la CEP 85", "Olas 77, 82, 83 y 84 frente a la CEP 85",
+                       "Solo con grupo socioeconómico en las olas 82 y 83; sin educación del jefe de hogar",
+                       "Olas 77, 82, 83 y 84 frente a la CEP 85")),
+  data.frame(resultado = c("Confianza política", "Voto"), medida = "Todas", ruta = "Placebo",
+             estado = "No estimable", razon = "Sin olas previas comparables en la base extendida"),
+  data.frame(resultado = rep(c("Interés político", "Confianza política", "Voto"), each = 4),
+             medida = rep(c("Nivel", "Dispersión", "Brecha social", "Insuficiencia"), 3),
+             ruta = "Propensity score matching") %>%
+    dplyr::mutate(r = rep(c("interes", "confianza", "voto"), each = 4),
+                  estado = dplyr::case_when(r == "voto" & medida %in% c("Dispersión", "Insuficiencia") ~ "No aplica",
+                                            medida == "Brecha social" & !sapply(r, brecha_psm) ~ "No estimable",
+                                            TRUE ~ "Estimada"),
+                  razon = dplyr::case_when(estado == "No aplica" ~ "Resultado dicotómico",
+                                           estado == "No estimable" ~ "Menos de 30 tratados emparejados de algún origen social",
+                                           TRUE ~ "Descriptiva: la edad no puede balancearse")) %>%
+    dplyr::select(-r)
+)
+
+## Resumen, gráfico y resultados ------------------------------------------------------
+principal <- dplyr::bind_rows(
+  sint_int %>% dplyr::filter(comp == "c23", pond == "sin", tipo == "Inverso de la varianza"),
+  sint_conf %>% dplyr::filter(comp == "c23", pond == "sin", tipo == "Inverso de la varianza"),
+  sint_voto %>% dplyr::filter(pond == "sin", tipo == "Agrupado")
+) %>%
+  dplyr::filter(medida %in% c("nivel", "de", "brecha", "insuf1"))
+
+celda_resumen <- function(r, m) {
+  f <- principal[principal$resultado == r & principal$medida == m, ]
+  if (!nrow(f) || is.na(f$est)) return("No aplica")
+  paste0(num(f$est, 3), gsub("*", "\\*", f$estrellas, fixed = TRUE), " (", num(f$se, 3), ") [", num(f$efecto, 2),
+         if (m == "insuf1") " pp" else "", "]")
+}
+tabla_resumen <- data.frame(
+  Medida = c("Nivel", "Dispersión (DE)", "Brecha social", "Insuficiencia"),
+  sapply(c("Interés político" = "interes", "Confianza política" = "confianza", "Voto" = "voto"),
+         function(r) sapply(c("nivel", "de", "brecha", "insuf1"), function(m) celda_resumen(r, m))),
+  check.names = FALSE, row.names = NULL
+)
+
+datos_grafico <- principal %>%
+  dplyr::filter(!is.na(est)) %>%
+  dplyr::mutate(resultado = factor(c(interes = "Interés político", confianza = "Confianza política", voto = "Voto")[resultado],
+                                   levels = c("Voto", "Confianza política", "Interés político")),
+                medida = factor(c(nivel = "Nivel (DE)", de = "Dispersión (DE)", brecha = "Brecha social (DE)",
+                                  insuf1 = "Insuficiencia (puntos porcentuales)")[medida],
+                                levels = c("Nivel (DE)", "Dispersión (DE)", "Brecha social (DE)", "Insuficiencia (puntos porcentuales)")),
+                inf = efecto - 1.96 * se_efecto, sup = efecto + 1.96 * se_efecto)
+grafico_resumen <- ggplot2::ggplot(datos_grafico, ggplot2::aes(x = efecto, y = resultado)) +
+  ggplot2::geom_vline(xintercept = 0, colour = "grey50") +
+  ggplot2::geom_errorbar(ggplot2::aes(xmin = inf, xmax = sup), width = 0.2, orientation = "y") +
+  ggplot2::geom_point(size = 2.5) +
+  ggplot2::facet_wrap(~ medida, scales = "free_x") +
+  ggplot2::labs(x = "Efecto estimado (intervalo al 95% con error estándar bootstrap)", y = NULL,
+                caption = "Interés y confianza: síntesis por el inverso de la varianza. Voto: estimador agrupado.") +
+  ggplot2::theme_minimal()
+ggplot2::ggsave("output/graphs/desig_efectos.png", grafico_resumen, width = 8, height = 5.5, dpi = 300)
+writeLines(knitr::kable(tabla_resumen, format = "html", caption = "Efecto de la asignatura sobre cada medida"),
+           "output/tables/desig_resumen.html")
+
+## Funciones para el texto ------------------------------------------------------------
+# Estimador con estrellas y error estándar bootstrap de una fila de síntesis
+fila_s <- function(s, comp_sel, med, tipo_sel = "Inverso de la varianza", p = "sin") {
+  s[s$comp == comp_sel & s$medida == med & s$tipo == tipo_sel & s$pond == p, ][1, ]
+}
+tx <- function(s, comp_sel, med, tipo_sel = "Inverso de la varianza", p = "sin") {
+  f <- fila_s(s, comp_sel, med, tipo_sel, p)
+  paste0(num(f$est, 3), gsub("*", "\\*", f$estrellas, fixed = TRUE), " (EE ", num(f$se, 3), ")")
+}
+efe <- function(s, comp_sel, med, tipo_sel = "Inverso de la varianza", p = "sin") {
+  num(fila_s(s, comp_sel, med, tipo_sel, p)$efecto, 2)
+}
+se_an <- function(s, comp_sel, med) num(fila_s(s, comp_sel, med)$se_an, 3)
+n_sig <- function(s) sum(s$p < 0.05, na.rm = TRUE)
+n_tot <- function(s) sum(!is.na(s$p))
+tx_psm <- function(r, med, esp = "Exacto por ola y origen social") {
+  f <- psm_res[psm_res$resultado == r & psm_res$medida == med & psm_res$especificacion == esp, ][1, ]
+  paste0(num(f$est, 3), gsub("*", "\\*", f$estrellas, fixed = TRUE), " (EE ", num(f$se, 3), ")")
+}
+# Confianza por institución, pares por ola y dirección de la brecha
+tx_item <- function(v, med) {
+  f <- sint_items[sint_items$resultado == v & sint_items$medida == med, ][1, ]
+  paste0(num(f$est, 3), gsub("*", "\\*", f$estrellas, fixed = TRUE), " (EE ", num(f$se, 3), ")")
+}
+tx_par <- function(med, par_sel) {
+  f <- pares_conf_graf[pares_conf_graf$medida == etiquetas_medidas[[med]] & pares_conf_graf$par == par_sel, ][1, ]
+  paste0(num(f$delta, 3), " [", num(f$ic_inf, 3), "; ", num(f$ic_sup, 3), "]")
+}
+rango_par <- function(med) {
+  f <- pares_conf_graf[pares_conf_graf$medida == etiquetas_medidas[[med]] & !pares_conf_graf$par %in% c("85-96", "Agrupado"), ]
+  paste(num(min(f$delta), 3), "y", num(max(f$delta), 3))
+}
+media_or <- function(g, per, col) num(medias_origen[[col]][medias_origen$grupo2 == g & medias_origen$periodo == per], 2)
+tx_origen <- function(o) {
+  f <- did_origen[did_origen$origen == o & did_origen$tipo == "Inverso de la varianza", ][1, ]
+  paste0(num(f$est, 3), gsub("*", "\\*", f$estrellas, fixed = TRUE), " (EE ", num(f$se_boot, 3), ")")
+}
+coef_reg <- function(reg, modelo, termino) {
+  ct <- lmtest::coeftest(reg[[modelo]], vcov. = sandwich::vcovHC, type = "HC1")
+  paste0(num(ct[termino, 1], 3), " (EE ", num(ct[termino, 2], 3), ", p = ", num(ct[termino, 4], 3), ")")
+}
+
+saveRDS(list(validacion = validacion, perdida = perdida,
+             interes = list(celdas = n_int, medidas = A_int, pares = pares_int, deltas = D_int, replicas = R_int, sintesis = sint_int, regresion = reg_int),
+             confianza = list(celdas = n_conf, medidas = A_conf, pares = pares_conf, deltas = D_conf, replicas = R_conf, sintesis = sint_conf, regresion = reg_conf),
+             voto = list(celdas = n_voto, medidas = A_voto, pares = pares_voto, deltas = D_voto, replicas = R_voto, sintesis = sint_voto, regresion = reg_voto),
+             placebo = list(celdas = n_pla, medidas = A_pla, pares = pares_pla, deltas = D_pla, replicas = R_pla, sintesis = sint_pla, dosis = dosis_pla),
+             confianza_complementos = list(items = sint_items, pares = pares_conf_graf,
+                                           medias_origen = medias_origen, did_origen = did_origen),
+             psm = list(n = psm_n, resultados = psm_res), principal = principal, estado = estado),
+        "output/models/desigualdades.rds")
+```
+
+```{r}
+#| label: tabla-estado
+knitr::kable(estado, caption = "Estado de cada combinación de resultado, medida y ruta")
+writeLines(knitr::kable(estado, format = "html", caption = "Qué funcionó y qué no"), "output/tables/desig_estado.html")
+```

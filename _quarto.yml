@@ -8,6 +8,7 @@ project:
     - processing/analysis_principal.qmd
     - processing/analysis_did_principal.qmd
     - processing/analysis_psm.qmd
+    - processing/analysis_desigualdades.qmd
     - processing/analysis_regresiones.qmd
     - processing/analysis_did_2x2.qmd
     - processing/analysis_did_interes.qmd
@@ -26,6 +27,8 @@ website:
         text: Diferencia en diferencias
       - href: processing/analysis_psm.qmd
         text: Propensity Score Matching
+      - href: processing/analysis_desigualdades.qmd
+        text: Tipos de desigualdad
       - href: processing/preparation.qmd
         text: Preparación
       - text: Análisis

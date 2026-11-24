@@ -19,6 +19,7 @@ La estructura de carpetas sigue el protocolo IPO (Input-Processing-Output) de an
 │   ├── analysis_principal.qmd        : modelos de la portada (interés, confianza y voto; muestra propia y común)
 │   ├── analysis_did_principal.qmd    : diferencia en diferencias para interés, confianza y voto (pestaña propia)
 │   ├── analysis_psm.qmd              : propensity score matching exploratorio para interés, confianza y voto (pestaña propia)
+│   ├── analysis_desigualdades.qmd    : efecto sobre nivel, dispersión, brecha social e insuficiencia (pestaña propia)
 │   ├── analysis_regresiones.qmd      : regresiones de interés político y voto
 │   ├── analysis_did_2x2.qmd          : diferencia en diferencias 2x2 (interés político)
 │   ├── analysis_did_interes.qmd      : diferencia en diferencias escalonada (interés político)
