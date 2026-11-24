@@ -15,6 +15,23 @@ execute:
 
 Este documento estima el efecto de la asignatura de Educación Ciudadana sobre cuatro medidas de la distribución del interés político, la confianza política y el voto en la 2ª vuelta presidencial de 2021: el nivel (la media o la proporción), la dispersión (la desviación estándar), la brecha social (la diferencia entre personas de origen social alto y bajo) y la insuficiencia (la proporción bajo un umbral mínimo). Cada medida se calcula en celdas de ola y grupo de edad, y el efecto se estima con una diferencia en diferencias sobre esas medidas, siguiendo los diseños de la pestaña [Diferencia en diferencias](analysis_did_principal.qmd). Las estimaciones se complementan con chequeos de regresión individual, pruebas de robustez, un placebo con olas previas a la asignatura y una comparación descriptiva con emparejamiento por puntaje de propensión.
 
+## Indicadores
+
+Cada indicador se calcula por separado en cada celda de ola y grupo de edad. El efecto de la asignatura sobre un indicador es una diferencia en diferencias: el cambio del indicador entre los jóvenes, desde la CEP 85 a las olas posteriores, menos el cambio del mismo indicador en el grupo de comparación en el mismo período. Por eso el efecto no describe el valor del indicador entre los jóvenes, sino cuánto más (efecto positivo) o cuánto menos (efecto negativo) cambió entre ellos que entre las personas mayores.
+
+- **Nivel:** el valor promedio del resultado en la celda. En el interés político es la media de la escala de 1 (nada interesado) a 5 (muy interesado); en la confianza política, la media del índice de 1 (nada de confianza) a 4 (mucha confianza); en el voto, la proporción que votó en la 2ª vuelta de 2021.
+  - *Efecto positivo:* entre los jóvenes el resultado aumentó más, o disminuyó menos, que en el grupo de comparación.
+  - *Efecto negativo:* aumentó menos o disminuyó más.
+- **Dispersión:** cuánto difieren entre sí las personas de una misma celda. La medida principal es la desviación estándar del resultado. Como robustez se usan la desviación absoluta media respecto de la mediana y, en el interés político, el índice ordinal de Leik, que vale 0 cuando todos eligen la misma categoría y 1 cuando las respuestas se reparten entre los extremos de la escala. No se calcula para el voto, porque en una variable dicotómica la dispersión depende solo de la proporción.
+  - *Efecto positivo:* las respuestas de los jóvenes se volvieron más heterogéneas en relación con las del grupo de comparación.
+  - *Efecto negativo:* se volvieron más homogéneas.
+- **Brecha social:** la diferencia de medias entre las personas de origen social alto (jefe de hogar con educación técnica o universitaria) y las de origen social bajo (jefe de hogar con educación básica o media). Una brecha positiva en una celda significa que las personas de origen alto tienen más interés, más confianza o votan más que las de origen bajo, es decir, una desigualdad a favor del origen alto.
+  - *Efecto negativo:* la brecha entre jóvenes de origen alto y bajo se redujo más, o aumentó menos, que la del grupo de comparación, es decir, disminuyó la desigualdad a favor del origen alto. Esto puede ocurrir porque aumentó el resultado de los jóvenes de origen bajo, porque disminuyó el de los de origen alto o por ambas cosas. Si el efecto es lo bastante grande, la brecha de los jóvenes puede incluso invertirse. Un efecto negativo no implica que la brecha de los jóvenes haya desaparecido, sino que cambió hacia menos desigualdad en comparación con las personas mayores.
+  - *Efecto positivo:* la desigualdad a favor del origen alto aumentó entre los jóvenes en relación con el grupo de comparación.
+- **Insuficiencia:** la proporción de personas que están en el nivel más bajo del resultado. En el interés político es la proporción "nada interesada" y, como robustez, "nada" o "no muy interesada". En la confianza política es la proporción sin confianza en ninguna de las tres instituciones (partidos, Congreso y Gobierno) y, como robustez, la proporción con "poca" confianza en a lo más una de ellas y "nada" en las demás. No se calcula para el voto, porque la proporción que no votó es simplemente 1 menos el nivel. El efecto se expresa en puntos porcentuales.
+  - *Efecto positivo:* aumentó la proporción de jóvenes en el nivel más bajo, en relación con el grupo de comparación, es decir, más insuficiencia.
+  - *Efecto negativo:* menos jóvenes quedan en el nivel más bajo.
+
 ## Por qué se hace
 
 Los análisis anteriores evalúan si la asignatura cambió el promedio de cada resultado. Una política educativa puede, sin embargo, afectar la distribución sin mover el promedio, por ejemplo reduciendo la distancia entre jóvenes de distinto origen social. Lindgren, Oskarsson y Dawes (2017, "Can Political Inequalities Be Educated Away?", *American Journal of Political Science*) muestran que una reforma educativa sueca redujo la brecha de participación según origen social, y esa es la hipótesis sustantiva que se evalúa aquí: la asignatura podría reducir la brecha social en participación aunque no cambie el nivel.
@@ -23,7 +40,7 @@ El enfoque se adapta de Strello, Strietholt, Steinmann y Siepmann (2021, "Early 
 
 La traducción a este proyecto tiene cinco diferencias:
 
-- **Unidades:** las unidades son grupos de edad dentro de cada ola de la Encuesta CEP (jóvenes de 18 a 21 años y personas de 23 años o más), no países.
+- **Unidades:** las unidades son grupos de edad dentro de cada ola de la Encuesta CEP (jóvenes de 18 a 21 años y personas de 23 años o más), no países. Todas las medidas se calculan sin ponderador.
 - **Períodos:** el período previo es la CEP 85, en la que casi ningún joven había cursado la asignatura, y los posteriores son las olas 92 en adelante; cada combinación de la CEP 85 con una ola posterior es un "par de estudios". En el voto, que se refiere a una sola elección, los pares son años de nacimiento.
 - **Origen social:** la brecha se define con el nivel educacional del jefe de hogar (`educ_jefe`) en lugar de los libros en el hogar.
 - **Incertidumbre:** hay pocas unidades y celdas pequeñas, por lo que los errores estándar se obtienen por bootstrap dentro de cada celda.
@@ -39,7 +56,16 @@ Strello et al. estandarizan los efectos con la desviación estándar de cada med
 #| ref.label: !expr knitr::all_labels()[grepl("^calc-", knitr::all_labels())]
 ```
 
-La tabla resume el estimador principal de cada medida y resultado. En interés y confianza es la síntesis por el inverso de la varianza de los pares de olas, con el grupo de comparación de 23 años o más y sin ponderador. En el voto es el estimador agrupado, que compara a los nacidos en 2003 con todos los nacidos antes. Entre paréntesis se presenta el error estándar bootstrap, y entre corchetes el efecto estandarizado (en desviaciones estándar del resultado) o, en la insuficiencia, el efecto en puntos porcentuales. Una brecha negativa indica que la brecha a favor del origen alto se redujo. De las `r sum(!is.na(principal$p))` estimaciones de la tabla, `r sum(principal$p < 0.05, na.rm = TRUE)` son significativas al 5%: el nivel y la brecha social de la confianza política y el nivel del voto. Ninguna medida del interés político cambia de forma significativa, y la reducción de la brecha en la confianza depende de cómo se mide el origen social, como se discute en la sección B.
+La tabla resume el estimador principal de cada medida y resultado. En interés y confianza es la síntesis por el inverso de la varianza de los pares de olas, con el grupo de comparación de 23 años o más y sin ponderador. En el voto es el estimador agrupado, que compara a los nacidos en 2003 con todos los nacidos antes. Entre paréntesis se presenta el error estándar bootstrap, y entre corchetes el efecto estandarizado (en desviaciones estándar del resultado) o, en la insuficiencia, el efecto en puntos porcentuales.
+
+Cada efecto compara cuánto cambió el indicador entre los jóvenes con cuánto cambió en el grupo de comparación (ver la sección "Indicadores"):
+
+- **Nivel:** un efecto positivo indica que el promedio del resultado aumentó más entre los jóvenes.
+- **Dispersión:** un efecto positivo indica respuestas más heterogéneas entre los jóvenes; uno negativo, más homogéneas.
+- **Brecha social:** la brecha es el promedio del origen alto menos el del origen bajo. Un efecto negativo indica que la desigualdad a favor del origen alto se redujo entre los jóvenes más que en el grupo de comparación; uno positivo, que aumentó.
+- **Insuficiencia:** es la proporción en el nivel más bajo del resultado ("nada interesado" o sin confianza en ninguna institución). Un efecto positivo indica que más jóvenes quedaron en ese nivel; uno negativo, que menos.
+
+De las `r sum(!is.na(principal$p))` estimaciones de la tabla, `r sum(principal$p < 0.05, na.rm = TRUE)` son significativas al 5%: el nivel y la brecha social de la confianza política y el nivel del voto. Ninguna medida del interés político cambia de forma significativa, y la reducción de la brecha en la confianza depende de cómo se mide el origen social, como se discute en la sección B.
 
 ```{r}
 #| label: tabla-resumen
@@ -135,11 +161,12 @@ armar_celdas <- function(grupos, periodos) {
   out
 }
 
-# Arreglo celda x medida x ponderación ("sin" y "con" pond)
+# Arreglo celda x medida x ponderación. Solo se calcula la versión sin
+# ponderar; la dimensión "con" se conserva vacía por compatibilidad
 calcular <- function(d, celdas, K) {
   A <- array(NA_real_, c(length(celdas), length(nombres_medidas), 2),
              dimnames = list(names(celdas), nombres_medidas, c("sin", "con")))
-  for (p in c("sin", "con")) {
+  for (p in "sin") {
     w <- if (p == "sin") rep(1, length(d$y)) else d$pond
     for (cc in names(celdas)) {
       i <- celdas[[cc]]
@@ -207,7 +234,7 @@ estandarizables <- c("nivel", "de", "mad", "brecha", "brecha_gse")
 resumir <- function(D, R, pares, sd_ref, resultado) {
   tipos <- c(agrupado = "Agrupado", agrupado_9802 = "Agrupado, nacidos 1998-2002")
   filas <- list()
-  for (comp in unique(pares$comp)) for (p in c("sin", "con")) for (m in nombres_medidas) {
+  for (comp in unique(pares$comp)) for (p in "sin") for (m in nombres_medidas) {
     ks <- pares$id[pares$comp == comp & pares$tipo == "par"]
     s <- sintetizar(D[ks, m, p], matriz(R, ks, m, p))
     f <- data.frame(tipo = c("Inverso de la varianza", "Pesos iguales"),
@@ -489,7 +516,6 @@ tabla_robustez <- function(sint, principal = list(comp = "c23", tipo = "Inverso 
   principales <- c("nivel", "de", "brecha", "insuf1")
   dplyr::bind_rows(
     esp("Principal", pc, "sin", pt, principales),
-    esp("Con ponderador", pc, "con", pt, principales),
     esp("Comparación de 23 a 29 años", "c2329", "sin", pt, principales),
     esp("Pesos iguales", pc, "sin", "Pesos iguales", principales),
     esp("Olas posteriores agrupadas", pc, "sin", "Agrupado", principales),
@@ -721,7 +747,7 @@ La brecha social según la educación del jefe de hogar se reduce: `r tx(sint_co
 - **Por institución:** el estimador de la brecha es negativo con los tres ítems, aunque solo es significativo en la confianza en los partidos (partidos `r tx_item("conf_partidos", "brecha")`, Congreso `r tx_item("conf_congreso", "brecha")` y Gobierno `r tx_item("conf_gobierno", "brecha")`) y con el índice sin Gobierno (`r tx_item("conf_sin_gob", "brecha")`), por lo que tampoco depende del ítem de Gobierno.
 - **Por par:** la reducción aparece en casi todos los pares, con la excepción del par 85-95 (`r tx_par("brecha", "85-95")`); el par 85-96 (`r tx_par("brecha", "85-96")`) no se aparta de los demás.
 
-La reducción se mantiene con pesos iguales (`r tx(sint_conf, "c23", "brecha", "Pesos iguales")`), con las olas posteriores agrupadas (`r tx(sint_conf, "c23", "brecha", "Agrupado")`), sin los pares con celdas de menos de 15 casos (`r tx(sint_conf, "c23", "brecha", "Inverso de la varianza, sin pares con celdas de menos de 15 casos")`), con el ponderador (`r tx(sint_conf, "c23", "brecha", p = "con")`) y en la triple diferencia con regresión individual (`r coef_reg(reg_conf, "Brecha", "alto:joven:post")`). Aun así, hay cuatro razones para no tomarla como evidencia de un efecto de la asignatura:
+La reducción se mantiene con pesos iguales (`r tx(sint_conf, "c23", "brecha", "Pesos iguales")`), con las olas posteriores agrupadas (`r tx(sint_conf, "c23", "brecha", "Agrupado")`), sin los pares con celdas de menos de 15 casos (`r tx(sint_conf, "c23", "brecha", "Inverso de la varianza, sin pares con celdas de menos de 15 casos")`) y en la triple diferencia con regresión individual (`r coef_reg(reg_conf, "Brecha", "alto:joven:post")`). Aun así, hay cuatro razones para no tomarla como evidencia de un efecto de la asignatura:
 
 - **Comparaciones múltiples:** `r n_sig(sint_conf)` de las `r n_tot(sint_conf)` estimaciones sintetizadas de esta sección son significativas al 5%, y varias de ellas son versiones de las mismas dos medidas, por lo que no son evidencia independiente.
 - **Comparación de 23 a 29 años:** el estimador es de magnitud similar (`r tx(sint_conf, "c2329", "brecha")`), pero no es significativo. Esta comparación importa porque `educ_jefe` corresponde a la educación de los padres entre los jóvenes que viven con ellos y suele ser la propia entre las personas mayores, que más a menudo son jefes de hogar.
@@ -811,7 +837,6 @@ tabla_hc1(reg_voto, file = "output/tables/desig_voto_regresion.html")
 #| label: tabla-robustez-voto
 robustez_voto <- dplyr::bind_rows(
   sint_voto %>% dplyr::filter(pond == "sin", tipo == "Agrupado", medida %in% c("nivel", "brecha")) %>% dplyr::mutate(especificacion = "Principal"),
-  sint_voto %>% dplyr::filter(pond == "con", tipo == "Agrupado", medida %in% c("nivel", "brecha")) %>% dplyr::mutate(especificacion = "Con ponderador"),
   sint_voto %>% dplyr::filter(pond == "sin", tipo %in% c("Inverso de la varianza", "Pesos iguales"), medida %in% c("nivel", "brecha")) %>%
     dplyr::mutate(especificacion = paste("Síntesis por año de nacimiento,", tolower(tipo))),
   sint_voto %>% dplyr::filter(pond == "sin", tipo == "Agrupado, nacidos 1998-2002", medida %in% c("nivel", "brecha")) %>% dplyr::mutate(especificacion = "Agrupado, nacidos 1998-2002"),
@@ -827,8 +852,7 @@ writeLines(c(knitr::kable(celdas_tab_voto, format = "html", digits = 3, caption 
 
 ## Interpretación
 
-El estimador agrupado del nivel es `r tx(sint_voto, "cohortes", "nivel", "Agrupado")`, equivalente a `r efe(sint_voto, "cohortes", "nivel", "Agrupado")` desviaciones estándar del voto: quienes nacieron entre abril y diciembre de 2003 votaron menos de lo que predice la diferencia entre nacidos a inicio y a fin de año en las cohortes anteriores, en línea con la regresión individual (`r coef_reg(reg_voto, "Nivel", "tardio:cohorte_2003")`). La síntesis por año de nacimiento da un estimador menor y no significativo con el error bootstrap (`r tx(sint_voto, "cohortes", "nivel")`). Su error estándar analítico (`r se_an(sint_voto, "cohortes", "nivel")`) es casi la mitad del bootstrap y llevaría a declararlo significativo, lo que ilustra por qué el error analítico subestima la incertidumbre cuando todos los pares comparten la celda de 2003. Con el ponderador el nivel tampoco es significativo (`r tx(sint_voto, "cohortes", "nivel", "Agrupado", p = "con")`).
-
+El estimador agrupado del nivel es `r tx(sint_voto, "cohortes", "nivel", "Agrupado")`, equivalente a `r efe(sint_voto, "cohortes", "nivel", "Agrupado")` desviaciones estándar del voto: quienes nacieron entre abril y diciembre de 2003 votaron menos de lo que predice la diferencia entre nacidos a inicio y a fin de año en las cohortes anteriores, en línea con la regresión individual (`r coef_reg(reg_voto, "Nivel", "tardio:cohorte_2003")`). La síntesis por año de nacimiento da un estimador menor y no significativo con el error bootstrap (`r tx(sint_voto, "cohortes", "nivel")`). Su error estándar analítico (`r se_an(sint_voto, "cohortes", "nivel")`) es casi la mitad del bootstrap y llevaría a declararlo significativo, lo que ilustra por qué el error analítico subestima la incertidumbre cuando todos los pares comparten la celda de 2003.
 La brecha social no muestra cambios: `r tx(sint_voto, "cohortes", "brecha", "Agrupado")` según la educación del jefe de hogar y `r tx(sint_voto, "cohortes", "brecha_gse", "Agrupado")` según el grupo socioeconómico. La celda de nacidos entre enero y marzo de 2003 tiene muy pocos casos de cada origen social, por lo que la brecha no puede estimarse con precisión. En total, `r n_sig(sint_voto)` de las `r n_tot(sint_voto)` estimaciones de esta sección son significativas al 5%. Como en los análisis anteriores, los tratados tenían 18 años en la elección, por lo que el diseño supone que la diferencia de participación entre nacidos a inicio y a fin de año es la misma entre votantes primerizos que a edades mayores.
 
 # D) Placebo con olas previas (interés político)
